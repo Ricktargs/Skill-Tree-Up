@@ -115,6 +115,7 @@ export default function App() {
     deleteProfile,
     getProfileStats,
     skills,
+    setSkills,
     nickname,
     setNickname,
     avatar,
@@ -123,8 +124,12 @@ export default function App() {
     setCurrentTheme,
     boxColorType,
     setBoxColorType,
+    linkSkillsByCategory,
+    setLinkSkillsByCategory,
     extraXp,
+    setExtraXp,
     xpHistory,
+    setXpHistory,
     folders,
     addFolder,
     moveSkillToFolder,
@@ -154,7 +159,18 @@ export default function App() {
     exportAllData,
     importData,
     undo,
-    redo
+    redo,
+    diamonds,
+    setDiamonds,
+    dailyMissions,
+    dailyRefreshesLeft,
+    refreshDailyMissions,
+    resetDailyMissionsHack,
+    addExtraRefreshesHack,
+    resetRefreshesCountHack,
+    completeMission,
+    addMiniMissionToSkill,
+    deleteMiniMissionFromSkill
   } = useGameData();
 
   const [isEditingNickname, setIsEditingNickname] = useState(false);
@@ -182,10 +198,25 @@ export default function App() {
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isBoxColorModalOpen, setIsBoxColorModalOpen] = useState(false);
+  const [isSkillSettingsModalOpen, setIsSkillSettingsModalOpen] = useState(false);
   const [isCommandsModalOpen, setIsCommandsModalOpen] = useState(false);
   const [isCustomColorModalOpen, setIsCustomColorModalOpen] = useState(false);
   const [isManageSkillsModalOpen, setIsManageSkillsModalOpen] = useState(false);
   const [isLayoutEditorOpen, setIsLayoutEditorOpen] = useState(false);
+
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const [isMissionsModalOpen, setIsMissionsModalOpen] = useState(false);
+  const [isMiniMissionsModalOpen, setIsMiniMissionsModalOpen] = useState(false);
+  const [miniMissionsModalTab, setMiniMissionsModalTab] = useState('list');
+  const [newMiniMissionText, setNewMiniMissionText] = useState('');
+
+  const [isHackModalOpen, setIsHackModalOpen] = useState(false);
+  const [hackXpInput, setHackXpInput] = useState('');
+  const [hackDiamondsInput, setHackDiamondsInput] = useState('');
+  const [confirmClearHistory, setConfirmClearHistory] = useState(false);
+  const [confirmClearSkills, setConfirmClearSkills] = useState(false);
 
   const [isCategoryFilterModalOpen, setIsCategoryFilterModalOpen] = useState(false);
   const [selectedFolderFilters, setSelectedFolderFilters] = useState([]);
@@ -193,7 +224,11 @@ export default function App() {
   const [dragOverFolder, setDragOverFolder] = useState(null);
   const [folderSortOrder, setFolderSortOrder] = useState('default');
   const [folderCardContextMenu, setFolderCardContextMenu] = useState(null);
-  
+
+  /* DRAG & DROP NO EDITOR DE LAYOUT */
+  const [draggedLayoutIdx, setDraggedLayoutIdx] = useState(null);
+  const [dragOverLayoutIdx, setDragOverLayoutIdx] = useState(null);
+
   const [folderSearchQuery, setFolderSearchQuery] = useState('');
   const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
   const [newFolderNameModalInput, setNewFolderNameModalInput] = useState('');
@@ -226,8 +261,73 @@ export default function App() {
   const fileInputRef = useRef(null);
   const holdIntervalRef = useRef(null);
   const holdTimeoutRef = useRef(null);
-
   const touchTimerRef = useRef(null);
+
+  const closeAllModals = () => {
+    let closedSomething = false;
+
+    if (
+      isSearchOpen ||
+      isHackModalOpen ||
+      isMissionsModalOpen ||
+      isMiniMissionsModalOpen ||
+      isCategoryFilterModalOpen ||
+      isCreateFolderModalOpen ||
+      isXpHistoryModalOpen ||
+      isMailModalOpen ||
+      isProfileModalOpen ||
+      isNewProfileModalOpen ||
+      isNewProfileEmojiPickerOpen ||
+      isEmojiPickerOpen ||
+      isSettingsModalOpen ||
+      isBoxColorModalOpen ||
+      isSkillSettingsModalOpen ||
+      isCommandsModalOpen ||
+      isLevelInfoModalOpen ||
+      isCustomColorModalOpen ||
+      isThemeModalOpen ||
+      activeTasksSkill ||
+      isAddModalOpen ||
+      editingSkill ||
+      isLayoutEditorOpen ||
+      isManageSkillsModalOpen ||
+      contextMenu ||
+      folderCardContextMenu ||
+      globalContextMenu
+    ) {
+      closedSomething = true;
+    }
+
+    setIsSearchOpen(false);
+    setIsHackModalOpen(false);
+    setIsMissionsModalOpen(false);
+    setIsMiniMissionsModalOpen(false);
+    setIsCategoryFilterModalOpen(false);
+    setIsCreateFolderModalOpen(false);
+    setIsXpHistoryModalOpen(false);
+    setIsMailModalOpen(false);
+    setIsProfileModalOpen(false);
+    setIsNewProfileModalOpen(false);
+    setIsNewProfileEmojiPickerOpen(false);
+    setIsEmojiPickerOpen(false);
+    setIsSettingsModalOpen(false);
+    setIsBoxColorModalOpen(false);
+    setIsSkillSettingsModalOpen(false);
+    setIsCommandsModalOpen(false);
+    setIsLevelInfoModalOpen(false);
+    setIsCustomColorModalOpen(false);
+    setIsThemeModalOpen(false);
+    setActiveTasksSkill(null);
+    setIsAddModalOpen(false);
+    setEditingSkill(null);
+    setIsLayoutEditorOpen(false);
+    setIsManageSkillsModalOpen(false);
+    setContextMenu(null);
+    setFolderCardContextMenu(null);
+    setGlobalContextMenu(null);
+
+    return closedSomething;
+  };
 
   const handleCardTouchStart = (e, skill, isFolderCard = false) => {
     if (!e.touches || e.touches.length === 0) return;
@@ -261,6 +361,29 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+      const keyLower = e.key ? e.key.toLowerCase() : '';
+
+      const isHackTrigger = isCtrlOrCmd && e.shiftKey && (e.code === 'KeyH' || keyLower === 'h');
+
+      if (isHackTrigger) {
+        e.preventDefault();
+        e.stopPropagation();
+        playSound('train');
+        setIsHackModalOpen((prev) => !prev);
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        playSound('click');
+        const closed = closeAllModals();
+        if (!closed) {
+          setIsSettingsModalOpen(true);
+        }
+        return;
+      }
+
       const activeElem = document.activeElement;
       const isEditingText =
         activeElem &&
@@ -268,26 +391,69 @@ export default function App() {
           activeElem.tagName === 'TEXTAREA' ||
           activeElem.isContentEditable);
 
+      if (isCtrlOrCmd && e.code === 'Space') {
+        e.preventDefault();
+        playSound('click');
+        setIsAddModalOpen(true);
+        return;
+      }
+
+      if (e.code === 'Space' && !isEditingText && !isSearchOpen) {
+        e.preventDefault();
+        playSound('click');
+        setIsSearchOpen(true);
+        return;
+      }
+
       if (isEditingText) return;
 
-      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
       if (isCtrlOrCmd) {
-        const key = e.key.toLowerCase();
-        if (key === 'z' && !e.shiftKey) {
+        if (keyLower === 'z' && !e.shiftKey) {
           e.preventDefault();
           playSound('click');
           undo();
-        } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+        } else if (keyLower === 'y' || (keyLower === 'z' && e.shiftKey)) {
           e.preventDefault();
           playSound('click');
           redo();
         }
+        return;
+      }
+
+      if (keyLower === 'c') {
+        e.preventDefault();
+        playSound('click');
+        setIsThemeModalOpen((prev) => !prev);
+      } else if (keyLower === 'p') {
+        e.preventDefault();
+        playSound('click');
+        setIsProfileModalOpen((prev) => !prev);
+      } else if (keyLower === 'g') {
+        e.preventDefault();
+        playSound('click');
+        setIsCategoryFilterModalOpen((prev) => !prev);
+      } else if (keyLower === 'o') {
+        e.preventDefault();
+        playSound('click');
+        setIsManageSkillsModalOpen((prev) => !prev);
+      } else if (keyLower === 'a') {
+        e.preventDefault();
+        playSound('click');
+        setIsEmojiPickerOpen((prev) => !prev);
+      } else if (keyLower === 'm') {
+        e.preventDefault();
+        playSound('click');
+        setIsMissionsModalOpen((prev) => !prev);
+      } else if (keyLower === 'e') {
+        e.preventDefault();
+        playSound('click');
+        setIsLayoutEditorOpen((prev) => !prev);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo]);
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [undo, redo, isSearchOpen]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -301,6 +467,9 @@ export default function App() {
 
   const activeThemePreset = THEME_PRESETS.find((t) => t.id === currentTheme) || THEME_PRESETS[0];
   const activeDeckColors = getActiveDeckColors();
+
+  const pendingMissionsCount = dailyMissions ? dailyMissions.filter((m) => !m.completed).length : 0;
+  const mailIcon = pendingMissionsCount > 0 ? '📫' : '📪';
 
   const getCardStyle = (isMax, skillColor) => {
     const styleObj = {
@@ -333,7 +502,7 @@ export default function App() {
   const handleOpenNewProfileModal = () => {
     playSound('click');
     setNewProfileName('');
-    setNewProfileAvatar('🛡️');
+    setNewProfileAvatar('🛡️️');
     setIsNewProfileModalOpen(true);
   };
 
@@ -680,7 +849,30 @@ export default function App() {
     });
   };
 
-  const visibleSkills = skills.filter((s) => {
+  const getOrderedSkills = (skillsList) => {
+    if (!linkSkillsByCategory) return skillsList;
+
+    const categoryOrder = [];
+    const categoryGroups = {};
+
+    skillsList.forEach((skill) => {
+      const catKey = (skill.category || 'Geral').trim().toLowerCase();
+      if (!categoryGroups[catKey]) {
+        categoryGroups[catKey] = [];
+        categoryOrder.push(catKey);
+      }
+      categoryGroups[catKey].push(skill);
+    });
+
+    const result = [];
+    categoryOrder.forEach((catKey) => {
+      result.push(...categoryGroups[catKey]);
+    });
+
+    return result;
+  };
+
+  const rawVisibleSkills = skills.filter((s) => {
     if (hiddenSkillIds.includes(s.id)) return false;
     if (selectedFolderFilters.length > 0) {
       const folderName = (s.folder || 'Geral').trim();
@@ -688,6 +880,8 @@ export default function App() {
     }
     return true;
   });
+
+  const visibleSkills = getOrderedSkills(rawVisibleSkills);
 
   const hiddenSkills = skills.filter((s) => hiddenSkillIds.includes(s.id));
 
@@ -720,7 +914,6 @@ export default function App() {
   }
 
   const sortedAvailableFolders = [geralFolderName, ...otherFolders];
-
   const queryClean = folderSearchQuery.trim().toLowerCase();
 
   const filteredFoldersToRender = sortedAvailableFolders.filter((folderName) => {
@@ -729,7 +922,7 @@ export default function App() {
     const folderSkills = skills.filter((s) => (s.folder || 'Geral').trim() === folderName);
     const skillMatches = folderSkills.some(
       (s) =>
-        s.title.toLowerCase().includes(queryClean) ||
+        (s.title || s.name || '').toLowerCase().includes(queryClean) ||
         (s.category && s.category.toLowerCase().includes(queryClean))
     );
     return folderMatches || skillMatches;
@@ -765,7 +958,7 @@ export default function App() {
       <div className="top-left-nav-buttons" style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
         <button
           className="top-icon-button"
-          title="Alternar / Gerenciar Perfis"
+          title="Alternar / Gerenciar Perfis (P)"
           onClick={() => {
             playSound('click');
             setDeletingProfileId(null);
@@ -774,6 +967,20 @@ export default function App() {
           }}
         >
           👤
+        </button>
+
+        <button
+          className="top-icon-button"
+          onClick={() => { playSound('click'); setIsMissionsModalOpen(true); }}
+          title="Missões Diárias e Diamantes (M)"
+          style={{ position: 'relative' }}
+        >
+          {mailIcon}
+          {pendingMissionsCount > 0 && (
+            <span className="subtle-mission-badge" title={`${pendingMissionsCount} missão(ões) para concluir!`}>
+              {pendingMissionsCount}
+            </span>
+          )}
         </button>
 
         {pendingTransfers && pendingTransfers.length > 0 && (
@@ -792,21 +999,21 @@ export default function App() {
       <div className="top-nav-buttons">
         <button
           className="top-icon-button"
-          title="Editor de Layouts / Habilidades"
+          title="Editor de Layouts / Habilidades (E)"
           onClick={() => { playSound('click'); setIsLayoutEditorOpen(true); }}
         >
-          ✏
+          ✏️
         </button>
         <button
           className="top-icon-button"
-          title="Customizar Tema"
+          title="Customizar Tema (C)"
           onClick={() => { playSound('click'); setIsThemeModalOpen(true); }}
         >
           🎨
         </button>
         <button
           className="top-icon-button"
-          title="Configurações"
+          title="Configurações (Esc)"
           onClick={() => { playSound('click'); setIsSettingsModalOpen(true); }}
         >
           ⚙
@@ -822,7 +1029,7 @@ export default function App() {
                 playSound('click');
                 setIsEmojiPickerOpen(true);
               }}
-              title="Clique para escolher um novo emoji"
+              title="Clique para escolher um novo emoji (A)"
             >
               {avatar}
             </div>
@@ -918,19 +1125,34 @@ export default function App() {
               />
             </div>
           </div>
+
+          <div className="diamonds-box">
+            <span className="diamonds-icon">💎</span>
+            <span className="diamonds-count">{diamonds || 0} Diamantes</span>
+          </div>
         </aside>
 
         <main className="skills-panel">
           <div className="skills-header-container">
             <h1 className="panel-title">Skills Upgrades</h1>
-            <button
-              type="button"
-              className="show-categories-trigger"
-              onClick={() => { playSound('click'); setIsCategoryFilterModalOpen(true); }}
-              title="Gerenciar pastas e visibilidade"
-            >
-              mostrar+
-            </button>
+            <div className="header-action-row-right">
+              <button
+                type="button"
+                className="show-categories-trigger"
+                onClick={() => { playSound('click'); setIsCategoryFilterModalOpen(true); }}
+                title="Gerenciar pastas e visibilidade (G)"
+              >
+                mostrar+
+              </button>
+              <button
+                type="button"
+                className="show-categories-trigger search-trigger-btn"
+                onClick={() => { playSound('click'); setIsSearchOpen(true); }}
+                title="Buscar habilidade (Espaço)"
+              >
+                buscar+
+              </button>
+            </div>
           </div>
 
           <div className="skills-list">
@@ -986,7 +1208,7 @@ export default function App() {
                     </button>
 
                     <div className="skill-details">
-                      <div className="skill-name">{skill.title}</div>
+                      <div className="skill-name">{skill.title || skill.name}</div>
                       <div className="skill-category">{skill.category || 'Geral'}</div>
                     </div>
 
@@ -1067,7 +1289,7 @@ export default function App() {
         <div
           className="subtle-side-rail"
           onClick={() => { playSound('click'); setIsManageSkillsModalOpen(true); }}
-          title="Editar habilidades atuais e ver escondidas"
+          title="Editar habilidades atuais e ver escondidas (O)"
         >
           <div className="rail-line-glow" />
           <div className="rail-plus-badge">+</div>
@@ -1075,6 +1297,661 @@ export default function App() {
         </div>
       </div>
 
+      {/* JANELA DE BUSCA (BUSCAR+) */}
+      {isSearchOpen && (
+        <div className="modal-backdrop high-z-backdrop" onClick={() => { playSound('click'); setIsSearchOpen(false); }}>
+          <div className="modal-window search-modal-window high-z-window" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-row">
+              <h3>Buscar Habilidade</h3>
+              <button className="close-popup-btn" onClick={() => { playSound('click'); setIsSearchOpen(false); }}>✕</button>
+            </div>
+
+            <input
+              type="text"
+              className="search-input-field"
+              placeholder="Digite o nome da habilidade..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+            />
+
+            <div className="search-results-list">
+              {skills
+                .filter((s) => (s.title || s.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
+                .map((skill) => {
+                  const isMax = skill.level >= skill.maxLevel;
+                  const skillColor = skill.color || '#3b82f6';
+                  const nextLevelNumber = skill.level + 1;
+                  const nextGoalText = skill.levelDescriptions?.[nextLevelNumber] || `Meta do Nível ${nextLevelNumber}`;
+                  const isHidden = hiddenSkillIds.includes(skill.id);
+
+                  return (
+                    <div
+                      key={skill.id}
+                      className={`skill-card compact-editor-card ${isMax ? 'gold-maxed' : ''}`}
+                      style={getCardStyle(isMax, skillColor)}
+                      onClick={() => {
+                        playSound('click');
+                        setEditingSkill({ ...skill });
+                        setIsSearchOpen(false);
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="gear-button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playSound('click');
+                          setEditingSkill({ ...skill });
+                          setIsSearchOpen(false);
+                        }}
+                      >
+                        ⚙
+                      </button>
+
+                      <div className="skill-details">
+                        <div className="skill-name">{skill.title || skill.name}</div>
+                        <div className="skill-category">
+                          {skill.category || 'Geral'} {isHidden ? '(Oculta)' : ''}
+                        </div>
+                      </div>
+
+                      <div className="segments-center-zone">
+                        <div className="current-goal-title">
+                          {isMax ? 'Habilidade Dominada!' : nextGoalText}
+                        </div>
+                        <div className="segments-bar">
+                          {renderSegmentBars(skill.level, skill.maxLevel, skillColor, isMax)}
+                        </div>
+                      </div>
+
+                      <div className="level-text">Lvl {skill.level}</div>
+
+                      <div className="editor-card-controls">
+                        <button
+                          type="button"
+                          className="manage-edit-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            playSound('click');
+                            setEditingSkill({ ...skill });
+                            setIsSearchOpen(false);
+                          }}
+                        >
+                          Abrir
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+
+              {searchQuery && skills.filter((s) => (s.title || s.name || '').toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                <p className="no-colors-msg">Nenhuma habilidade encontrada.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MENU HACK EXPANDIDO DO SISTEMA (CTRL + SHIFT + H) */}
+      {isHackModalOpen && (
+        <div className="modal-backdrop high-z-backdrop" onClick={() => setIsHackModalOpen(false)}>
+          <div
+            className="modal-window high-z-window"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '720px', width: '92vw', border: '2px solid #ef4444' }}
+          >
+            <div className="modal-header-row">
+              <h3 style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>
+                ⚡ Menu Hack do Sistema
+              </h3>
+              <button className="close-popup-btn" onClick={() => setIsHackModalOpen(false)}>✕</button>
+            </div>
+
+            <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '0.2rem 0 1rem 0' }}>
+              Painel avançado de desenvolvedor para alteração direta de atributos do perfil ativo (<strong>{nickname}</strong>).
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: '1rem' }}>
+              <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--theme-border, #334155)', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--theme-accent, #38bdf8)', fontWeight: 'bold' }}>⚡ XP Acumulado</span>
+                  <span style={{ background: 'rgba(255, 255, 255, 0.08)', color: 'var(--theme-accent, #38bdf8)', border: '1px solid var(--theme-border, rgba(56, 189, 248, 0.3))', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.95rem', fontWeight: 'bold' }}>
+                    {totalXp} XP
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Ajuste Rápido:</span>
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <button
+                      type="button"
+                      className="cancel-button"
+                      style={{ flex: 1, padding: '0.4rem', fontSize: '0.82rem', fontWeight: 'bold' }}
+                      onClick={() => { playSound('click'); setExtraXp((prev) => Math.max(0, prev - 10)); }}
+                    >
+                      -10 XP
+                    </button>
+                    <button
+                      type="button"
+                      className="confirm-button"
+                      style={{ flex: 1, padding: '0.4rem', fontSize: '0.82rem', fontWeight: 'bold' }}
+                      onClick={() => { playSound('train'); setExtraXp((prev) => prev + 10); }}
+                    >
+                      +10 XP
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.2rem' }}>
+                  <input
+                    type="number"
+                    placeholder="Quantidade de XP"
+                    value={hackXpInput}
+                    onChange={(e) => setHackXpInput(e.target.value)}
+                    style={{ width: '100%', padding: '0.45rem 0.6rem', background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--theme-border, #334155)', borderRadius: '6px', color: '#fff', fontSize: '0.85rem' }}
+                  />
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <button
+                      type="button"
+                      className="confirm-button"
+                      style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem' }}
+                      onClick={() => {
+                        playSound('train');
+                        setExtraXp((prev) => Math.max(0, prev + Number(hackXpInput || 0)));
+                        setHackXpInput('');
+                      }}
+                    >
+                      + Somar XP
+                    </button>
+                    <button
+                      type="button"
+                      className="cancel-button"
+                      style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem' }}
+                      onClick={() => {
+                        playSound('click');
+                        setExtraXp(Math.max(0, Number(hackXpInput || 0)));
+                        setHackXpInput('');
+                      }}
+                    >
+                      Definir Exato
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--theme-border, #334155)', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.9rem', color: '#facc15', fontWeight: 'bold' }}>💎 Diamantes Totais</span>
+                  <span style={{ background: 'rgba(250, 204, 21, 0.15)', color: '#facc15', border: '1px solid rgba(250, 204, 21, 0.3)', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.95rem', fontWeight: 'bold' }}>
+                    {diamonds || 0} 💎
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Ajuste Rápido:</span>
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <button
+                      type="button"
+                      className="cancel-button"
+                      style={{ flex: 1, padding: '0.4rem', fontSize: '0.82rem', fontWeight: 'bold' }}
+                      onClick={() => { playSound('click'); setDiamonds((prev) => Math.max(0, prev - 1)); }}
+                    >
+                      -1 💎
+                    </button>
+                    <button
+                      type="button"
+                      className="confirm-button"
+                      style={{ flex: 1, padding: '0.4rem', fontSize: '0.82rem', fontWeight: 'bold', background: '#eab308', color: '#000' }}
+                      onClick={() => { playSound('train'); setDiamonds((prev) => prev + 1); }}
+                    >
+                      +1 💎
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.2rem' }}>
+                  <input
+                    type="number"
+                    placeholder="Quantidade Diamantes"
+                    value={hackDiamondsInput}
+                    onChange={(e) => setHackDiamondsInput(e.target.value)}
+                    style={{ width: '100%', padding: '0.45rem 0.6rem', background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--theme-border, #334155)', borderRadius: '6px', color: '#fff', fontSize: '0.85rem' }}
+                  />
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <button
+                      type="button"
+                      className="confirm-button"
+                      style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem', background: '#eab308', color: '#000' }}
+                      onClick={() => {
+                        playSound('train');
+                        setDiamonds((prev) => Math.max(0, prev + Number(hackDiamondsInput || 0)));
+                        setHackDiamondsInput('');
+                      }}
+                    >
+                      + Somar 💎
+                    </button>
+                    <button
+                      type="button"
+                      className="cancel-button"
+                      style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem' }}
+                      onClick={() => {
+                        playSound('click');
+                        setDiamonds(Math.max(0, Number(hackDiamondsInput || 0)));
+                        setHackDiamondsInput('');
+                      }}
+                    >
+                      Definir Exato
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+              <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--theme-border, #334155)', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--theme-accent, #38bdf8)', fontWeight: 'bold' }}>📜 Missões de Hoje</span>
+                  <span style={{ background: 'rgba(255, 255, 255, 0.08)', color: 'var(--theme-accent, #38bdf8)', border: '1px solid var(--theme-border, rgba(56, 189, 248, 0.3))', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                    {dailyMissions ? dailyMissions.filter(m => !m.completed).length : 0} Disponíveis
+                  </span>
+                </div>
+
+                <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: 0 }}>
+                  Gera 5 novas missões não concluídas a partir das habilidades e reseta o status de conclusão diária.
+                </p>
+
+                <button
+                  type="button"
+                  className="confirm-button"
+                  style={{ padding: '0.5rem', fontSize: '0.85rem', fontWeight: 'bold' }}
+                  onClick={() => {
+                    playSound('train');
+                    resetDailyMissionsHack();
+                  }}
+                >
+                  🔄 Zerar / Resetar 5 Missões de Hoje
+                </button>
+              </div>
+
+              <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--theme-border, #334155)', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.9rem', color: '#facc15', fontWeight: 'bold' }}>🎲 Sorteios de Missão</span>
+                  <span style={{ background: 'rgba(250, 204, 21, 0.15)', color: '#facc15', border: '1px solid rgba(250, 204, 21, 0.3)', padding: '0.2rem 0.6rem', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                    {dailyRefreshesLeft} Restantes Hoje
+                  </span>
+                </div>
+
+                <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: 0 }}>
+                  Aumente a quantidade de sorteios para o dia ou resete o contador para 2/2.
+                </p>
+
+                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <button
+                    type="button"
+                    className="confirm-button"
+                    style={{ flex: 1, padding: '0.45rem', fontSize: '0.8rem', background: '#eab308', color: '#000', fontWeight: 'bold' }}
+                    onClick={() => {
+                      playSound('train');
+                      addExtraRefreshesHack(1);
+                    }}
+                  >
+                    +1 Sorteio Extra
+                  </button>
+                  <button
+                    type="button"
+                    className="cancel-button"
+                    style={{ flex: 1, padding: '0.45rem', fontSize: '0.8rem' }}
+                    onClick={() => {
+                      playSound('click');
+                      resetRefreshesCountHack();
+                    }}
+                  >
+                    Resetar (2/2)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+              <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: '0.8rem 1rem', borderRadius: '10px', border: '1px solid var(--theme-border, #334155)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <strong style={{ fontSize: '0.85rem', color: '#f8fafc' }}>Apagar Histórico XP</strong>
+                  <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>Limpa os logs de evolução.</p>
+                </div>
+                {confirmClearHistory ? (
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <button
+                      type="button"
+                      className="confirm-yes-btn"
+                      onClick={() => {
+                        playSound('delete');
+                        setXpHistory([]);
+                        setConfirmClearHistory(false);
+                      }}
+                    >
+                      Sim
+                    </button>
+                    <button
+                      type="button"
+                      className="confirm-no-btn"
+                      onClick={() => setConfirmClearHistory(false)}
+                    >
+                      Não
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="delete-btn"
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                    onClick={() => setConfirmClearHistory(true)}
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+
+              <div style={{ background: '#2d0808', padding: '0.8rem 1rem', borderRadius: '10px', border: '1px solid #7f1d1d', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <strong style={{ fontSize: '0.85rem', color: '#f87171' }}>Zerar Habilidades</strong>
+                  <p style={{ fontSize: '0.75rem', color: '#fca5a5', margin: 0 }}>Exclui todas as skills.</p>
+                </div>
+                {confirmClearSkills ? (
+                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <button
+                      type="button"
+                      className="confirm-yes-btn"
+                      style={{ background: '#dc2626' }}
+                      onClick={() => {
+                        playSound('delete');
+                        setSkills([]);
+                        setConfirmClearSkills(false);
+                      }}
+                    >
+                      EXCLUIR
+                    </button>
+                    <button
+                      type="button"
+                      className="confirm-no-btn"
+                      onClick={() => setConfirmClearSkills(false)}
+                    >
+                      Não
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="delete-btn"
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', background: '#dc2626' }}
+                    onClick={() => setConfirmClearSkills(true)}
+                  >
+                    Zerar TUDO
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="modal-actions-bar" style={{ marginTop: '1.2rem' }}>
+              <button className="confirm-button" onClick={() => setIsHackModalOpen(false)}>
+                Fechar Menu Hack
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* JANELA DE MISSÕES DE HOJE COM TEMA DINÂMICO */}
+      {isMissionsModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsMissionsModalOpen(false)}>
+          <div
+            className="modal-window missions-modal-large"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '1100px', width: '95vw', maxHeight: '90vh', overflowY: 'auto' }}
+          >
+            <div className="modal-header-row" style={{ justifyContent: 'space-between', width: '100%' }}>
+              <h2>📜 Missões de Hoje</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <button
+                  type="button"
+                  className="cancel-button"
+                  disabled={dailyRefreshesLeft <= 0}
+                  style={{
+                    padding: '0.35rem 0.8rem',
+                    fontSize: '0.8rem',
+                    opacity: dailyRefreshesLeft <= 0 ? 0.5 : 1,
+                    cursor: dailyRefreshesLeft <= 0 ? 'not-allowed' : 'pointer'
+                  }}
+                  onClick={() => {
+                    if (dailyRefreshesLeft <= 0) {
+                      playSound('error');
+                      alert('Você já atingiu o limite máximo de 2 sorteios hoje!');
+                      return;
+                    }
+
+                    const result = refreshDailyMissions();
+                    if (result.success) {
+                      playSound('train');
+                    } else {
+                      playSound('error');
+                      if (result.reason === 'limit_reached') {
+                        alert('Você já atingiu o limite máximo de 2 sorteios hoje!');
+                      } else if (result.reason === 'no_uncompleted_available') {
+                        alert('Não há outras mini-missões não-concluídas disponíveis para sortear.');
+                      }
+                    }
+                  }}
+                  title={
+                    dailyRefreshesLeft > 0
+                      ? `Sortear novas missões não concluídas (${dailyRefreshesLeft}/2 restantes hoje)`
+                      : 'Limite de 2 sorteios diários atingido'
+                  }
+                >
+                  🔄 Sortear Novas ({dailyRefreshesLeft}/2)
+                </button>
+                <button className="close-popup-btn" onClick={() => setIsMissionsModalOpen(false)}>
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.88rem', color: '#94a3b8', margin: '0.5rem 0 1rem 0' }}>
+              Abaixo estão até <strong>5 missões sorteadas aleatoriamente</strong> para hoje. As missões concluídas são mantidas, enquanto as não-concluídas podem ser resorteadas até <strong>2x por dia</strong> ({dailyRefreshesLeft}/2 restantes). Complete cada uma para resgatar <strong>1 ou 2 Diamantes 💎</strong>!
+            </p>
+
+            {(!dailyMissions || dailyMissions.length === 0) ? (
+              <div className="no-missions-box" style={{ textAlign: 'center', padding: '3rem 0', color: '#94a3b8' }}>
+                <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Nenhuma missão disponível no momento.</p>
+                <span style={{ fontSize: '0.85rem' }}>
+                  Adicione mini missões dentro do menu de edição (envelope ✉️) das suas habilidades para gerar desafios diários!
+                </span>
+              </div>
+            ) : (
+              <div
+                className="missions-grid-container"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                  gap: '1.2rem',
+                  padding: '0.5rem 0.2rem'
+                }}
+              >
+                {dailyMissions.map((mission) => (
+                  <div
+                    key={mission.id}
+                    className={`mission-card-item ${mission.completed ? 'completed' : ''}`}
+                  >
+                    <div>
+                      <div
+                        className="mission-card-header"
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}
+                      >
+                        <span
+                          className="mission-skill-badge"
+                          title={mission.skillName}
+                        >
+                          {mission.skillName}
+                        </span>
+                        <span
+                          className="mission-reward-badge"
+                        >
+                          +{mission.rewardDiamonds || 1} 💎
+                        </span>
+                      </div>
+                      <div
+                        className="mission-text-content"
+                        style={{ fontSize: '0.9rem', color: '#f8fafc', marginBottom: '1.2rem', lineHeight: '1.4' }}
+                      >
+                        {mission.text}
+                      </div>
+                    </div>
+
+                    <button
+                      className={`mission-complete-btn ${mission.completed ? 'is-done' : ''}`}
+                      onClick={() => {
+                        if (!mission.completed) {
+                          playSound('train');
+                          completeMission(mission.id);
+                        }
+                      }}
+                      disabled={mission.completed}
+                    >
+                      {mission.completed ? 'Concluída ✓' : 'Concluir Missão'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {dailyMissions && dailyMissions.length > 0 && (
+              <div className="missions-bonus-footer-banner">
+                {dailyMissions.every((m) => m.completed) ? (
+                  <div className="bonus-claimed-text">
+                    🎉 Parabéns! Todas as {dailyMissions.length} missões de hoje foram concluídas e o bônus de +1 💎 foi resgatado!
+                  </div>
+                ) : (
+                  <div className="bonus-pending-text">
+                    ⭐ Complete todas as {dailyMissions.length} missões do dia para receber um bônus extra de +1 Diamante!
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="modal-actions-bar" style={{ marginTop: '1.5rem' }}>
+              <button className="confirm-button" onClick={() => setIsMissionsModalOpen(false)}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE GERENCIAMENTO DE MINI MISSÕES COM TEMA DINÂMICO */}
+      {isMiniMissionsModalOpen && editingSkill && (
+        <div className="modal-backdrop high-z-backdrop" onClick={() => setIsMiniMissionsModalOpen(false)}>
+          <div className="modal-window high-z-window" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="modal-header-row" style={{ justifyContent: 'space-between', width: '100%' }}>
+              <h3>✉️ Mini Missões: {editingSkill.title || editingSkill.name}</h3>
+              <button className="close-popup-btn" onClick={() => setIsMiniMissionsModalOpen(false)}>✕</button>
+            </div>
+
+            <div className="mini-mission-tabs-row" style={{ display: 'flex', gap: '0.5rem', margin: '1rem 0' }}>
+              <button 
+                className={`mini-tab-btn ${miniMissionsModalTab === 'list' ? 'active' : ''}`}
+                onClick={() => setMiniMissionsModalTab('list')}
+              >
+                Ver Mini Missões ({editingSkill.miniMissions?.length || 0})
+              </button>
+              <button 
+                className={`mini-tab-btn ${miniMissionsModalTab === 'assign' ? 'active' : ''}`}
+                onClick={() => setMiniMissionsModalTab('assign')}
+              >
+                Adicionar Nova
+              </button>
+            </div>
+
+            {miniMissionsModalTab === 'list' ? (
+              <div className="mini-missions-scroll-list">
+                {(!editingSkill.miniMissions || editingSkill.miniMissions.length === 0) ? (
+                  <div style={{ textAlign: 'center', padding: '2rem 0', color: '#94a3b8', fontSize: '0.85rem' }}>
+                    Nenhuma mini missão cadastrada para esta habilidade.
+                  </div>
+                ) : (
+                  editingSkill.miniMissions.map((mm, idx) => (
+                    <div key={idx} className="mini-mission-row-item">
+                      <span style={{ fontSize: '0.9rem', color: '#f8fafc' }}>{mm}</span>
+                      <button 
+                        type="button"
+                        className="editor-remove-btn" 
+                        onClick={() => {
+                          playSound('delete');
+                          deleteMiniMissionFromSkill(editingSkill.id, idx);
+                          setEditingSkill((prev) => ({
+                            ...prev,
+                            miniMissions: (prev.miniMissions || []).filter((_, i) => i !== idx)
+                          }));
+                        }}
+                        title="Excluir mini missão"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', margin: '1rem 0' }}>
+                <label style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>Digite a descrição da nova mini missão:</label>
+                <input
+                  type="text"
+                  className="nickname-input"
+                  style={{ width: '100%', textAlign: 'left', padding: '0.6rem', background: 'rgba(0, 0, 0, 0.4)', border: '1px solid var(--theme-border, #334155)', borderRadius: '6px', color: '#fff' }}
+                  placeholder="Ex: Fazer um esboço"
+                  value={newMiniMissionText}
+                  onChange={(e) => setNewMiniMissionText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newMiniMissionText.trim()) {
+                      addMiniMissionToSkill(editingSkill.id, newMiniMissionText.trim());
+                      setEditingSkill(prev => ({
+                        ...prev,
+                        miniMissions: [...(prev.miniMissions || []), newMiniMissionText.trim()]
+                      }));
+                      setNewMiniMissionText('');
+                      setMiniMissionsModalTab('list');
+                    }
+                  }}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="confirm-button"
+                  onClick={() => {
+                    if (newMiniMissionText.trim()) {
+                      addMiniMissionToSkill(editingSkill.id, newMiniMissionText.trim());
+                      setEditingSkill(prev => ({
+                        ...prev,
+                        miniMissions: [...(prev.miniMissions || []), newMiniMissionText.trim()]
+                      }));
+                      setNewMiniMissionText('');
+                      setMiniMissionsModalTab('list');
+                    }
+                  }}
+                >
+                  Salvar e Atribuir Mini Missão
+                </button>
+              </div>
+            )}
+
+            <div className="modal-actions-bar" style={{ marginTop: '1rem' }}>
+              <button className="confirm-button" onClick={() => setIsMiniMissionsModalOpen(false)}>
+                Concluído
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GERENCIADOR DE PASTAS */}
       {isCategoryFilterModalOpen && (
         <div className="modal-backdrop layout-editor-modal-large" onClick={() => { playSound('click'); setIsCategoryFilterModalOpen(false); }}>
           <div className="modal-window layout-editor-modal-large" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '95vw', width: '1200px' }}>
@@ -1086,7 +1963,7 @@ export default function App() {
             <p className="settings-description" style={{ marginBottom: '1rem' }}>
               Marque a <strong>caixa de seleção</strong> de cada pasta para deixar todas as suas habilidades visíveis ou não.
               <br />
-              <strong>Arraste qualquer habilidade com o mouse</strong> ou <strong>pressione e segure o card no celular</strong> para movê-la de pasta.
+              <strong>Arraste qualquer habilidade com o mouse</strong> ou <strong>pressione e segure o card no telemóvel</strong> para movê-la de pasta.
             </p>
 
             <div className="folder-manager-toolbar">
@@ -1096,7 +1973,7 @@ export default function App() {
                   placeholder="Pesquisar pasta ou habilidade..."
                   value={folderSearchQuery}
                   onChange={(e) => setFolderSearchQuery(e.target.value)}
-                  style={{ flex: 1, padding: '0.5rem 0.8rem', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#fff' }}
+                  style={{ flex: 1, padding: '0.5rem 0.8rem', background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--theme-border, #334155)', borderRadius: '6px', color: '#fff' }}
                 />
                 <button
                   type="button"
@@ -1113,7 +1990,7 @@ export default function App() {
                 <select
                   value={folderSortOrder}
                   onChange={(e) => { playSound('click'); setFolderSortOrder(e.target.value); }}
-                  style={{ padding: '0.45rem 0.8rem', borderRadius: '6px', background: '#0f172a', border: '1px solid #334155', color: '#fff', fontSize: '0.85rem', cursor: 'pointer' }}
+                  style={{ padding: '0.45rem 0.8rem', borderRadius: '6px', background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--theme-border, #334155)', color: '#fff', fontSize: '0.85rem', cursor: 'pointer' }}
                 >
                   <option value="default">Padrão</option>
                   <option value="a-z">A a Z (Alfabética)</option>
@@ -1131,7 +2008,7 @@ export default function App() {
                   const folderNameMatches = folderName.toLowerCase().includes(queryClean);
                   if (folderNameMatches) return true;
                   return (
-                    s.title.toLowerCase().includes(queryClean) ||
+                    (s.title || s.name || '').toLowerCase().includes(queryClean) ||
                     (s.category && s.category.toLowerCase().includes(queryClean))
                   );
                 });
@@ -1150,7 +2027,7 @@ export default function App() {
                     onDrop={() => handleDropSkillToFolder(folderName)}
                     style={{
                       flex: '0 0 290px',
-                      background: isDragOverThis ? '#1e293b' : 'var(--theme-modal-bg, #0e1626)',
+                      background: isDragOverThis ? 'rgba(255, 255, 255, 0.08)' : 'var(--theme-modal-bg, #0e1626)',
                       border: isDragOverThis ? '2px dashed var(--theme-accent, #38bdf8)' : '1px solid var(--theme-border, #334155)',
                       borderRadius: '12px',
                       padding: '1rem',
@@ -1160,7 +2037,7 @@ export default function App() {
                       boxShadow: isDragOverThis ? '0 0 15px rgba(56, 189, 248, 0.3)' : 'none'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', borderBottom: '1px solid #334155', paddingBottom: '0.6rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', borderBottom: '1px solid var(--theme-border, #334155)', paddingBottom: '0.6rem' }}>
                       <strong style={{ fontSize: '1rem', color: '#f8fafc' }}>
                         {folderName} {folderName === 'Geral' ? '(Padrão)' : ''}
                       </strong>
@@ -1195,7 +2072,7 @@ export default function App() {
                         width: '100%',
                         padding: '0.4rem 0.6rem',
                         marginBottom: '0.6rem',
-                        background: 'rgba(56, 189, 248, 0.12)',
+                        background: 'rgba(255, 255, 255, 0.05)',
                         border: '1px dashed var(--theme-accent, #38bdf8)',
                         borderRadius: '6px',
                         color: 'var(--theme-accent, #38bdf8)',
@@ -1271,7 +2148,7 @@ export default function App() {
                             >
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span className="skill-name" style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>
-                                  ⠿ {sk.title}
+                                  ⠿ {sk.title || sk.name}
                                 </span>
                                 <span className="level-text" style={{ fontSize: '0.75rem' }}>
                                   Lvl {sk.level}/{sk.maxLevel}
@@ -1284,7 +2161,7 @@ export default function App() {
                                 </div>
                               </div>
 
-                              <div style={{ fontSize: '0.75rem', opacity: 0.85, color: '#38bdf8', wordBreak: 'break-word' }}>
+                              <div style={{ fontSize: '0.75rem', opacity: 0.85, color: 'var(--theme-accent, #38bdf8)', wordBreak: 'break-word' }}>
                                 Cat: {sk.category || 'Geral'}
                               </div>
                             </div>
@@ -1377,8 +2254,8 @@ export default function App() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ padding: '0.6rem 0.8rem', fontSize: '0.8rem', fontWeight: 'bold', color: '#38bdf8', borderBottom: '1px solid var(--theme-border, #334155)' }}>
-              Mover "{folderCardContextMenu.skill.title}" para:
+            <div style={{ padding: '0.6rem 0.8rem', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--theme-accent, #38bdf8)', borderBottom: '1px solid var(--theme-border, #334155)' }}>
+              Mover "{folderCardContextMenu.skill.title || folderCardContextMenu.skill.name}" para:
             </div>
             <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
               {sortedAvailableFolders.map((fName) => {
@@ -1544,7 +2421,7 @@ export default function App() {
                   <div key={item.id} className="profile-transfer-inline-box" style={{ margin: '0.6rem 0' }}>
                     <div className="transfer-header-row">
                       <span className="transfer-title">
-                        ✉️ Transferência enviada por <strong>"{item.sourceName}"</strong>
+                        ✉ Transferência enviada por <strong>"{item.sourceName}"</strong>
                       </span>
                     </div>
 
@@ -1601,7 +2478,7 @@ export default function App() {
         <div className="modal-backdrop" onClick={() => { playSound('click'); setDeletingProfileId(null); setTransferSourceId(null); setIsProfileModalOpen(false); }}>
           <div className="modal-window" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header-row">
-              <h3>👤 Troca e Gerenciamento de Perfis</h3>
+              <h3>👤 Troca e Gerenciamento de Perfis (P)</h3>
               <button className="close-popup-btn" onClick={() => { playSound('click'); setDeletingProfileId(null); setTransferSourceId(null); setIsProfileModalOpen(false); }}>×</button>
             </div>
 
@@ -1738,7 +2615,7 @@ export default function App() {
                                   setTransferStep('confirm_all');
                                 }}
                               >
-                                🛠️ Habilidades + XP
+                                🛠 Habilidades + XP
                               </button>
                               <button
                                 type="button"
@@ -1942,14 +2819,21 @@ export default function App() {
                   className="backup-btn commands-btn"
                   onClick={() => { playSound('click'); setIsBoxColorModalOpen(true); }}
                 >
-                  🎨 Cor da Caixa
+                   Cor da Caixa
+                </button>
+
+                <button
+                  className="backup-btn commands-btn"
+                  onClick={() => { playSound('click'); setIsSkillSettingsModalOpen(true); }}
+                >
+                   Habilidades
                 </button>
 
                 <button
                   className="backup-btn commands-btn"
                   onClick={() => { playSound('click'); setIsCommandsModalOpen(true); }}
                 >
-                  ⌨ Comandos do Sistema
+                   Comandos do Sistema
                 </button>
 
                 <button className="backup-btn export-btn" onClick={handleExportData}>
@@ -1990,7 +2874,7 @@ export default function App() {
         <div className="modal-backdrop high-z-backdrop" onClick={() => { playSound('click'); setIsBoxColorModalOpen(false); }}>
           <div className="modal-window high-z-window" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header-row">
-              <h3>🎨 Cor da Caixa das Habilidades</h3>
+              <h3>Cor da Caixa das Habilidades</h3>
               <button className="close-popup-btn" onClick={() => { playSound('click'); setIsBoxColorModalOpen(false); }}>×</button>
             </div>
 
@@ -2016,7 +2900,7 @@ export default function App() {
                 onClick={() => { playSound('click'); setBoxColorType('theme'); }}
               >
                 <strong style={{ fontSize: '1rem', color: activeThemePreset.color }}>● Cor do Tema ({activeThemePreset.name})</strong>
-                <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>Aplicar a tonalidade harmonizada com o Tema Visual atual do perfil.</span>
+                <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>Aplicar a tonalidade com o Tema Visual atual do perfil.</span>
               </button>
             </div>
 
@@ -2029,67 +2913,102 @@ export default function App() {
         </div>
       )}
 
+      {isSkillSettingsModalOpen && (
+        <div className="modal-backdrop high-z-backdrop" onClick={() => { playSound('click'); setIsSkillSettingsModalOpen(false); }}>
+          <div className="modal-window high-z-window" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-row">
+              <h3> Configurações de Habilidades</h3>
+              <button className="close-popup-btn" onClick={() => { playSound('click'); setIsSkillSettingsModalOpen(false); }}>×</button>
+            </div>
+
+            <p className="settings-description">
+              Ajuste as regras de exibição e agrupamento das suas habilidades:
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', margin: '1rem 0' }}>
+              <button
+                type="button"
+                className={`deck-status-btn ${linkSkillsByCategory ? 'active' : ''}`}
+                style={{ padding: '0.85rem 1rem', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}
+                onClick={() => { playSound('click'); setLinkSkillsByCategory(!linkSkillsByCategory); }}
+              >
+                <strong style={{ fontSize: '1rem', color: linkSkillsByCategory ? '#34d399' : '#f8fafc' }}>
+                  ● Interligação por Categoria: {linkSkillsByCategory ? 'Ativada' : 'Desativada'}
+                </strong>
+                <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>
+                  {linkSkillsByCategory
+                    ? 'Habilidades da mesma categoria interligadas'
+                    : 'As habilidades seguem estritamente a ordem manual, sem obrigatoriedade de interligação.'}
+                </span>
+              </button>
+            </div>
+
+            <div className="modal-actions-bar">
+              <button className="confirm-button" onClick={() => { playSound('click'); setIsSkillSettingsModalOpen(false); }}>
+                Concluído
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isCommandsModalOpen && (
         <div className="modal-backdrop high-z-backdrop" onClick={() => { playSound('click'); setIsCommandsModalOpen(false); }}>
           <div className="modal-window commands-modal-window high-z-window" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header-row">
-              <h3>⌨ Comandos e Atalhos do Sistema</h3>
+              <h3> Comandos e Atalhos do Sistema</h3>
               <button className="close-popup-btn" onClick={() => { playSound('click'); setIsCommandsModalOpen(false); }}>×</button>
             </div>
 
             <div className="commands-list-container">
               <div className="command-item">
-                <div className="command-keys">
-                  <kbd>Ctrl</kbd> + <kbd>Z</kbd>
-                </div>
-                <div className="command-desc">
-                  <strong>Desfazer Ação:</strong> Reverte a última modificação realizada.
-                </div>
+                <div className="command-keys"><kbd>Esc</kbd></div>
+                <div className="command-desc"><strong>Fechar / Configurações:</strong> Fecha janelas abertas ou abre as configurações na tela inicial.</div>
               </div>
 
               <div className="command-item">
-                <div className="command-keys">
-                  <kbd>Ctrl</kbd> + <kbd>Y</kbd>
-                </div>
-                <div className="command-desc">
-                  <strong>Refazer Ação:</strong> Refaz a última ação que foi desfeita.
-                </div>
+                <div className="command-keys"><kbd>Espaço</kbd></div>
+                <div className="command-desc"><strong>Buscar Habilidade:</strong> Abre a janela de busca para pesquisar qualquer habilidade.</div>
               </div>
 
               <div className="command-item">
-                <div className="command-keys">
-                  <span className="mouse-badge">Botão Direito / Long-Press</span>
-                </div>
-                <div className="command-desc">
-                  <strong>Menu de Contexto:</strong> Clique com o botão direito (ou pressione e segure no celular) sobre qualquer card para abrir opções.
-                </div>
+                <div className="command-keys"><kbd>Ctrl</kbd> + <kbd>Espaço</kbd></div>
+                <div className="command-desc"><strong>Criar Habilidade:</strong> Abre a janela para criar uma nova habilidade.</div>
               </div>
 
               <div className="command-item">
-                <div className="command-keys">
-                  <span className="mouse-badge">Segurar Clique</span>
-                </div>
-                <div className="command-desc">
-                  <strong>Ajuste Contínuo:</strong> Mantenha pressionados os botões <kbd>+</kbd> ou <kbd>−</kbd> para alterar o nível rapidamente.
-                </div>
+                <div className="command-keys"><kbd>C</kbd></div>
+                <div className="command-desc"><strong>Tema Visual:</strong> Abre a personalização de cores e tema do perfil.</div>
               </div>
 
               <div className="command-item">
-                <div className="command-keys">
-                  <kbd>Clique no Nome</kbd>
-                </div>
-                <div className="command-desc">
-                  <strong>Editar Nickname:</strong> Clique sobre o nome do seu personagem no painel esquerdo.
-                </div>
+                <div className="command-keys"><kbd>P</kbd></div>
+                <div className="command-desc"><strong>Gerenciar Perfis:</strong> Abre o painel de seleção e troca de perfis.</div>
               </div>
 
               <div className="command-item">
-                <div className="command-keys">
-                  <kbd>Clique no Avatar</kbd>
-                </div>
-                <div className="command-desc">
-                  <strong>Mudar Emoji:</strong> Abre o painel visual com todos os emojis para seleção rápida.
-                </div>
+                <div className="command-keys"><kbd>G</kbd></div>
+                <div className="command-desc"><strong>Gerenciador de Pastas:</strong> Abre a organização e filtro de pastas.</div>
+              </div>
+
+              <div className="command-item">
+                <div className="command-keys"><kbd>O</kbd></div>
+                <div className="command-desc"><strong>Habilidades & Ocultas:</strong> Abre o painel de gerenciamento de visibilidade.</div>
+              </div>
+
+              <div className="command-item">
+                <div className="command-keys"><kbd>A</kbd></div>
+                <div className="command-desc"><strong>Avatar Emoji:</strong> Abre o seletor de emojis para o perfil.</div>
+              </div>
+
+              <div className="command-item">
+                <div className="command-keys"><kbd>M</kbd></div>
+                <div className="command-desc"><strong>Missões Diárias:</strong> Abre o painel de missões e resgate de diamantes.</div>
+              </div>
+
+              <div className="command-item">
+                <div className="command-keys"><kbd>E</kbd></div>
+                <div className="command-desc"><strong>Editor de Layout:</strong> Abre o reordenador de habilidades.</div>
               </div>
             </div>
 
@@ -2154,6 +3073,7 @@ export default function App() {
         </div>
       )}
 
+      {/* MENU CONTEXTUAL DE HABILIDADE (CLIQUE DIREITO) */}
       {contextMenu && (
         <>
           <div
@@ -2223,6 +3143,17 @@ export default function App() {
                 </button>
                 <button
                   type="button"
+                  className="context-menu-item"
+                  onClick={() => {
+                    playSound('click');
+                    toggleHideSkill(contextMenu.skill.id);
+                    setContextMenu(null);
+                  }}
+                >
+                  Ocultar Habilidade
+                </button>
+                <button
+                  type="button"
                   className="context-menu-item delete-item"
                   onClick={() => {
                     playSound('click');
@@ -2237,6 +3168,7 @@ export default function App() {
         </>
       )}
 
+      {/* EDITOR DE LAYOUT E REORDENAÇÃO (COM DRAG & DROP E SELEÇÃO MÚLTIPLA POR CLIQUE) */}
       {isLayoutEditorOpen && (
         <div className="modal-backdrop" onClick={() => { playSound('click'); setIsLayoutEditorOpen(false); }}>
           <div className="modal-window layout-editor-modal-large" onClick={(e) => e.stopPropagation()}>
@@ -2247,7 +3179,7 @@ export default function App() {
 
             <div className="editor-toolbar-row">
               <p className="settings-description" style={{ margin: 0 }}>
-                Use as setas para mover as habilidades ou use o seletor para exclusão em massa.
+                Arraste qualquer habilidade com o botão esquerdo para reordenar. Ative o seletor (<strong>`☑` / `☐`</strong>) para selecionar clicando em qualquer lugar da carta.
               </p>
               <button
                 type="button"
@@ -2329,70 +3261,136 @@ export default function App() {
                     (nextSkill.category || 'Geral').trim().toLowerCase();
 
                 const isCheckedBatch = selectedBatchIds.includes(skill.id);
+                const isBeingDragged = draggedLayoutIdx === idx;
+                const isDragTarget = dragOverLayoutIdx === idx && !isBeingDragged;
+
+                const toggleBatchSelection = () => {
+                  playSound('click');
+                  if (isCheckedBatch) {
+                    setSelectedBatchIds(selectedBatchIds.filter((id) => id !== skill.id));
+                  } else {
+                    setSelectedBatchIds([...selectedBatchIds, skill.id]);
+                  }
+                };
 
                 return (
                   <div
                     key={skill.id}
                     className={`skill-card-wrapper ${isSameCategoryWithNext ? 'has-next-same-cat' : ''}`}
+                    draggable={!isBatchSelectMode}
+                    onDragStart={(e) => {
+                      setDraggedLayoutIdx(idx);
+                      e.dataTransfer.effectAllowed = 'move';
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragOverLayoutIdx(idx);
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverLayoutIdx === idx) setDragOverLayoutIdx(null);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedLayoutIdx !== null && draggedLayoutIdx !== idx) {
+                        const fromReal = getRealIndex(draggedLayoutIdx);
+                        const toReal = getRealIndex(idx);
+                        playSound('train');
+                        reorderSkills(fromReal, toReal);
+                      }
+                      setDraggedLayoutIdx(null);
+                      setDragOverLayoutIdx(null);
+                    }}
+                    onDragEnd={() => {
+                      setDraggedLayoutIdx(null);
+                      setDragOverLayoutIdx(null);
+                    }}
                   >
                     <div
                       className={`skill-card compact-editor-card ${isMax ? 'gold-maxed' : ''}`}
-                      style={getCardStyle(isMax, skillColor)}
+                      onClick={() => {
+                        if (isBatchSelectMode) {
+                          toggleBatchSelection();
+                        }
+                      }}
+                      style={{
+                        ...getCardStyle(isMax, skillColor),
+                        cursor: isBatchSelectMode ? 'pointer' : 'grab',
+                        opacity: isBeingDragged ? 0.4 : 1,
+                        borderStyle: isDragTarget ? 'dashed' : 'solid',
+                        borderWidth: isCheckedBatch || isDragTarget ? '2px' : '1px',
+                        borderColor: isCheckedBatch
+                          ? '#f87171'
+                          : isDragTarget
+                          ? 'var(--theme-accent, #38bdf8)'
+                          : undefined,
+                        boxShadow: isCheckedBatch
+                          ? '0 0 14px rgba(248, 113, 113, 0.5)'
+                          : isDragTarget
+                          ? '0 0 15px rgba(56, 189, 248, 0.4)'
+                          : undefined,
+                        backgroundColor: isCheckedBatch ? 'rgba(127, 29, 29, 0.25)' : undefined
+                      }}
                     >
-                      <div className="reorder-button-group">
-                        <button
-                          type="button"
-                          className="reorder-btn edge-btn"
-                          disabled={idx === 0}
-                          onClick={() => { playSound('click'); reorderSkills(currentRealIdx, getRealIndex(0)); }}
-                          title="Mover para o topo"
-                        >
-                          ▲▲
-                        </button>
-                        <button
-                          type="button"
-                          className="reorder-btn"
-                          disabled={idx === 0}
-                          onClick={() => { playSound('click'); reorderSkills(currentRealIdx, getRealIndex(idx - 1)); }}
-                          title="Mover para cima"
-                        >
-                          ▲
-                        </button>
-                        <button
-                          type="button"
-                          className="reorder-btn"
-                          disabled={idx === visibleSkills.length - 1}
-                          onClick={() => { playSound('click'); reorderSkills(currentRealIdx, getRealIndex(idx + 1)); }}
-                          title="Mover para baixo"
-                        >
-                          ▼
-                        </button>
-                        <button
-                          type="button"
-                          className="reorder-btn edge-btn"
-                          disabled={idx === visibleSkills.length - 1}
-                          onClick={() => { playSound('click'); reorderSkills(currentRealIdx, getRealIndex(visibleSkills.length - 1)); }}
-                          title="Mover para o fim"
-                        >
-                          ▼▼
-                        </button>
-                      </div>
+                      {!isBatchSelectMode && (
+                        <div className="reorder-button-group" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            className="reorder-btn edge-btn"
+                            disabled={idx === 0}
+                            onClick={() => { playSound('click'); reorderSkills(currentRealIdx, getRealIndex(0)); }}
+                            title="Mover para o topo"
+                          >
+                            ▲▲
+                          </button>
+                          <button
+                            type="button"
+                            className="reorder-btn"
+                            disabled={idx === 0}
+                            onClick={() => { playSound('click'); reorderSkills(currentRealIdx, getRealIndex(idx - 1)); }}
+                            title="Mover para cima"
+                          >
+                            ▲
+                          </button>
+                          <button
+                            type="button"
+                            className="reorder-btn"
+                            disabled={idx === visibleSkills.length - 1}
+                            onClick={() => { playSound('click'); reorderSkills(currentRealIdx, getRealIndex(idx + 1)); }}
+                            title="Mover para baixo"
+                          >
+                            ▼
+                          </button>
+                          <button
+                            type="button"
+                            className="reorder-btn edge-btn"
+                            disabled={idx === visibleSkills.length - 1}
+                            onClick={() => { playSound('click'); reorderSkills(currentRealIdx, getRealIndex(visibleSkills.length - 1)); }}
+                            title="Mover para o fim"
+                          >
+                            ▼▼
+                          </button>
+                        </div>
+                      )}
 
-                      <button
-                        type="button"
-                        className="gear-button"
-                        onClick={() => {
-                          playSound('click');
-                          setEditingSkill({ ...skill });
-                          setIsCustomMaxLevelInput(false);
-                        }}
-                        title="Configurar Habilidade"
-                      >
-                        ⚙
-                      </button>
+                      {!isBatchSelectMode && (
+                        <button
+                          type="button"
+                          className="mini-missions-envelope-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            playSound('click');
+                            setEditingSkill(skill);
+                            setMiniMissionsModalTab('list');
+                            setIsMiniMissionsModalOpen(true);
+                          }}
+                          title="Gerenciar Mini Missões"
+                        >
+                          ✉️
+                        </button>
+                      )}
 
                       <div className="skill-details">
-                        <div className="skill-name">{skill.title}</div>
+                        <div className="skill-name">{skill.title || skill.name}</div>
                         <div className="skill-category">{skill.category}</div>
                       </div>
 
@@ -2407,20 +3405,13 @@ export default function App() {
 
                       <div className="level-text">Lvl {skill.level}</div>
 
-                      <div className="editor-card-controls">
+                      <div className="editor-card-controls" onClick={(e) => e.stopPropagation()}>
                         {isBatchSelectMode ? (
                           <input
                             type="checkbox"
                             className="card-batch-checkbox"
                             checked={isCheckedBatch}
-                            onChange={() => {
-                              playSound('click');
-                              if (isCheckedBatch) {
-                                setSelectedBatchIds(selectedBatchIds.filter((id) => id !== skill.id));
-                              } else {
-                                setSelectedBatchIds([...selectedBatchIds, skill.id]);
-                              }
-                            }}
+                            onChange={toggleBatchSelection}
                           />
                         ) : (
                           <button
@@ -2487,7 +3478,7 @@ export default function App() {
                           style={getCardStyle(isMax, skillColor)}
                         >
                           <div className="skill-details">
-                            <div className="skill-name">{skill.title}</div>
+                            <div className="skill-name">{skill.title || skill.name}</div>
                             <div className="skill-category">{skill.category}</div>
                           </div>
 
@@ -2552,7 +3543,7 @@ export default function App() {
                           style={getCardStyle(isMax, skillColor)}
                         >
                           <div className="skill-details">
-                            <div className="skill-name">{skill.title}</div>
+                            <div className="skill-name">{skill.title || skill.name}</div>
                             <div className="skill-category">{skill.category}</div>
                           </div>
 
@@ -2863,8 +3854,8 @@ export default function App() {
                     width: '100%',
                     padding: '0.55rem 0.8rem',
                     borderRadius: '6px',
-                    background: '#0f172a',
-                    border: '1px solid #334155',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid var(--theme-border, #334155)',
                     color: '#fff',
                     fontSize: '0.9rem',
                     cursor: 'pointer'
@@ -2973,11 +3964,12 @@ export default function App() {
         </div>
       )}
 
+      {/* MODAL DE EDIÇÃO DE HABILIDADE */}
       {editingSkill && (
         <div className="modal-backdrop" onClick={() => handleSaveEdit()}>
           <form className="modal-window full-screen-edit" onSubmit={handleSaveEdit} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header-row">
-              <h2>Editar Habilidade: {editingSkill.title}</h2>
+              <h2>Editar Habilidade: {editingSkill.title || editingSkill.name}</h2>
               <div className="header-action-row-right">
                 <button
                   type="button"
@@ -3009,12 +4001,25 @@ export default function App() {
                 <label>Nome da Habilidade</label>
                 <input
                   type="text"
-                  value={editingSkill.title}
+                  value={editingSkill.title || editingSkill.name || ''}
                   onChange={(e) =>
-                    setEditingSkill({ ...editingSkill, title: e.target.value })
+                    setEditingSkill({ ...editingSkill, title: e.target.value, name: e.target.value })
                   }
                   required
                 />
+                <button
+                  type="button"
+                  className="mini-missions-envelope-btn"
+                  style={{ marginTop: '0.4rem', width: 'fit-content', padding: '0.35rem 0.7rem', fontSize: '1.1rem', cursor: 'pointer' }}
+                  onClick={() => {
+                    playSound('click');
+                    setMiniMissionsModalTab('list');
+                    setIsMiniMissionsModalOpen(true);
+                  }}
+                  title="Gerenciar Mini Missões"
+                >
+                  ✉
+                </button>
               </div>
 
               <div className="field-group flex-2">
@@ -3043,7 +4048,7 @@ export default function App() {
                   onChange={(e) =>
                     setEditingSkill({ ...editingSkill, folder: e.target.value })
                   }
-                  style={{ padding: '0.45rem', borderRadius: '6px', background: '#0f172a', color: '#fff', border: '1px solid #334155' }}
+                  style={{ padding: '0.45rem', borderRadius: '6px', background: 'rgba(0, 0, 0, 0.3)', color: '#fff', border: '1px solid var(--theme-border, #334155)' }}
                 >
                   {sortedAvailableFolders.map((f) => (
                     <option key={f} value={f}>{f}</option>

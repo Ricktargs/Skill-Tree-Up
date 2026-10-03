@@ -68,9 +68,42 @@ export const calculateTotalXpFromSkills = (skillsList) => {
     if (currentLvl >= maxLvl) {
       return acc + ((maxLvl - 1) * 10 + 50);
     } else {
-      return acc + (currentLvl * 10);
+      return acc + currentLvl * 10;
     }
   }, 0);
+};
+
+export const generateDailyMissionsFromSkills = (skillsList) => {
+  if (!Array.isArray(skillsList)) return [];
+
+  const pool = [];
+  skillsList.forEach((skill) => {
+    if (Array.isArray(skill.miniMissions)) {
+      skill.miniMissions.forEach((text) => {
+        if (text && text.trim()) {
+          pool.push({
+            skillId: skill.id,
+            skillName: skill.title || skill.name,
+            text: text.trim()
+          });
+        }
+      });
+    }
+  });
+
+  if (pool.length === 0) return [];
+
+  const shuffled = [...pool].sort(() => 0.5 - Math.random());
+  const selected = shuffled.slice(0, 5);
+
+  return selected.map((m, idx) => ({
+    id: `dm_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`,
+    skillId: m.skillId,
+    skillName: m.skillName,
+    text: m.text,
+    rewardDiamonds: Math.random() < 0.5 ? 1 : 2,
+    completed: false
+  }));
 };
 
 const DEFAULT_PROFILE_DATA = {
@@ -78,6 +111,7 @@ const DEFAULT_PROFILE_DATA = {
   avatar: '🛡️',
   currentTheme: 'cyberpunk',
   boxColorType: 'default',
+  linkSkillsByCategory: true,
   extraXp: 0,
   xpHistory: [],
   folders: ['Geral', 'Trabalho', 'Estudos'],
@@ -91,9 +125,16 @@ const DEFAULT_PROFILE_DATA = {
       maxLevel: 10,
       color: '#3b82f6',
       levelDescriptions: { 1: 'Aprender JSX e Props' },
-      levelTasks: { 1: [{ id: 't1', text: 'Criar primeiro app', done: false }] }
+      levelTasks: { 1: [{ id: 't1', text: 'Criar primeiro app', done: false }] },
+      miniMissions: ['Praticar React por 20 minutos', 'Revisar componentes']
     }
   ],
+  diamonds: 5,
+  dailyMissions: [],
+  lastMissionsDate: '',
+  dailyBonusClaimed: false,
+  dailyRefreshesCount: 0,
+  lastRefreshesDate: '',
   customColorDeck: [],
   activeDeckId: 'deck_neon',
   hiddenSkillIds: [],
@@ -104,7 +145,9 @@ export function useGameData() {
   const [profiles, setProfiles] = useState(() => {
     const saved = localStorage.getItem('rpg_profiles_list');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
     }
     return [{ id: 'profile_default', name: 'Herói Principal', avatar: '🛡️' }];
   });
@@ -125,10 +168,17 @@ export function useGameData() {
           avatar: parsed.avatar || '🛡️',
           currentTheme: parsed.currentTheme || 'cyberpunk',
           boxColorType: parsed.boxColorType || 'default',
+          linkSkillsByCategory: parsed.linkSkillsByCategory !== undefined ? !!parsed.linkSkillsByCategory : true,
           extraXp: Number(parsed.extraXp) || 0,
           xpHistory: parsed.xpHistory || [],
           folders: Array.isArray(parsed.folders) ? parsed.folders : ['Geral'],
           skills: parsed.skills || [],
+          diamonds: Number(parsed.diamonds) || 0,
+          dailyMissions: parsed.dailyMissions || [],
+          lastMissionsDate: parsed.lastMissionsDate || '',
+          dailyBonusClaimed: !!parsed.dailyBonusClaimed,
+          dailyRefreshesCount: Number(parsed.dailyRefreshesCount) || 0,
+          lastRefreshesDate: parsed.lastRefreshesDate || '',
           customColorDeck: parsed.customColorDeck || [],
           activeDeckId: parsed.activeDeckId || 'deck_neon',
           hiddenSkillIds: parsed.hiddenSkillIds || [],
@@ -145,10 +195,17 @@ export function useGameData() {
   const [avatar, setAvatar] = useState(initialData.avatar);
   const [currentTheme, setCurrentTheme] = useState(initialData.currentTheme);
   const [boxColorType, setBoxColorType] = useState(initialData.boxColorType);
+  const [linkSkillsByCategory, setLinkSkillsByCategory] = useState(initialData.linkSkillsByCategory);
   const [extraXp, setExtraXp] = useState(initialData.extraXp);
   const [xpHistory, setXpHistory] = useState(initialData.xpHistory);
   const [folders, setFolders] = useState(initialData.folders);
   const [skills, setSkills] = useState(initialData.skills);
+  const [diamonds, setDiamonds] = useState(initialData.diamonds);
+  const [dailyMissions, setDailyMissions] = useState(initialData.dailyMissions);
+  const [lastMissionsDate, setLastMissionsDate] = useState(initialData.lastMissionsDate);
+  const [dailyBonusClaimed, setDailyBonusClaimed] = useState(initialData.dailyBonusClaimed);
+  const [dailyRefreshesCount, setDailyRefreshesCount] = useState(initialData.dailyRefreshesCount);
+  const [lastRefreshesDate, setLastRefreshesDate] = useState(initialData.lastRefreshesDate);
   const [customColorDeck, setCustomColorDeck] = useState(initialData.customColorDeck);
   const [activeDeckId, setActiveDeckId] = useState(initialData.activeDeckId);
   const [hiddenSkillIds, setHiddenSkillIds] = useState(initialData.hiddenSkillIds);
@@ -156,6 +213,20 @@ export function useGameData() {
 
   const [history, setHistory] = useState([]);
   const [future, setFuture] = useState([]);
+
+  useEffect(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (lastMissionsDate !== todayStr || dailyMissions.length === 0) {
+      const freshMissions = generateDailyMissionsFromSkills(skills);
+      if (freshMissions.length > 0) {
+        setDailyMissions(freshMissions);
+        setLastMissionsDate(todayStr);
+        setDailyBonusClaimed(false);
+        setDailyRefreshesCount(0);
+        setLastRefreshesDate(todayStr);
+      }
+    }
+  }, [skills, lastMissionsDate, dailyMissions.length]);
 
   useEffect(() => {
     localStorage.setItem('rpg_profiles_list', JSON.stringify(profiles));
@@ -179,17 +250,45 @@ export function useGameData() {
       avatar,
       currentTheme,
       boxColorType,
+      linkSkillsByCategory,
       extraXp,
       xpHistory,
       folders,
       skills,
+      diamonds,
+      dailyMissions,
+      lastMissionsDate,
+      dailyBonusClaimed,
+      dailyRefreshesCount,
+      lastRefreshesDate,
       customColorDeck,
       activeDeckId,
       hiddenSkillIds,
       pendingTransfers
     };
     localStorage.setItem(getProfileStorageKey(activeProfileId), JSON.stringify(dataToSave));
-  }, [activeProfileId, nickname, avatar, currentTheme, boxColorType, extraXp, xpHistory, folders, skills, customColorDeck, activeDeckId, hiddenSkillIds, pendingTransfers]);
+  }, [
+    activeProfileId,
+    nickname,
+    avatar,
+    currentTheme,
+    boxColorType,
+    linkSkillsByCategory,
+    extraXp,
+    xpHistory,
+    folders,
+    skills,
+    diamonds,
+    dailyMissions,
+    lastMissionsDate,
+    dailyBonusClaimed,
+    dailyRefreshesCount,
+    lastRefreshesDate,
+    customColorDeck,
+    activeDeckId,
+    hiddenSkillIds,
+    pendingTransfers
+  ]);
 
   const recordState = (newSkills, newHidden) => {
     setHistory((prev) => [
@@ -204,6 +303,83 @@ export function useGameData() {
     if (newHidden) setHiddenSkillIds(newHidden);
   };
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const currentRefreshesUsedToday = lastRefreshesDate === todayStr ? dailyRefreshesCount : 0;
+  const dailyRefreshesLeft = Math.max(0, 2 - currentRefreshesUsedToday);
+
+  const refreshDailyMissions = () => {
+    const currentTodayStr = new Date().toISOString().slice(0, 10);
+    let usedCount = lastRefreshesDate === currentTodayStr ? dailyRefreshesCount : 0;
+
+    if (usedCount >= 2) {
+      return { success: false, reason: 'limit_reached' };
+    }
+
+    const completedMissions = (dailyMissions || []).filter((m) => m.completed);
+    const completedKeys = new Set(completedMissions.map((m) => `${m.skillId}_${m.text}`));
+
+    const availablePool = [];
+    skills.forEach((skill) => {
+      if (Array.isArray(skill.miniMissions)) {
+        skill.miniMissions.forEach((text) => {
+          if (text && text.trim()) {
+            const key = `${skill.id}_${text.trim()}`;
+            if (!completedKeys.has(key)) {
+              availablePool.push({
+                skillId: skill.id,
+                skillName: skill.title || skill.name,
+                text: text.trim()
+              });
+            }
+          }
+        });
+      }
+    });
+
+    const slotsNeeded = Math.max(0, 5 - completedMissions.length);
+
+    if (availablePool.length === 0 && slotsNeeded > 0) {
+      return { success: false, reason: 'no_uncompleted_available' };
+    }
+
+    const shuffled = [...availablePool].sort(() => 0.5 - Math.random());
+    const newDrawnMissions = shuffled.slice(0, slotsNeeded).map((m, idx) => ({
+      id: `dm_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`,
+      skillId: m.skillId,
+      skillName: m.skillName,
+      text: m.text,
+      rewardDiamonds: Math.random() < 0.5 ? 1 : 2,
+      completed: false
+    }));
+
+    const updatedMissions = [...completedMissions, ...newDrawnMissions];
+    const newUsedCount = usedCount + 1;
+
+    setDailyMissions(updatedMissions);
+    setDailyRefreshesCount(newUsedCount);
+    setLastRefreshesDate(currentTodayStr);
+    setLastMissionsDate(currentTodayStr);
+
+    return { success: true, remaining: 2 - newUsedCount };
+  };
+
+  const resetDailyMissionsHack = () => {
+    const freshMissions = generateDailyMissionsFromSkills(skills);
+    const currentTodayStr = new Date().toISOString().slice(0, 10);
+    setDailyMissions(freshMissions);
+    setLastMissionsDate(currentTodayStr);
+    setDailyBonusClaimed(false);
+  };
+
+  const addExtraRefreshesHack = (amount = 1) => {
+    setDailyRefreshesCount((prev) => prev - amount);
+  };
+
+  const resetRefreshesCountHack = () => {
+    setDailyRefreshesCount(0);
+    setLastRefreshesDate(new Date().toISOString().slice(0, 10));
+  };
+
   const switchProfile = (targetProfileId) => {
     if (targetProfileId === activeProfileId) return;
     const targetData = loadDataForProfile(targetProfileId);
@@ -212,10 +388,17 @@ export function useGameData() {
     setAvatar(targetData.avatar);
     setCurrentTheme(targetData.currentTheme);
     setBoxColorType(targetData.boxColorType || 'default');
+    setLinkSkillsByCategory(targetData.linkSkillsByCategory !== undefined ? !!targetData.linkSkillsByCategory : true);
     setExtraXp(targetData.extraXp || 0);
     setXpHistory(targetData.xpHistory || []);
     setFolders(targetData.folders || ['Geral']);
     setSkills(targetData.skills);
+    setDiamonds(targetData.diamonds || 0);
+    setDailyMissions(targetData.dailyMissions || []);
+    setLastMissionsDate(targetData.lastMissionsDate || '');
+    setDailyBonusClaimed(!!targetData.dailyBonusClaimed);
+    setDailyRefreshesCount(targetData.dailyRefreshesCount || 0);
+    setLastRefreshesDate(targetData.lastRefreshesDate || '');
     setCustomColorDeck(targetData.customColorDeck);
     setActiveDeckId(targetData.activeDeckId);
     setHiddenSkillIds(targetData.hiddenSkillIds);
@@ -235,10 +418,17 @@ export function useGameData() {
       avatar: newAvatar,
       currentTheme: 'cyberpunk',
       boxColorType: 'default',
+      linkSkillsByCategory: true,
       extraXp: 0,
       xpHistory: [],
       folders: ['Geral'],
       skills: [],
+      diamonds: 0,
+      dailyMissions: [],
+      lastMissionsDate: '',
+      dailyBonusClaimed: false,
+      dailyRefreshesCount: 0,
+      lastRefreshesDate: '',
       customColorDeck: [],
       activeDeckId: 'deck_neon',
       hiddenSkillIds: [],
@@ -266,8 +456,8 @@ export function useGameData() {
     const sourceData = loadDataForProfile(sourceId);
     const targetData = loadDataForProfile(targetId);
 
-    const srcSkills = sourceId === activeProfileId ? skills : (sourceData.skills || []);
-    const srcExtraXp = sourceId === activeProfileId ? extraXp : (sourceData.extraXp || 0);
+    const srcSkills = sourceId === activeProfileId ? skills : sourceData.skills || [];
+    const srcExtraXp = sourceId === activeProfileId ? extraXp : sourceData.extraXp || 0;
     const srcTotalXp = calculateTotalXpFromSkills(srcSkills) + srcExtraXp;
 
     if (srcTotalXp === 0) return false;
@@ -357,6 +547,63 @@ export function useGameData() {
       s.id === skillId ? { ...s, folder: targetFolderName } : s
     );
     recordState(updated);
+  };
+
+  const completeMission = (missionId) => {
+    setDailyMissions((prev) => {
+      const target = prev.find((m) => m.id === missionId);
+      if (!target || target.completed) return prev;
+
+      const rewardAmount = target.rewardDiamonds || 1;
+      setDiamonds((d) => d + rewardAmount);
+
+      const updated = prev.map((m) =>
+        m.id === missionId ? { ...m, completed: true } : m
+      );
+
+      const allDone = updated.every((m) => m.completed);
+      if (allDone && !dailyBonusClaimed) {
+        setDiamonds((d) => d + 1);
+        setDailyBonusClaimed(true);
+      }
+
+      return updated;
+    });
+  };
+
+  const addMiniMissionToSkill = (skillId, missionText) => {
+    const textTrimmed = missionText.trim();
+    if (!textTrimmed) return;
+
+    const updatedSkills = skills.map((s) => {
+      if (s.id === skillId) {
+        const miniArr = s.miniMissions || [];
+        return { ...s, miniMissions: [...miniArr, textTrimmed] };
+      }
+      return s;
+    });
+    recordState(updatedSkills);
+  };
+
+  const deleteMiniMissionFromSkill = (skillId, index) => {
+    let missionTextToRemove = '';
+
+    const updatedSkills = skills.map((s) => {
+      if (s.id === skillId) {
+        const miniArr = s.miniMissions || [];
+        missionTextToRemove = miniArr[index];
+        const filtered = miniArr.filter((_, idx) => idx !== index);
+        return { ...s, miniMissions: filtered };
+      }
+      return s;
+    });
+    recordState(updatedSkills);
+
+    if (missionTextToRemove) {
+      setDailyMissions((prev) =>
+        prev.filter((m) => !(m.skillId === skillId && m.text === missionTextToRemove))
+      );
+    }
   };
 
   const skillsXp = calculateTotalXpFromSkills(skills);
@@ -459,7 +706,8 @@ export function useGameData() {
       maxLevel: Number(maxLevel) || 10,
       color: color || '#3b82f6',
       levelDescriptions: {},
-      levelTasks: {}
+      levelTasks: {},
+      miniMissions: []
     };
     recordState([...skills, newSkill]);
   };
@@ -495,10 +743,17 @@ export function useGameData() {
       avatar,
       currentTheme,
       boxColorType,
+      linkSkillsByCategory,
       extraXp,
       xpHistory,
       folders,
       skills,
+      diamonds,
+      dailyMissions,
+      lastMissionsDate,
+      dailyBonusClaimed,
+      dailyRefreshesCount,
+      lastRefreshesDate,
       customColorDeck,
       activeDeckId,
       hiddenSkillIds,
@@ -535,9 +790,10 @@ export function useGameData() {
           localStorage.setItem(getProfileStorageKey(profId), JSON.stringify(profData));
         });
 
-        const targetActiveId = data.activeProfileId && data.profilesData[data.activeProfileId]
-          ? data.activeProfileId
-          : data.profiles[0].id;
+        const targetActiveId =
+          data.activeProfileId && data.profilesData[data.activeProfileId]
+            ? data.activeProfileId
+            : data.profiles[0].id;
 
         setActiveProfileId(targetActiveId);
         localStorage.setItem('rpg_active_profile_id', targetActiveId);
@@ -547,10 +803,17 @@ export function useGameData() {
         setAvatar(activeData.avatar || '🛡️');
         setCurrentTheme(activeData.currentTheme || 'cyberpunk');
         setBoxColorType(activeData.boxColorType || 'default');
+        setLinkSkillsByCategory(activeData.linkSkillsByCategory !== undefined ? !!activeData.linkSkillsByCategory : true);
         setExtraXp(activeData.extraXp || 0);
         setXpHistory(activeData.xpHistory || []);
         setFolders(activeData.folders || ['Geral']);
         setSkills(activeData.skills || []);
+        setDiamonds(activeData.diamonds || 0);
+        setDailyMissions(activeData.dailyMissions || []);
+        setLastMissionsDate(activeData.lastMissionsDate || '');
+        setDailyBonusClaimed(!!activeData.dailyBonusClaimed);
+        setDailyRefreshesCount(activeData.dailyRefreshesCount || 0);
+        setLastRefreshesDate(activeData.lastRefreshesDate || '');
         setCustomColorDeck(activeData.customColorDeck || []);
         setActiveDeckId(activeData.activeDeckId || 'deck_neon');
         setHiddenSkillIds(activeData.hiddenSkillIds || []);
@@ -567,9 +830,16 @@ export function useGameData() {
         if (data.avatar) setAvatar(data.avatar);
         if (data.currentTheme) setCurrentTheme(data.currentTheme);
         if (data.boxColorType) setBoxColorType(data.boxColorType);
+        if (data.linkSkillsByCategory !== undefined) setLinkSkillsByCategory(!!data.linkSkillsByCategory);
         if (data.extraXp) setExtraXp(data.extraXp);
         if (data.xpHistory) setXpHistory(data.xpHistory);
         if (data.folders) setFolders(data.folders);
+        if (data.diamonds !== undefined) setDiamonds(data.diamonds);
+        if (data.dailyMissions) setDailyMissions(data.dailyMissions);
+        if (data.lastMissionsDate) setLastMissionsDate(data.lastMissionsDate);
+        if (data.dailyBonusClaimed !== undefined) setDailyBonusClaimed(data.dailyBonusClaimed);
+        if (data.dailyRefreshesCount !== undefined) setDailyRefreshesCount(data.dailyRefreshesCount);
+        if (data.lastRefreshesDate) setLastRefreshesDate(data.lastRefreshesDate);
         if (data.customColorDeck) setCustomColorDeck(data.customColorDeck);
         if (data.activeDeckId) setActiveDeckId(data.activeDeckId);
         if (data.hiddenSkillIds) setHiddenSkillIds(data.hiddenSkillIds);
@@ -617,6 +887,7 @@ export function useGameData() {
     deleteProfile,
     getProfileStats,
     skills,
+    setSkills,
     nickname,
     setNickname,
     avatar,
@@ -625,8 +896,12 @@ export function useGameData() {
     setCurrentTheme,
     boxColorType,
     setBoxColorType,
+    linkSkillsByCategory,
+    setLinkSkillsByCategory,
     extraXp,
+    setExtraXp,
     xpHistory,
+    setXpHistory,
     folders,
     addFolder,
     moveSkillToFolder,
@@ -656,6 +931,18 @@ export function useGameData() {
     exportAllData,
     importData,
     undo,
-    redo
+    redo,
+    diamonds,
+    setDiamonds,
+    dailyMissions,
+    dailyBonusClaimed,
+    dailyRefreshesLeft,
+    refreshDailyMissions,
+    resetDailyMissionsHack,
+    addExtraRefreshesHack,
+    resetRefreshesCountHack,
+    completeMission,
+    addMiniMissionToSkill,
+    deleteMiniMissionFromSkill
   };
 }
