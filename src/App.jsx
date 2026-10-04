@@ -502,7 +502,7 @@ export default function App() {
   const handleOpenNewProfileModal = () => {
     playSound('click');
     setNewProfileName('');
-    setNewProfileAvatar('🛡️️');
+    setNewProfileAvatar('🛡');
     setIsNewProfileModalOpen(true);
   };
 
