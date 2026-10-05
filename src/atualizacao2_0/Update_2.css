@@ -1,0 +1,226 @@
+/* JANELA MODAL DO POMODORO */
+.pomodoro-modal-window {
+  width: 460px !important;
+  max-width: 92vw !important;
+  text-align: center;
+}
+
+.pomodoro-modes-row {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.pomodoro-mode-btn {
+  flex: 1;
+  padding: 0.5rem 0.4rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--theme-border, #334155);
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pomodoro-mode-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.pomodoro-mode-btn.active {
+  background: var(--theme-accent, #2563eb);
+  color: #ffffff;
+  border-color: var(--theme-accent, #38bdf8);
+  box-shadow: 0 0 12px var(--theme-accent, rgba(56, 189, 248, 0.3));
+}
+
+.pomodoro-timer-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--theme-border, #334155);
+  border-radius: 16px;
+  padding: 1.5rem 1rem;
+  margin: 1.2rem 0;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.timer-text {
+  font-size: 3.8rem;
+  font-weight: 900;
+  font-family: monospace, system-ui;
+  color: #f8fafc;
+  letter-spacing: 2px;
+  text-shadow: 0 0 15px var(--theme-accent, rgba(56, 189, 248, 0.4));
+}
+
+.timer-text.editable {
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.timer-text.editable:hover {
+  opacity: 0.85;
+  transform: scale(1.03);
+}
+
+.timer-edit-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.timer-edit-input {
+  width: 105px;
+  font-size: 3.5rem;
+  font-weight: 900;
+  font-family: monospace, system-ui;
+  color: #f8fafc;
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--theme-accent, #38bdf8);
+  border-radius: 12px;
+  text-align: center;
+  outline: none;
+  box-shadow: 0 0 12px var(--theme-accent, rgba(56, 189, 248, 0.3));
+}
+
+.timer-edit-input::-webkit-inner-spin-button,
+.timer-edit-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.timer-colon {
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: #f8fafc;
+}
+
+.timer-status-tag {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--theme-accent, #38bdf8);
+  letter-spacing: 1.5px;
+  margin-top: 0.2rem;
+}
+
+.pomodoro-controls-row {
+  display: flex;
+  gap: 0.8rem;
+  justify-content: center;
+}
+
+.pomodoro-action-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-weight: 800;
+  border-radius: 10px;
+}
+
+.pomodoro-action-btn.pause {
+  background: #eab308;
+  color: #000;
+}
+
+/* SELEÇÃO DE SOM */
+.pomodoro-sound-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.8rem;
+  padding: 0.6rem 0.8rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pomodoro-sound-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  color: #cbd5e1;
+}
+
+.pomodoro-select-input {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--theme-border, #334155);
+  border-radius: 6px;
+  color: #f8fafc;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.8rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.sound-test-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #f8fafc;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sound-test-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.pomodoro-pin-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.6rem;
+  padding: 0.6rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pomodoro-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+.pomodoro-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--theme-accent, #2563eb);
+  cursor: pointer;
+}
+
+/* WIDGET EFEITO DE PULSO NO ALARME */
+.pomodoro-floating-widget.ringing {
+  animation: pulseRinging 0.8s infinite alternate;
+}
+
+@keyframes pulseRinging {
+  0% { box-shadow: 0 0 10px rgba(248, 113, 113, 0.4); }
+  100% { box-shadow: 0 0 25px rgba(248, 113, 113, 0.9); }
+}
+
+@media (max-width: 768px) {
+  .timer-text {
+    font-size: 2.8rem;
+  }
+  .timer-edit-input {
+    width: 80px;
+    font-size: 2.5rem;
+  }
+  .timer-colon {
+    font-size: 2.5rem;
+  }
+}

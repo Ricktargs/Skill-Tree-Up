@@ -1,0 +1,91 @@
+.task-modal-window {
+  background-color: #0e1626;
+  border: 1.5px solid #334155;
+  border-radius: 18px;
+  padding: 1.2rem;
+  color: #f8fafc;
+  max-width: 520px;
+  width: 92%;
+  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.task-lists-bar {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.4rem;
+}
+
+.task-list-tab {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #94a3b8;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: grab;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s ease;
+}
+
+.task-list-tab.active {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.task-item-card {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  cursor: grab;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.task-item-card:hover {
+  border-color: #334155;
+}
+
+.task-item-card.dragging {
+  opacity: 0.4;
+}
+
+.task-checkbox-custom {
+  width: 18px;
+  height: 18px;
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+
+.task-text {
+  font-size: 0.88rem;
+  color: #f1f5f9;
+  transition: color 0.2s ease;
+}
+
+.task-text.completed {
+  text-decoration: line-through;
+  color: #64748b;
+}
+
+.task-due-badge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}

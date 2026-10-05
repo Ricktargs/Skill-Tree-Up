@@ -4,6 +4,11 @@ import EmojiPicker from 'emoji-picker-react';
 import confetti from 'canvas-confetti';
 import './App.css';
 
+import { usePomodoro } from './atualizacao2_0/Update_2';
+import { PomodoroModal, PomodoroWidget } from './atualizacao2_0/Update_2.jsx';
+import { useTaskUpdate } from './atualizacao2_0/TaskUpdate.js';
+import { TaskModal } from './atualizacao2_0/TaskUpdate.jsx';
+
 const THEME_PRESETS = [
   { id: 'cyberpunk', name: 'Cyberpunk', bg: 'radial-gradient(circle at 50% 30%, #111827 0%, #080c14 100%)', modalBg: '#0e1626', border: '#1e293b', color: '#38bdf8', boxBg: '#131e32' },
   { id: 'slate', name: 'Cinza Rochoso', bg: 'radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 100%)', modalBg: '#182232', border: '#334155', color: '#94a3b8', boxBg: '#1e293b' },
@@ -107,6 +112,9 @@ const getClampedMenuPos = (clientX, clientY, width = 220, height = 200) => {
 };
 
 export default function App() {
+  const pomodoro = usePomodoro();
+  const taskState = useTaskUpdate();
+
   const {
     profiles,
     activeProfileId,
@@ -955,19 +963,44 @@ export default function App() {
         '--theme-border': activeThemePreset.border
       }}
     >
-      <div className="top-left-nav-buttons" style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-        <button
-          className="top-icon-button"
-          title="Alternar / Gerenciar Perfis (P)"
-          onClick={() => {
-            playSound('click');
-            setDeletingProfileId(null);
-            setTransferSourceId(null);
-            setIsProfileModalOpen(true);
-          }}
-        >
-          👤
-        </button>
+      <div className="top-left-nav-buttons" style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
+        {/* Coluna vertical: Perfil, Pomodoro e Tarefas */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          <button
+            className="top-icon-button"
+            title="Alternar / Gerenciar Perfis (P)"
+            onClick={() => {
+              playSound('click');
+              setDeletingProfileId(null);
+              setTransferSourceId(null);
+              setIsProfileModalOpen(true);
+            }}
+          >
+            👤
+          </button>
+
+          <button
+            className="top-icon-button"
+            title="Pomodoro (R)"
+            onClick={() => {
+              playSound('click');
+              pomodoro.toggleModal();
+            }}
+          >
+            ⏱️
+          </button>
+
+          <button
+            className="top-icon-button"
+            title="Tarefas (T)"
+            onClick={() => {
+              playSound('click');
+              taskState.toggleModal();
+            }}
+          >
+            📋
+          </button>
+        </div>
 
         <button
           className="top-icon-button"
@@ -3168,7 +3201,7 @@ export default function App() {
         </>
       )}
 
-      {/* EDITOR DE LAYOUT E REORDENAÇÃO (COM DRAG & DROP E SELEÇÃO MÚLTIPLA POR CLIQUE) */}
+      {/* EDITOR DE LAYOUT E REORDENAÇÃO */}
       {isLayoutEditorOpen && (
         <div className="modal-backdrop" onClick={() => { playSound('click'); setIsLayoutEditorOpen(false); }}>
           <div className="modal-window layout-editor-modal-large" onClick={(e) => e.stopPropagation()}>
@@ -4341,6 +4374,11 @@ export default function App() {
           </form>
         </div>
       )}
+
+      {/* COMPONENTES DO POMODORO E TAREFAS */}
+      <PomodoroModal pomodoro={pomodoro} playSound={playSound} />
+      <PomodoroWidget pomodoro={pomodoro} playSound={playSound} />
+      <TaskModal taskState={taskState} playSound={playSound} />
     </div>
   );
 }
