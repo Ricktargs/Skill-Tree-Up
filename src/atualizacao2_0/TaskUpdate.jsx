@@ -171,7 +171,7 @@ export function TaskModal({ taskState, playSound }) {
           overflow: 'hidden',
           transition: 'all 0.2s ease'
         }}
-        title={task.isRecurring && isDone ? "Concluído hoje (travado)" : "Clique esquerdo: Concluir/Desmarcar | Clique direito: Editar"}
+        title={task.isRecurring && isDone ? "Concluído hoje (travado)" : "Clique esquerdo: Concluir/Desmarcar | Botão ✏️ ou Clique direito: Editar"}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flex: 1, minWidth: 0 }}>
           <span style={{ color: isDone ? '#38bdf8' : '#64748b', fontSize: '0.85rem' }} title="Arraste para reordenar">⠿</span>
@@ -223,7 +223,7 @@ export function TaskModal({ taskState, playSound }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, marginLeft: '0.4rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0, marginLeft: '0.4rem' }}>
           {task.dueDate && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(255,255,255,0.08)', padding: '0.12rem 0.45rem', borderRadius: '4px', fontSize: '0.72rem' }}>
               {deadlineInfo && (
@@ -236,6 +236,22 @@ export function TaskModal({ taskState, playSound }) {
               </span>
             </div>
           )}
+          
+          {/* BOTÃO DE EDITAR TAREFA */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (playSound) playSound('click');
+              setEditingTask({ ...task, monthOffset: task.monthOffset || 0 });
+            }}
+            style={{ background: 'transparent', border: 'none', color: '#38bdf8', cursor: 'pointer', fontSize: '0.85rem', padding: '0.15rem' }}
+            title="Editar tarefa"
+          >
+            ✏️
+          </button>
+
+          {/* BOTÃO DE EXCLUIR TAREFA */}
           <button
             type="button"
             onClick={(e) => {
@@ -243,7 +259,7 @@ export function TaskModal({ taskState, playSound }) {
               if (playSound) playSound('delete');
               removeTask(task.id);
             }}
-            style={{ background: 'transparent', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '0.9rem', padding: '0.1rem' }}
+            style={{ background: 'transparent', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '0.9rem', padding: '0.15rem' }}
             title="Excluir tarefa"
           >
             ✕
