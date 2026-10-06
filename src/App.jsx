@@ -7,7 +7,7 @@ import './App.css';
 import { usePomodoro } from './atualizacao2_0/Update_2';
 import { PomodoroModal, PomodoroWidget } from './atualizacao2_0/Update_2.jsx';
 import { useTaskUpdate } from './atualizacao2_0/TaskUpdate.js';
-import { TaskModal } from './atualizacao2_0/TaskUpdate.jsx';
+import { TaskModal, TaskAlert, TaskBadge } from './atualizacao2_0/TaskUpdate.jsx';
 
 const THEME_PRESETS = [
   { id: 'cyberpunk', name: 'Cyberpunk', bg: 'radial-gradient(circle at 50% 30%, #111827 0%, #080c14 100%)', modalBg: '#0e1626', border: '#1e293b', color: '#38bdf8', boxBg: '#131e32' },
@@ -997,8 +997,10 @@ export default function App() {
               playSound('click');
               taskState.toggleModal();
             }}
+            style={{ position: 'relative' }}
           >
             📋
+            <TaskBadge taskState={taskState} />
           </button>
         </div>
 
@@ -1015,6 +1017,9 @@ export default function App() {
             </span>
           )}
         </button>
+
+        {/* === ALERTA COLOCADO AQUI, AO LADO DAS MISSÕES === */}
+        <TaskAlert taskState={taskState} />
 
         {pendingTransfers && pendingTransfers.length > 0 && (
           <button

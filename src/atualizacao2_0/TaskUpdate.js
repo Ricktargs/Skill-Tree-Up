@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 const STORAGE_KEY_LISTS = 'task_update_lists_v1';
 const STORAGE_KEY_LANG = 'task_update_lang_v1';
@@ -7,33 +7,14 @@ const DEFAULT_LISTS = [
   {
     id: 'list_default',
     title: 'Geral',
-    tasks: [
-      { 
-        id: 'task_1', 
-        title: 'Estudar React e Hooks', 
-        completed: false, 
-        dueDate: '', 
-        description: 'Rever conceitos de useState e useEffect',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      },
-      { 
-        id: 'task_2', 
-        title: 'Ajustar temporizador do Pomodoro', 
-        completed: true, 
-        dueDate: '', 
-        description: '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-    ]
+    tasks: []
   }
 ];
 
 export function useTaskUpdate() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isAlertDismissed, setIsAlertDismissed] = useState(false);
 
-  // Estado de Idioma (Português como padrão)
   const [language, setLanguage] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_LANG);
@@ -48,13 +29,27 @@ export function useTaskUpdate() {
       const saved = localStorage.getItem(STORAGE_KEY_LISTS);
       if (saved) {
         const parsed = JSON.parse(saved);
+        const todayStr = new Date().toISOString().split('T')[0];
+
         return parsed.map(list => ({
           ...list,
-          tasks: list.tasks.map(t => ({
-            ...t,
-            createdAt: t.createdAt || new Date().toISOString(),
-            updatedAt: t.updatedAt || new Date().toISOString()
-          }))
+          tasks: list.tasks.map(t => {
+            const isNewDay = t.lastCompletedDate && t.lastCompletedDate !== todayStr;
+            return {
+              ...t,
+              createdAt: t.createdAt || new Date().toISOString(),
+              updatedAt: t.updatedAt || new Date().toISOString(),
+              isRecurring: t.isRecurring || false,
+              recurrenceCount: t.recurrenceCount || 1,
+              recurrenceInterval: t.recurrenceInterval || 1,
+              recurrenceType: t.recurrenceType || 'weekly',
+              recurrenceCurrent: isNewDay ? 0 : (t.recurrenceCurrent || 0),
+              completed: isNewDay ? false : (t.completed || false),
+              recurrenceDays: t.recurrenceDays || [],
+              lastCompletedDate: t.lastCompletedDate || null,
+              dueTime: t.dueTime || ''
+            };
+          })
         }));
       }
       return DEFAULT_LISTS;
@@ -65,12 +60,34 @@ export function useTaskUpdate() {
 
   const [activeListId, setActiveListId] = useState(() => taskLists[0]?.id || 'list_default');
 
-  // Histórico de Undo (Ctrl+Z) e Redo (Ctrl+Y / Ctrl+Shift+Z)
   const [past, setPast] = useState([]);
   const [future, setFuture] = useState([]);
 
   const draggedTaskIndex = useRef(null);
   const draggedListIndex = useRef(null);
+
+  const tasksDue = useMemo(() => {
+    let todayCount = 0;
+    let tomorrowCount = 0;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    taskLists.forEach(list => {
+      list.tasks.forEach(task => {
+        if (!task.completed && task.dueDate) {
+          const due = new Date(task.dueDate + 'T00:00:00');
+          const diffTime = due - today;
+          const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+          
+          if (diffDays === 0) todayCount++;
+          else if (diffDays === 1) tomorrowCount++;
+        }
+      });
+    });
+    
+    return { todayCount, tomorrowCount };
+  }, [taskLists]);
 
   useEffect(() => {
     try {
@@ -209,7 +226,7 @@ export function useTaskUpdate() {
     draggedListIndex.current = null;
   };
 
-  const addTask = (title, dueDate = '', description = '') => {
+  const addTask = (title, dueDate = '', dueTime = '', description = '') => {
     if (!title.trim()) return;
     const nowIso = new Date().toISOString();
     const newTask = {
@@ -217,9 +234,17 @@ export function useTaskUpdate() {
       title: title.trim(),
       completed: false,
       dueDate,
+      dueTime,
       description: description.trim(),
       createdAt: nowIso,
-      updatedAt: nowIso
+      updatedAt: nowIso,
+      isRecurring: false,
+      recurrenceCount: 1,
+      recurrenceInterval: 1,
+      recurrenceType: 'weekly',
+      recurrenceCurrent: 0,
+      recurrenceDays: [],
+      lastCompletedDate: null
     };
 
     applyChange((prev) =>
@@ -231,12 +256,60 @@ export function useTaskUpdate() {
 
   const toggleTask = (taskId) => {
     const nowIso = new Date().toISOString();
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayObj = new Date();
+    const currentDayOfWeek = todayObj.getDay();
+    const currentDayOfMonth = todayObj.getDate();
+
     applyChange((prev) =>
       prev.map((list) => {
         if (list.id !== activeListId) return list;
         return {
           ...list,
-          tasks: list.tasks.map((t) => (t.id === taskId ? { ...t, completed: !t.completed, updatedAt: nowIso } : t))
+          tasks: list.tasks.map((t) => {
+            if (t.id === taskId) {
+              if (t.isRecurring) {
+                if (t.completed && t.lastCompletedDate === todayStr) {
+                  return t;
+                }
+
+                if (t.recurrenceDays && t.recurrenceDays.length > 0) {
+                  const isScheduledToday = t.recurrenceType === 'weekly'
+                    ? t.recurrenceDays.includes(currentDayOfWeek)
+                    : t.recurrenceType === 'monthly'
+                    ? t.recurrenceDays.includes(currentDayOfMonth)
+                    : true;
+
+                  if (!isScheduledToday) {
+                    return t;
+                  }
+                }
+
+                const target = t.recurrenceType === 'daily' ? (t.recurrenceCount || 1) : 1;
+                const current = (t.recurrenceCurrent || 0) + 1;
+
+                if (current >= target) {
+                  return { 
+                    ...t, 
+                    completed: true, 
+                    recurrenceCurrent: target, 
+                    lastCompletedDate: todayStr,
+                    updatedAt: nowIso 
+                  };
+                } else {
+                  return { 
+                    ...t, 
+                    recurrenceCurrent: current, 
+                    lastCompletedDate: todayStr,
+                    updatedAt: nowIso 
+                  };
+                }
+              }
+
+              return { ...t, completed: !t.completed, updatedAt: nowIso };
+            }
+            return t;
+          })
         };
       })
     );
@@ -309,6 +382,9 @@ export function useTaskUpdate() {
     undo,
     redo,
     language,
-    setLanguage
+    setLanguage,
+    tasksDue,
+    isAlertDismissed,
+    setIsAlertDismissed
   };
 }

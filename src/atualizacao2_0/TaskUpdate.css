@@ -89,3 +89,78 @@
   color: #fbbf24;
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
+
+/* =========================================
+   NOVO: Alerta Flutuante e Badge Numérico
+========================================= */
+
+.task-notification-alert {
+  position: absolute;
+  top: 20px;
+  left: 90px;
+  background-color: rgba(14, 22, 38, 0.95);
+  border: 1px solid #334155;
+  border-left: 4px solid #facc15;
+  color: #f8fafc;
+  padding: 0.8rem 1.2rem;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  z-index: 9999;
+  cursor: pointer;
+  animation: slideInLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s ease;
+}
+
+.task-notification-alert:hover {
+  background-color: rgba(30, 41, 59, 0.95);
+  border-color: #475569;
+}
+
+.task-notification-alert span {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.task-notification-alert button {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.task-notification-alert button:hover {
+  color: #f87171;
+}
+
+.task-badge-icon {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background-color: #ef4444;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: bold;
+  border-radius: 50%;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  pointer-events: none;
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
