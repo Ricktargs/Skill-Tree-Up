@@ -44,7 +44,7 @@ export function useTaskUpdate() {
               recurrenceInterval: t.recurrenceInterval || 1,
               recurrenceType: t.recurrenceType || 'weekly',
               recurrenceCurrent: isNewDay ? 0 : (t.recurrenceCurrent || 0),
-              completed: isNewDay ? false : (t.completed || false),
+              completed: t.isRecurring ? (isNewDay ? false : (t.completed || false)) : (t.completed || false),
               recurrenceDays: t.recurrenceDays || [],
               lastCompletedDate: t.lastCompletedDate || null,
               dueTime: t.dueTime || ''
@@ -257,9 +257,6 @@ export function useTaskUpdate() {
   const toggleTask = (taskId) => {
     const nowIso = new Date().toISOString();
     const todayStr = new Date().toISOString().split('T')[0];
-    const todayObj = new Date();
-    const currentDayOfWeek = todayObj.getDay();
-    const currentDayOfMonth = todayObj.getDate();
 
     applyChange((prev) =>
       prev.map((list) => {
@@ -271,18 +268,6 @@ export function useTaskUpdate() {
               if (t.isRecurring) {
                 if (t.completed && t.lastCompletedDate === todayStr) {
                   return t;
-                }
-
-                if (t.recurrenceDays && t.recurrenceDays.length > 0) {
-                  const isScheduledToday = t.recurrenceType === 'weekly'
-                    ? t.recurrenceDays.includes(currentDayOfWeek)
-                    : t.recurrenceType === 'monthly'
-                    ? t.recurrenceDays.includes(currentDayOfMonth)
-                    : true;
-
-                  if (!isScheduledToday) {
-                    return t;
-                  }
                 }
 
                 const target = t.recurrenceType === 'daily' ? (t.recurrenceCount || 1) : 1;
@@ -306,7 +291,13 @@ export function useTaskUpdate() {
                 }
               }
 
-              return { ...t, completed: !t.completed, updatedAt: nowIso };
+              const nextCompleted = !t.completed;
+              return { 
+                ...t, 
+                completed: nextCompleted, 
+                lastCompletedDate: nextCompleted ? todayStr : null, 
+                updatedAt: nowIso 
+              };
             }
             return t;
           })

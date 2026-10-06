@@ -40,7 +40,7 @@ export function TaskModal({ taskState, playSound }) {
   const [editingTask, setEditingTask] = useState(null);
   const [sortOrder, setSortOrder] = useState('antigos');
   const [showOnlyCompletedToday, setShowOnlyCompletedToday] = useState(false);
-  const [hideCompleted, setHideCompleted] = useState(true); // Padrão ativado
+  const [hideCompleted, setHideCompleted] = useState(true);
   const [showCompletedAccordion, setShowCompletedAccordion] = useState(false);
   
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
@@ -119,11 +119,17 @@ export function TaskModal({ taskState, playSound }) {
     return diffInHours >= 0 && diffInHours <= 24;
   };
 
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const getIsDone = (task) => {
+    return task.isRecurring 
+      ? (task.completed && task.lastCompletedDate === todayStr) 
+      : task.completed;
+  };
+
   const renderTaskCard = (task, index) => {
     const deadlineInfo = getDeadlineStatusText(task.dueDate);
-    const isCompleted = task.completed;
-    const todayStr = new Date().toISOString().split('T')[0];
-    const isCompletedToday = isCompleted && task.lastCompletedDate === todayStr;
+    const isDone = getIsDone(task);
 
     return (
       <div
@@ -136,7 +142,7 @@ export function TaskModal({ taskState, playSound }) {
           handleTaskDrop(index);
         }}
         onClick={() => {
-          if (isCompletedToday) return;
+          if (task.isRecurring && isDone) return;
           if (playSound) playSound('click');
           toggleTask(task.id);
         }}
@@ -156,37 +162,37 @@ export function TaskModal({ taskState, playSound }) {
           maxHeight: '54px',
           padding: '0.45rem 0.65rem',
           boxSizing: 'border-box',
-          background: isCompletedToday ? 'rgba(56, 189, 248, 0.08)' : 'rgba(255, 255, 255, 0.04)',
-          border: isCompletedToday ? '1px solid var(--theme-accent, #38bdf8)' : '1px solid var(--theme-border, #334155)',
-          boxShadow: isCompletedToday ? '0 0 12px rgba(56, 189, 248, 0.45), inset 0 0 6px rgba(56, 189, 248, 0.2)' : 'none',
+          background: isDone ? 'rgba(56, 189, 248, 0.08)' : 'rgba(255, 255, 255, 0.04)',
+          border: isDone ? '1px solid var(--theme-accent, #38bdf8)' : '1px solid var(--theme-border, #334155)',
+          boxShadow: isDone ? '0 0 12px rgba(56, 189, 248, 0.45), inset 0 0 6px rgba(56, 189, 248, 0.2)' : 'none',
           borderRadius: '7px',
-          cursor: isCompletedToday ? 'default' : 'pointer',
+          cursor: (task.isRecurring && isDone) ? 'default' : 'pointer',
           userSelect: 'none',
           overflow: 'hidden',
           transition: 'all 0.2s ease'
         }}
-        title={isCompletedToday ? "Concluído hoje (travado)" : "Clique esquerdo: Concluir | Clique direito: Editar"}
+        title={task.isRecurring && isDone ? "Concluído hoje (travado)" : "Clique esquerdo: Concluir/Desmarcar | Clique direito: Editar"}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flex: 1, minWidth: 0 }}>
-          <span style={{ color: isCompletedToday ? '#38bdf8' : '#64748b', fontSize: '0.85rem' }} title="Arraste para reordenar">⠿</span>
+          <span style={{ color: isDone ? '#38bdf8' : '#64748b', fontSize: '0.85rem' }} title="Arraste para reordenar">⠿</span>
           <input
             type="checkbox"
-            checked={isCompletedToday}
+            checked={isDone}
             onChange={() => {}}
-            style={{ width: '15px', height: '15px', cursor: isCompletedToday ? 'default' : 'pointer', accentColor: 'var(--theme-accent, #38bdf8)', flexShrink: 0 }}
+            style={{ width: '15px', height: '15px', cursor: (task.isRecurring && isDone) ? 'default' : 'pointer', accentColor: 'var(--theme-accent, #38bdf8)', flexShrink: 0 }}
           />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', flex: 1, minWidth: 0, justifyContent: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <span
                 style={{
                   fontSize: '0.88rem',
-                  color: isCompletedToday ? '#38bdf8' : '#f8fafc',
-                  textDecoration: isCompletedToday ? 'line-through' : 'none',
-                  textShadow: isCompletedToday ? '0 0 6px rgba(56, 189, 248, 0.7)' : 'none',
+                  color: isDone ? '#38bdf8' : '#f8fafc',
+                  textDecoration: isDone ? 'line-through' : 'none',
+                  textShadow: isDone ? '0 0 6px rgba(56, 189, 248, 0.7)' : 'none',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  fontWeight: isCompletedToday ? 'bold' : '500'
+                  fontWeight: isDone ? 'bold' : '500'
                 }}
               >
                 {task.title}
@@ -204,13 +210,13 @@ export function TaskModal({ taskState, playSound }) {
                   whiteSpace: 'nowrap',
                   fontWeight: 'bold'
                 }}>
-                  🔁 {task.recurrenceCurrent || 0}/{task.recurrenceType === 'daily' ? (task.recurrenceCount || 1) : 1} {isCompletedToday ? '🔒' : ''}
+                  🔁 {task.recurrenceCurrent || 0}/{task.recurrenceType === 'daily' ? (task.recurrenceCount || 1) : 1} {isDone ? '🔒' : ''}
                 </span>
               )}
             </div>
             
             {task.description && (
-              <span style={{ fontSize: '0.74rem', color: isCompletedToday ? '#7dd3fc' : '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span style={{ fontSize: '0.74rem', color: isDone ? '#7dd3fc' : '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {task.description}
               </span>
             )}
@@ -255,10 +261,10 @@ export function TaskModal({ taskState, playSound }) {
   if (showOnlyCompletedToday) {
     activeTasks = sortedTasks.filter(isCompletedInLast24Hours);
   } else if (hideCompleted) {
-    activeTasks = sortedTasks.filter((t) => !t.completed);
+    activeTasks = sortedTasks.filter((t) => !getIsDone(t));
   }
 
-  const completedTasks = sortedTasks.filter((t) => t.completed);
+  const completedTasks = sortedTasks.filter((t) => getIsDone(t));
 
   const taskChunks = [];
   for (let i = 0; i < activeTasks.length; i += 10) {

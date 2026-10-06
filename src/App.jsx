@@ -3,6 +3,9 @@ import { useGameData, PRESET_DECKS, getXpNeededForLevel } from './hooks/useGameD
 import EmojiPicker from 'emoji-picker-react';
 import confetti from 'canvas-confetti';
 import './App.css';
+import './App.css';
+import './SetMobileGrande.css';
+import './SetMobilePequeno.css';
 
 import { usePomodoro } from './atualizacao2_0/Update_2';
 import { PomodoroModal, PomodoroWidget } from './atualizacao2_0/Update_2.jsx';
@@ -367,6 +370,24 @@ export default function App() {
     setTempNickname(nickname);
   }, [nickname]);
 
+  // === RESET AUTOMÁTICO DE MISSÕES E SORTEIOS ÀS 04:00 DA MADRUGADA ===
+  useEffect(() => {
+    const getGameDayKey = (date = new Date()) => {
+      const d = new Date(date);
+      d.setHours(d.getHours() - 4);
+      return d.toISOString().split('T')[0];
+    };
+
+    const currentGameDay = getGameDayKey();
+    const lastResetGameDay = localStorage.getItem('last_daily_missions_reset_day');
+
+    if (lastResetGameDay !== currentGameDay) {
+      resetDailyMissionsHack();
+      resetRefreshesCountHack();
+      localStorage.setItem('last_daily_missions_reset_day', currentGameDay);
+    }
+  }, [resetDailyMissionsHack, resetRefreshesCountHack]);
+  
   useEffect(() => {
     const handleKeyDown = (e) => {
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
@@ -3350,25 +3371,30 @@ export default function App() {
                           toggleBatchSelection();
                         }
                       }}
-                      style={{
-                        ...getCardStyle(isMax, skillColor),
-                        cursor: isBatchSelectMode ? 'pointer' : 'grab',
-                        opacity: isBeingDragged ? 0.4 : 1,
-                        borderStyle: isDragTarget ? 'dashed' : 'solid',
-                        borderWidth: isCheckedBatch || isDragTarget ? '2px' : '1px',
-                        borderColor: isCheckedBatch
-                          ? '#f87171'
-                          : isDragTarget
-                          ? 'var(--theme-accent, #38bdf8)'
-                          : undefined,
-                        boxShadow: isCheckedBatch
-                          ? '0 0 14px rgba(248, 113, 113, 0.5)'
-                          : isDragTarget
-                          ? '0 0 15px rgba(56, 189, 248, 0.4)'
-                          : undefined,
-                        backgroundColor: isCheckedBatch ? 'rgba(127, 29, 29, 0.25)' : undefined
-                      }}
-                    >
+                         style={{
+                          ...getCardStyle(isMax, skillColor),
+                          cursor: isBatchSelectMode ? 'pointer' : 'grab',
+                          opacity: isBeingDragged ? 0.4 : 1,
+                          borderStyle: isDragTarget ? 'dashed' : 'solid',
+                          borderWidth: isCheckedBatch || isDragTarget ? '2px' : '1px',
+                          borderColor: isCheckedBatch
+                            ? '#f87171'
+                            : isDragTarget
+                            ? 'var(--theme-accent, #38bdf8)'
+                            : boxColorType === 'theme'
+                            ? activeThemePreset.border
+                            : isMax
+                            ? '#facc15'
+                            : skillColor,
+                          boxShadow: isCheckedBatch
+                            ? '0 0 14px rgba(248, 113, 113, 0.5)'
+                            : isDragTarget
+                            ? '0 0 15px rgba(56, 189, 248, 0.4)'
+                            : isMax
+                            ? '0 0 10px rgba(250, 204, 21, 0.3)'
+                            : `0 0 8px ${skillColor.startsWith && skillColor.startsWith('#') ? skillColor + '40' : skillColor}`,
+                          ...(isCheckedBatch ? { backgroundColor: 'rgba(127, 29, 29, 0.25)' } : {})
+                        }}                 >
                       {!isBatchSelectMode && (
                         <div className="reorder-button-group" onClick={(e) => e.stopPropagation()}>
                           <button

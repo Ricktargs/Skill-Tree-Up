@@ -1,0 +1,193 @@
+/* ==========================================================================
+   TELA INICIAL E MODAIS - TABLETS GRANDES E IPAD PRO (<= 1280px)
+   ========================================================================== */
+@media (max-width: 1280px) {
+  body, html {
+    overflow-y: auto;
+  }
+
+  .app-screen {
+    padding: 5rem 1.5rem 3rem 1.5rem;
+    align-items: flex-start;
+    min-height: 100vh;
+    height: auto;
+  }
+
+  /* BOTÕES SUPERIORES DE NAVEGAÇÃO */
+  .top-left-nav-buttons {
+    top: 1.2rem;
+    left: 1.2rem;
+    gap: 0.6rem;
+    z-index: 30;
+  }
+
+  .top-nav-buttons {
+    top: 1.2rem;
+    right: 1.2rem;
+    gap: 0.6rem;
+    z-index: 30;
+  }
+
+  .top-icon-button {
+    width: 42px;
+    height: 42px;
+    font-size: 1.15rem;
+    border-radius: 10px;
+  }
+
+  /* CONTAINER PRINCIPAL E PAINEL DO PERSONAGEM */
+  .dashboard-container {
+    flex-direction: column;
+    gap: 2rem;
+    width: 100%;
+    max-width: 720px;
+    align-items: center;
+    margin: 0 auto;
+  }
+
+  .character-panel {
+    width: 100%;
+    max-width: 420px;
+    align-items: center;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid var(--theme-border, rgba(255, 255, 255, 0.08));
+    border-radius: 20px;
+    padding: 1.5rem 1.2rem;
+  }
+
+  .avatar-circle {
+    width: 110px;
+    height: 110px;
+    font-size: 3.5rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .hero-nickname {
+    font-size: 1.3rem;
+  }
+
+  .hero-level-title {
+    font-size: 1rem;
+  }
+
+  .inspect-level-btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.6rem;
+  }
+
+  .xp-box {
+    margin-top: 1.2rem;
+  }
+
+  .diamonds-box {
+    margin-top: 0.8rem;
+    padding: 0.45rem 0.8rem;
+  }
+
+  /* PAINEL E LISTA DE HABILIDADES */
+  .skills-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .panel-title {
+    font-size: 1.8rem;
+  }
+
+  .skills-list {
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+    gap: 1rem;
+  }
+
+  /* CARDS DAS HABILIDADES NA TELA INICIAL */
+  .skills-list .skill-card {
+    padding: 1rem 1.2rem;
+    gap: 1rem;
+  }
+
+  .skills-list .skill-details {
+    width: 180px;
+  }
+
+  .skills-list .plus-button {
+    width: 40px;
+    height: 40px;
+    font-size: 1.4rem;
+  }
+
+  /* BOTÃO FLUTUANTE DA BARRA LATERAL */
+  .subtle-side-rail {
+    position: fixed;
+    right: 20px;
+    bottom: 24px;
+    top: auto;
+    height: 48px;
+    width: 48px;
+    z-index: 90;
+  }
+
+  .rail-line-glow {
+    display: none;
+  }
+
+  .rail-plus-badge {
+    width: 46px;
+    height: 46px;
+    font-size: 1.3rem;
+  }
+
+  .rail-tooltip {
+    display: none;
+  }
+
+  /* ==========================================================================
+     MODAL EDITAR HABILIDADE (TABLETS E IPAD PRO)
+     ========================================================================== */
+  .modal-window.full-screen-edit {
+    width: 95vw !important;
+    max-width: 1100px !important;
+    max-height: 90vh !important;
+    padding: 1.2rem !important;
+    overflow-y: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  /* BARRA SUPERIOR: Quebra em linhas fluidas para tablets grandes (iPad Pro 1032px) */
+  .horizontal-info-bar {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: stretch !important;
+    justify-content: space-between !important;
+    gap: 0.8rem !important;
+    padding: 1rem !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Caixas com largura mínima ajustada para caber sem estourar a janela */
+  .horizontal-info-bar .flex-1,
+  .horizontal-info-bar .flex-2,
+  .horizontal-info-bar .field-group,
+  .horizontal-info-bar .control-box {
+    flex: 1 1 150px !important;
+    min-width: 140px !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* GRADE DE METAS (Ajustada para preencher em colunas proporcionais) */
+  .horizontal-levels-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)) !important;
+    gap: 0.8rem !important;
+    width: 100% !important;
+    max-height: 48vh !important;
+    overflow-y: auto !important;
+    padding-right: 0.3rem !important;
+  }
+}
