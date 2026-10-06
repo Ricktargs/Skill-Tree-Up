@@ -1,3 +1,22 @@
+/* ELIMINA O DELAY DE TOQUE (300ms), DUPLO CLIQUE E SELEÇÃO NATIVA NO MOBILE E TABLET */
+button, 
+input,
+select,
+.control-box,
+.control-box button,
+.horizontal-info-bar button,
+.plus-button, 
+.icon-button,
+.top-icon-button,
+.skill-card,
+.gear-button,
+.subtle-side-rail {
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
 /* ==========================================================================
    TELA INICIAL - CELULAR / MOBILE (<= 768px)
    ========================================================================== */
