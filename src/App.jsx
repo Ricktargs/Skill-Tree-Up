@@ -751,9 +751,28 @@ export default function App() {
     handleApplyCustomColorDirectly(pickedColorHex);
   };
 
-  const handleExportData = () => {
+ const handleExportData = () => {
     playSound('click');
-    const exportObject = exportAllData();
+    const baseExport = exportAllData();
+
+    // Obtém as tarefas diretamente do localStorage
+    let savedTasks = null;
+    try {
+      const rawTasks = localStorage.getItem('task_update_lists_v1');
+      if (rawTasks) savedTasks = JSON.parse(rawTasks);
+    } catch (e) {
+      console.error('Erro ao ler tarefas para o backup:', e);
+    }
+
+    const exportObject = {
+      ...baseExport,
+      // Dados do Gerenciador de Tarefas
+      taskUpdateLists: savedTasks || taskState?.taskLists || taskState?.lists || [],
+      taskUpdateLang: localStorage.getItem('task_update_lang_v1') || taskState?.language || 'pt-BR',
+      // Dados do Pomodoro
+      pomodoroPresets: pomodoro?.modePresets,
+      pomodoroSound: pomodoro?.soundOption
+    };
 
     const now = new Date();
     const year = now.getFullYear();
@@ -771,7 +790,7 @@ export default function App() {
     downloadAnchor.remove();
   };
 
-  const handleFileChange = (e) => {
+const handleFileChange = (e) => {
     const fileReader = new FileReader();
     const file = e.target.files[0];
 
@@ -780,10 +799,30 @@ export default function App() {
       fileReader.onload = (event) => {
         try {
           const parsedData = JSON.parse(event.target.result);
+
+          // 1. Restaura dados principais (Perfis, Skills, Missões e Diamantes)
           const success = importData(parsedData);
+
+          // 2. Restaura dados do Gerenciador de Tarefas no localStorage
+          if (parsedData.taskUpdateLists) {
+            localStorage.setItem('task_update_lists_v1', JSON.stringify(parsedData.taskUpdateLists));
+          }
+          if (parsedData.taskUpdateLang) {
+            localStorage.setItem('task_update_lang_v1', parsedData.taskUpdateLang);
+          }
+
+          // 3. Restaura dados do Pomodoro no localStorage
+          if (parsedData.pomodoroPresets) {
+            localStorage.setItem('pomodoro_mode_presets_v3', JSON.stringify(parsedData.pomodoroPresets));
+          }
+          if (parsedData.pomodoroSound) {
+            localStorage.setItem('pomodoro_saved_sound_option', parsedData.pomodoroSound);
+          }
+
           if (success) {
             playSound('train');
             setIsSettingsModalOpen(false);
+            window.location.reload();
           } else {
             playSound('error');
           }
@@ -793,7 +832,6 @@ export default function App() {
       };
     }
   };
-
   const handleContextMenu = (e, skill) => {
     e.preventDefault();
     e.stopPropagation();
