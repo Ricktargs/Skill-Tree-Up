@@ -10,6 +10,7 @@ import './SetMobilePequeno.css';
 import { usePomodoro } from './atualizacao2_0/Update_2';
 import { PomodoroModal, PomodoroWidget } from './atualizacao2_0/Update_2.jsx';
 import { useTaskUpdate } from './atualizacao2_0/TaskUpdate.js';
+import { useLanguage, UpIdiomaModal } from './atualizacao2_0/UpIdioma.jsx';
 import { TaskModal, TaskAlert, TaskBadge } from './atualizacao2_0/TaskUpdate.jsx';
 
 const THEME_PRESETS = [
@@ -117,6 +118,8 @@ const getClampedMenuPos = (clientX, clientY, width = 220, height = 200) => {
 export default function App() {
   const pomodoro = usePomodoro();
   const taskState = useTaskUpdate();
+ const { t } = useLanguage();
+  const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
 
   const {
     profiles,
@@ -143,6 +146,7 @@ export default function App() {
     setXpHistory,
     folders,
     addFolder,
+    deleteFolder,
     moveSkillToFolder,
     pendingTransfers,
     sendTransferRequest,
@@ -230,7 +234,152 @@ export default function App() {
   const [confirmClearSkills, setConfirmClearSkills] = useState(false);
 
   const [isCategoryFilterModalOpen, setIsCategoryFilterModalOpen] = useState(false);
-  const [selectedFolderFilters, setSelectedFolderFilters] = useState([]);
+const [selectedFolderFilters, setSelectedFolderFilters] = useState(() => {
+    try {
+      const saved = localStorage.getItem('selected_folder_filters_v1');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('selected_folder_filters_v1', JSON.stringify(selectedFolderFilters));
+    } catch (e) {}
+  }, [selectedFolderFilters]);  const [selectedFolderInList, setSelectedFolderInList] = useState('');
+  
+  const [isFolderDropdownOpen, setIsFolderDropdownOpen] = useState(false);
+const [deletingFolderName, setDeletingFolderName] = useState(null);
+  const [deletedFolders, setDeletedFolders] = useState(() => {
+    try {
+      const saved = localStorage.getItem('rpg_deleted_folders_v1');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rpg_deleted_folders_v1', JSON.stringify(deletedFolders));
+    } catch (e) {}
+  }, [deletedFolders]);
+
+const [editingFolderName, setEditingFolderName] = useState(null);
+  const [tempFolderNameInput, setTempFolderNameInput] = useState('');
+
+  const handleRenameFolder = (oldName, newName) => {
+    const trimmed = newName.trim();
+    if (!trimmed || oldName === 'Geral' || oldName === trimmed) {
+      setEditingFolderName(null);
+      return;
+    }
+    playSound('click');
+
+    // 1. Atualiza o nome da pasta em todas as habilidades pertencentes a ela
+    setSkills((prevSkills) =>
+      prevSkills.map((s) => {
+        if ((s.folder || 'Geral').trim() === oldName) {
+          return { ...s, folder: trimmed };
+        }
+        return s;
+      })
+    );
+
+    // 2. Oculta o nome antigo para evitar duplicação e garante o novo nome ativo
+    setDeletedFolders((prev) => [...new Set([...prev, oldName])].filter((f) => f !== trimmed));
+
+    // 3. Registra a nova pasta
+    if (addFolder) addFolder(trimmed);
+
+    // 4. Atualiza os filtros de visualização selecionados
+    setSelectedFolderFilters((prev) =>
+      prev.map((f) => (f === oldName ? trimmed : f))
+    );
+
+    setEditingFolderName(null);
+  };
+
+const [draggedFolderName, setDraggedFolderName] = useState(null);
+  const [dragOverFolderName, setDragOverFolderName] = useState(null);
+
+  const [customFolderOrder, setCustomFolderOrder] = useState(() => {
+    try {
+      const saved = localStorage.getItem('rpg_custom_folder_order_v1');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rpg_custom_folder_order_v1', JSON.stringify(customFolderOrder));
+    } catch (e) {}
+  }, [customFolderOrder]);
+
+  const reorderFolders = (fromFolder, toFolder) => {
+    if (fromFolder === toFolder) return;
+    playSound('train');
+
+    const rawList = Array.from(
+      new Set([...(folders || []), 'Geral', ...skills.map((s) => s.folder || 'Geral')])
+    ).filter((f) => Boolean(f) && !deletedFolders.includes(f));
+
+    const currentOthers = rawList.filter((f) => f.toLowerCase() !== 'geral');
+
+    if (customFolderOrder && customFolderOrder.length > 0) {
+      currentOthers.sort((a, b) => {
+        const idxA = customFolderOrder.indexOf(a);
+        const idxB = customFolderOrder.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return 0;
+      });
+    }
+
+    const fromIndex = currentOthers.indexOf(fromFolder);
+    if (fromIndex === -1) return;
+
+    currentOthers.splice(fromIndex, 1);
+
+    if (toFolder.toLowerCase() === 'geral') {
+      currentOthers.unshift(fromFolder);
+    } else {
+      const toIndex = currentOthers.indexOf(toFolder);
+      if (toIndex !== -1) {
+        currentOthers.splice(toIndex, 0, fromFolder);
+      } else {
+        currentOthers.push(fromFolder);
+      }
+    }
+
+    setCustomFolderOrder(currentOthers);
+    setFolderSortOrder('default');
+  };
+
+  const handleDeleteFolder = (folderName) => {
+    if (folderName === 'Geral') return;
+    playSound('delete');
+
+    // 1. Mover todas as habilidades desta pasta com segurança para a pasta 'Geral'
+    setSkills((prevSkills) =>
+      prevSkills.map((s) => {
+        if ((s.folder || 'Geral').trim() === folderName) {
+          return { ...s, folder: 'Geral' };
+        }
+        return s;
+      })
+    );
+
+    // 2. Registrar a pasta na lista de excluídas
+    setDeletedFolders((prev) => [...new Set([...prev, folderName])]);
+
+    // 3. Remover dos filtros ativos
+    setSelectedFolderFilters((prev) => prev.filter((f) => f !== folderName));
+  };
   const [draggedSkillId, setDraggedSkillId] = useState(null);
   const [dragOverFolder, setDragOverFolder] = useState(null);
   const [folderSortOrder, setFolderSortOrder] = useState('default');
@@ -751,87 +900,91 @@ export default function App() {
     handleApplyCustomColorDirectly(pickedColorHex);
   };
 
- const handleExportData = () => {
-    playSound('click');
-    const baseExport = exportAllData();
+const handleExportData = () => {
+  playSound('click');
+  const baseExport = exportAllData();
 
-    // Obtém as tarefas diretamente do localStorage
-    let savedTasks = null;
-    try {
-      const rawTasks = localStorage.getItem('task_update_lists_v1');
-      if (rawTasks) savedTasks = JSON.parse(rawTasks);
-    } catch (e) {
-      console.error('Erro ao ler tarefas para o backup:', e);
-    }
+  let savedTasks = null;
+  try {
+    const rawTasks = localStorage.getItem('task_update_lists_v1');
+    if (rawTasks) savedTasks = JSON.parse(rawTasks);
+  } catch (e) {}
 
-    const exportObject = {
-      ...baseExport,
-      // Dados do Gerenciador de Tarefas
-      taskUpdateLists: savedTasks || taskState?.taskLists || taskState?.lists || [],
-      taskUpdateLang: localStorage.getItem('task_update_lang_v1') || taskState?.language || 'pt-BR',
-      // Dados do Pomodoro
-      pomodoroPresets: pomodoro?.modePresets,
-      pomodoroSound: pomodoro?.soundOption
-    };
-
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-
-    const fileName = `skill-tree-backup-${day}-${month}-${year}.json`;
-
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportObject, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', fileName);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+  const exportObject = {
+    ...baseExport,
+    // Tarefas e Pomodoro
+    taskUpdateLists: savedTasks || taskState?.taskLists || taskState?.lists || [],
+    taskUpdateLang: localStorage.getItem('task_update_lang_v1') || taskState?.language || 'pt-BR',
+    pomodoroPresets: pomodoro?.modePresets,
+    pomodoroSound: pomodoro?.soundOption,
+    // PREFERÊNCIAS DAS PASTAS
+    folderCustomOrder: JSON.parse(localStorage.getItem('rpg_custom_folder_order_v1') || '[]'),
+    folderDeletedList: JSON.parse(localStorage.getItem('rpg_deleted_folders_v1') || '[]'),
+    folderFilters: JSON.parse(localStorage.getItem('selected_folder_filters_v1') || '[]')
   };
+
+  const now = new Date();
+  const fileName = `skill-tree-backup-${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}.json`;
+
+  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportObject, null, 2));
+  const downloadAnchor = document.createElement('a');
+  downloadAnchor.setAttribute('href', dataStr);
+  downloadAnchor.setAttribute('download', fileName);
+  document.body.appendChild(downloadAnchor);
+  downloadAnchor.click();
+  downloadAnchor.remove();
+};
 
 const handleFileChange = (e) => {
-    const fileReader = new FileReader();
-    const file = e.target.files[0];
+  const fileReader = new FileReader();
+  const file = e.target.files[0];
 
-    if (file) {
-      fileReader.readAsText(file, 'UTF-8');
-      fileReader.onload = (event) => {
-        try {
-          const parsedData = JSON.parse(event.target.result);
+  if (file) {
+    fileReader.readAsText(file, 'UTF-8');
+    fileReader.onload = (event) => {
+      try {
+        const parsedData = JSON.parse(event.target.result);
 
-          // 1. Restaura dados principais (Perfis, Skills, Missões e Diamantes)
-          const success = importData(parsedData);
+        const success = importData(parsedData);
 
-          // 2. Restaura dados do Gerenciador de Tarefas no localStorage
-          if (parsedData.taskUpdateLists) {
-            localStorage.setItem('task_update_lists_v1', JSON.stringify(parsedData.taskUpdateLists));
-          }
-          if (parsedData.taskUpdateLang) {
-            localStorage.setItem('task_update_lang_v1', parsedData.taskUpdateLang);
-          }
+        // Restaura Tarefas e Pomodoro
+        if (parsedData.taskUpdateLists) {
+          localStorage.setItem('task_update_lists_v1', JSON.stringify(parsedData.taskUpdateLists));
+        }
+        if (parsedData.taskUpdateLang) {
+          localStorage.setItem('task_update_lang_v1', parsedData.taskUpdateLang);
+        }
+        if (parsedData.pomodoroPresets) {
+          localStorage.setItem('pomodoro_mode_presets_v3', JSON.stringify(parsedData.pomodoroPresets));
+        }
+        if (parsedData.pomodoroSound) {
+          localStorage.setItem('pomodoro_saved_sound_option', parsedData.pomodoroSound);
+        }
 
-          // 3. Restaura dados do Pomodoro no localStorage
-          if (parsedData.pomodoroPresets) {
-            localStorage.setItem('pomodoro_mode_presets_v3', JSON.stringify(parsedData.pomodoroPresets));
-          }
-          if (parsedData.pomodoroSound) {
-            localStorage.setItem('pomodoro_saved_sound_option', parsedData.pomodoroSound);
-          }
+        // Restaura Preferências do Gerenciador de Pastas
+        if (parsedData.folderCustomOrder) {
+          localStorage.setItem('rpg_custom_folder_order_v1', JSON.stringify(parsedData.folderCustomOrder));
+        }
+        if (parsedData.folderDeletedList) {
+          localStorage.setItem('rpg_deleted_folders_v1', JSON.stringify(parsedData.folderDeletedList));
+        }
+        if (parsedData.folderFilters) {
+          localStorage.setItem('selected_folder_filters_v1', JSON.stringify(parsedData.folderFilters));
+        }
 
-          if (success) {
-            playSound('train');
-            setIsSettingsModalOpen(false);
-            window.location.reload();
-          } else {
-            playSound('error');
-          }
-        } catch (error) {
+        if (success) {
+          playSound('train');
+          setIsSettingsModalOpen(false);
+          window.location.reload();
+        } else {
           playSound('error');
         }
-      };
-    }
-  };
+      } catch (error) {
+        playSound('error');
+      }
+    };
+  }
+};
   const handleContextMenu = (e, skill) => {
     e.preventDefault();
     e.stopPropagation();
@@ -967,17 +1120,26 @@ const handleFileChange = (e) => {
     { level: 480, rank: 'Mago Supremo (Máximo)' }
   ];
 
-  const rawAvailableFolders = Array.from(
+const rawAvailableFolders = Array.from(
     new Set([...(folders || []), 'Geral', ...skills.map((s) => s.folder || 'Geral')])
-  ).filter(Boolean);
+  ).filter((f) => Boolean(f) && !deletedFolders.includes(f));
 
   const geralFolderName = rawAvailableFolders.find((f) => f.toLowerCase() === 'geral') || 'Geral';
   const otherFolders = rawAvailableFolders.filter((f) => f.toLowerCase() !== 'geral');
 
-  if (folderSortOrder === 'a-z') {
+if (folderSortOrder === 'a-z') {
     otherFolders.sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
   } else if (folderSortOrder === 'z-a') {
     otherFolders.sort((a, b) => b.localeCompare(a, 'pt-BR', { sensitivity: 'base' }));
+  } else if (customFolderOrder && customFolderOrder.length > 0) {
+    otherFolders.sort((a, b) => {
+      const idxA = customFolderOrder.indexOf(a);
+      const idxB = customFolderOrder.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return 0;
+    });
   }
 
   const sortedAvailableFolders = [geralFolderName, ...otherFolders];
@@ -1191,18 +1353,17 @@ const handleFileChange = (e) => {
             )}
           </div>
 
-          <div className="level-badge-row">
-            <span className="hero-level-title">Nível {playerLevel}</span>
-            <button
-              type="button"
-              className="inspect-level-btn"
-              onClick={() => { playSound('click'); setIsLevelInfoModalOpen(true); }}
-              title="Ver tabela de patentes e pontuação"
-            >
-              📊 Ver Níveis
-            </button>
-          </div>
-
+<div className="level-badge-row">
+  <span className="hero-level-title">{t('hero_level', 'Nível')} {playerLevel}</span>
+  <button
+    type="button"
+    className="inspect-level-btn"
+    onClick={() => { playSound('click'); setIsLevelInfoModalOpen(true); }}
+    title="Ver tabela de patentes e pontuação"
+  >
+    📊 {t('hero_inspect_levels', 'Ver Níveis')}
+  </button>
+</div>
           <span className="hero-rank">{getRankTitle(playerLevel)}</span>
 
           <div
@@ -2110,57 +2271,190 @@ const handleFileChange = (e) => {
                   );
                 });
 
-                const isFolderVisible = selectedFolderFilters.length === 0 || selectedFolderFilters.includes(folderName);
+const isFolderVisible = selectedFolderFilters.length === 0 || selectedFolderFilters.includes(folderName);
                 const isDragOverThis = dragOverFolder === folderName;
+                const isFolderBeingDragged = draggedFolderName === folderName;
+                const isFolderDragTarget = dragOverFolderName === folderName && draggedFolderName !== folderName;
 
                 return (
                   <div
                     key={folderName}
+                    draggable={folderName !== 'Geral' && !draggedSkillId}
+                    onDragStart={(e) => {
+                      if (draggedSkillId) return;
+                      setDraggedFolderName(folderName);
+                      e.dataTransfer.effectAllowed = 'move';
+                    }}
                     onDragOver={(e) => {
                       e.preventDefault();
-                      setDragOverFolder(folderName);
+                      if (draggedSkillId) {
+                        setDragOverFolder(folderName);
+                      } else if (draggedFolderName && draggedFolderName !== folderName) {
+                        setDragOverFolderName(folderName);
+                      }
                     }}
-                    onDragLeave={() => setDragOverFolder(null)}
-                    onDrop={() => handleDropSkillToFolder(folderName)}
+                    onDragLeave={() => {
+                      if (draggedSkillId) {
+                        setDragOverFolder(null);
+                      } else {
+                        setDragOverFolderName(null);
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedSkillId) {
+                        handleDropSkillToFolder(folderName);
+                      } else if (draggedFolderName && draggedFolderName !== folderName) {
+                        reorderFolders(draggedFolderName, folderName);
+                      }
+                      setDraggedFolderName(null);
+                      setDragOverFolderName(null);
+                    }}
+                    onDragEnd={() => {
+                      setDraggedFolderName(null);
+                      setDragOverFolderName(null);
+                    }}
                     style={{
                       flex: '0 0 290px',
-                      background: isDragOverThis ? 'rgba(255, 255, 255, 0.08)' : 'var(--theme-modal-bg, #0e1626)',
-                      border: isDragOverThis ? '2px dashed var(--theme-accent, #38bdf8)' : '1px solid var(--theme-border, #334155)',
+                      background: isDragOverThis || isFolderDragTarget ? 'rgba(255, 255, 255, 0.08)' : 'var(--theme-modal-bg, #0e1626)',
+                      border: isDragOverThis || isFolderDragTarget ? '2px dashed var(--theme-accent, #38bdf8)' : '1px solid var(--theme-border, #334155)',
                       borderRadius: '12px',
                       padding: '1rem',
                       display: 'flex',
                       flexDirection: 'column',
                       transition: 'all 0.2s ease',
-                      boxShadow: isDragOverThis ? '0 0 15px rgba(56, 189, 248, 0.3)' : 'none'
+                      boxShadow: isDragOverThis || isFolderDragTarget ? '0 0 15px rgba(56, 189, 248, 0.3)' : 'none',
+                      opacity: isFolderBeingDragged ? 0.4 : 1,
+                      cursor: folderName !== 'Geral' ? 'grab' : 'default'
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', borderBottom: '1px solid var(--theme-border, #334155)', paddingBottom: '0.6rem' }}>
-                      <strong style={{ fontSize: '1rem', color: '#f8fafc' }}>
-                        {folderName} {folderName === 'Geral' ? '(Padrão)' : ''}
-                      </strong>
-
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.85rem', color: '#94a3b8' }}>
+                      {editingFolderName === folderName && folderName !== 'Geral' ? (
                         <input
-                          type="checkbox"
-                          checked={isFolderVisible}
-                          onChange={() => {
-                            playSound('click');
-                            if (selectedFolderFilters.length === 0) {
-                              const others = sortedAvailableFolders.filter((f) => f !== folderName);
-                              setSelectedFolderFilters(others);
-                            } else {
-                              if (selectedFolderFilters.includes(folderName)) {
-                                const updated = selectedFolderFilters.filter((f) => f !== folderName);
-                                setSelectedFolderFilters(updated);
-                              } else {
-                                setSelectedFolderFilters([...selectedFolderFilters, folderName]);
-                              }
+                          type="text"
+                          value={tempFolderNameInput}
+                          onChange={(e) => setTempFolderNameInput(e.target.value)}
+                          onBlur={() => handleRenameFolder(folderName, tempFolderNameInput)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleRenameFolder(folderName, tempFolderNameInput);
+                            } else if (e.key === 'Escape') {
+                              setEditingFolderName(null);
                             }
                           }}
+                          autoFocus
+                          style={{
+                            fontSize: '0.9rem',
+                            padding: '0.2rem 0.4rem',
+                            background: 'rgba(0, 0, 0, 0.4)',
+                            border: '1px solid var(--theme-accent, #38bdf8)',
+                            borderRadius: '4px',
+                            color: '#fff',
+                            width: '120px'
+                          }}
                         />
-                        <span>Visível</span>
-                      </label>
-                    </div>
+                      ) : (
+                        <strong
+                          onClick={() => {
+                            if (folderName === 'Geral') return;
+                            playSound('click');
+                            setEditingFolderName(folderName);
+                            setTempFolderNameInput(folderName);
+                          }}
+                          title={folderName === 'Geral' ? 'Pasta Padrão' : 'Clique para renomear esta pasta'}
+                          style={{
+                            fontSize: '1rem',
+                            color: '#f8fafc',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            maxWidth: '130px',
+                            cursor: folderName === 'Geral' ? 'default' : 'pointer'
+                          }}
+                        >
+                          {folderName} {folderName === 'Geral' ? '(Padrão)' : ''}
+                        </strong>
+                      )}
+
+                      {deletingFolderName === folderName ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span style={{ fontSize: '0.78rem', color: '#f87171', fontWeight: 'bold' }}>Excluir?</span>
+                          <button
+                            type="button"
+                            className="confirm-yes-btn"
+                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', background: '#dc2626' }}
+                            onClick={() => {
+                              handleDeleteFolder(folderName);
+                              setDeletingFolderName(null);
+                            }}
+                          >
+                            Sim
+                          </button>
+                          <button
+                            type="button"
+                            className="confirm-no-btn"
+                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+                            onClick={() => {
+                              playSound('click');
+                              setDeletingFolderName(null);
+                            }}
+                          >
+                            Não
+                          </button>
+                        </div>
+) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          {folderName !== 'Geral' && (
+                            <button
+                              type="button"
+                              className="delete-folder-icon-btn"
+                              onClick={() => {
+                                playSound('click');
+                                setDeletingFolderName(folderName);
+                              }}
+                              title={`Excluir pasta "${folderName}"`}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#ef4444',
+                                fontSize: '0.95rem',
+                                cursor: 'pointer',
+                                padding: '0.1rem 0.3rem',
+                                borderRadius: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'background 0.2s, transform 0.1s'
+                              }}
+                            >
+                              🗑️
+                            </button>
+                          )}
+
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', cursor: 'pointer', fontSize: '0.85rem', color: '#94a3b8', userSelect: 'none' }}>
+                            <input
+                              type="checkbox"
+                              checked={isFolderVisible}
+                              onChange={() => {
+                                playSound('click');
+                                if (selectedFolderFilters.length === 0) {
+                                  const others = sortedAvailableFolders.filter((f) => f !== folderName);
+                                  setSelectedFolderFilters(others);
+                                } else {
+                                  if (selectedFolderFilters.includes(folderName)) {
+                                    const updated = selectedFolderFilters.filter((f) => f !== folderName);
+                                    setSelectedFolderFilters(updated);
+                                  } else {
+                                    setSelectedFolderFilters([...selectedFolderFilters, folderName]);
+                                  }
+                                }
+                              }}
+                            />
+                            <span>Visível</span>
+                          </label>
+                        </div>
+                      )}
+                                          </div>
 
                     <button
                       type="button"
@@ -2209,8 +2503,11 @@ const handleFileChange = (e) => {
                           return (
                             <div
                               key={sk.id}
-                              draggable
-                              onDragStart={() => setDraggedSkillId(sk.id)}
+                            draggable
+                              onDragStart={(e) => {
+                                e.stopPropagation();
+                                setDraggedSkillId(sk.id);
+                              }}
                               onDragEnd={() => {
                                 setDraggedSkillId(null);
                                 setDragOverFolder(null);
@@ -2271,19 +2568,141 @@ const handleFileChange = (e) => {
               })}
             </div>
 
-            <div className="modal-actions-bar" style={{ marginTop: '1rem' }}>
+<div className="modal-actions-bar" style={{ marginTop: '1rem', position: 'relative' }}>
               <button
                 type="button"
                 className="cancel-button"
-                onClick={() => { playSound('click'); setSelectedFolderFilters([]); setFolderSearchQuery(''); }}
+                onClick={() => {
+                  playSound('click');
+                  const areAllVisible =
+                    !selectedFolderFilters.includes('__NONE__') &&
+                    (selectedFolderFilters.length === 0 ||
+                      sortedAvailableFolders.every((f) => selectedFolderFilters.includes(f)));
+
+                  if (areAllVisible) {
+                    setSelectedFolderFilters(['__NONE__']);
+                  } else {
+                    setSelectedFolderFilters([]);
+                  }
+                }}
               >
-                Mostrar Todas as Pastas
+                {!selectedFolderFilters.includes('__NONE__') &&
+                (selectedFolderFilters.length === 0 ||
+                  sortedAvailableFolders.every((f) => selectedFolderFilters.includes(f)))
+                  ? 'Ocultar Todas as Pastas'
+                  : 'Mostrar Todas as Pastas'}
               </button>
-              <button className="confirm-button" onClick={() => { playSound('click'); setIsCategoryFilterModalOpen(false); }}>
+
+              <div className="custom-folder-dropdown-container" style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  className="folder-list-select-btn"
+                  onClick={() => {
+                    playSound('click');
+                    setIsFolderDropdownOpen((prev) => !prev);
+                  }}
+                >
+                  📁 Lista de Pastas ▾
+                </button>
+
+                {isFolderDropdownOpen && (
+                  <>
+                    <div
+                      className="dropdown-overlay-backdrop"
+                      onClick={() => setIsFolderDropdownOpen(false)}
+                      style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100vw',
+                        height: '100vh',
+                        zIndex: 99990,
+                        background: 'transparent'
+                      }}
+                    />
+                    <div
+                      className="custom-folder-dropdown-menu"
+                      style={{
+                        position: 'absolute',
+                        bottom: '100%',
+                        left: 0,
+                        marginBottom: '0.5rem',
+                        background: '#1e293b',
+                        border: '1px solid var(--theme-border, #334155)',
+                        borderRadius: '8px',
+                        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+                        maxHeight: '260px',
+                        overflowY: 'auto',
+                        width: '220px',
+                        zIndex: 99991,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        padding: '0.4rem 0'
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {sortedAvailableFolders.map((fName) => {
+                        const isVisible =
+                          !selectedFolderFilters.includes('__NONE__') &&
+                          (selectedFolderFilters.length === 0 || selectedFolderFilters.includes(fName));
+
+                        return (
+                          <div
+                            key={fName}
+                            className="custom-folder-dropdown-item"
+                            onClick={() => {
+                              playSound('click');
+                              if (selectedFolderFilters.length === 0) {
+                                const others = sortedAvailableFolders.filter((f) => f !== fName);
+                                setSelectedFolderFilters(others.length === 0 ? ['__NONE__'] : others);
+                              } else if (selectedFolderFilters.includes('__NONE__')) {
+                                setSelectedFolderFilters([fName]);
+                              } else {
+                                if (selectedFolderFilters.includes(fName)) {
+                                  const updated = selectedFolderFilters.filter((f) => f !== fName);
+                                  setSelectedFolderFilters(updated.length === 0 ? ['__NONE__'] : updated);
+                                } else {
+                                  setSelectedFolderFilters([...selectedFolderFilters, fName]);
+                                }
+                              }
+                            }}
+                            style={{
+                              padding: '0.55rem 0.9rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.6rem',
+                              color: '#f1f5f9',
+                              fontSize: '0.85rem',
+                              fontWeight: isVisible ? 'bold' : 'normal',
+                              cursor: 'pointer',
+                              userSelect: 'none',
+                              transition: 'background 0.15s ease'
+                            }}
+                          >
+                            <span style={{ fontSize: '1rem', color: isVisible ? 'var(--theme-accent, #38bdf8)' : '#64748b' }}>
+                              {isVisible ? '☑' : '☐'}
+                            </span>
+                            <span>{fName}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="confirm-button"
+                onClick={() => {
+                  playSound('click');
+                  setIsFolderDropdownOpen(false);
+                  setIsCategoryFilterModalOpen(false);
+                }}
+              >
                 Concluído
               </button>
-            </div>
-          </div>
+            </div>        </div>
         </div>
       )}
 
@@ -2902,8 +3321,7 @@ const handleFileChange = (e) => {
         <div className="modal-backdrop" onClick={() => { playSound('click'); setIsSettingsModalOpen(false); }}>
           <div className="modal-window settings-modal-window" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header-row">
-              <h3>Configurações e Dados</h3>
-              <button className="close-popup-btn" onClick={() => { playSound('click'); setIsSettingsModalOpen(false); }}>×</button>
+             <h3>{t('modal_settings_title', 'Configurações e Dados')}</h3>              <button className="close-popup-btn" onClick={() => { playSound('click'); setIsSettingsModalOpen(false); }}>×</button>
             </div>
 
             <div className="settings-content">
@@ -2933,10 +3351,15 @@ const handleFileChange = (e) => {
                    Comandos do Sistema
                 </button>
 
-                <button className="backup-btn export-btn" onClick={handleExportData}>
-                  Fazer Backup
-                </button>
+               <button
+                  className="backup-btn commands-btn up-idioma-settings-btn"
+                  onClick={() => { playSound('click'); setIsLanguageModalOpen(true); }}
+                >
+                 {t('btn_language', 'Idioma do Sistema')}                </button>
 
+<button className="backup-btn export-btn" onClick={handleExportData}>
+  {t('btn_backup', 'Fazer Backup')}
+</button>
                 <button
                   className="backup-btn import-btn"
                   onClick={() => { playSound('click'); fileInputRef.current && fileInputRef.current.click(); }}
@@ -4444,10 +4867,15 @@ const handleFileChange = (e) => {
         </div>
       )}
 
-      {/* COMPONENTES DO POMODORO E TAREFAS */}
+{/* COMPONENTES DO POMODORO E TAREFAS */}
       <PomodoroModal pomodoro={pomodoro} playSound={playSound} />
       <PomodoroWidget pomodoro={pomodoro} playSound={playSound} />
       <TaskModal taskState={taskState} playSound={playSound} />
+      <UpIdiomaModal
+        isOpen={isLanguageModalOpen}
+        onClose={() => setIsLanguageModalOpen(false)}
+        playSound={playSound}
+      />
     </div>
   );
 }

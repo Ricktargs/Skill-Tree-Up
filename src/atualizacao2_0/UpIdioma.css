@@ -1,0 +1,136 @@
+/* ESTILOS EXCLUSIVOS DO COMPONENTE UPIDIOMA */
+.up-idioma-modal {
+  width: 520px !important;
+  max-width: 92vw !important;
+  padding: 1.8rem !important;
+}
+
+.up-idioma-modal-title {
+  font-size: 1.25rem !important;
+  font-weight: 800 !important;
+  color: #f8fafc !important;
+}
+
+.up-idioma-modal-desc {
+  font-size: 0.88rem !important;
+  color: #94a3b8 !important;
+  line-height: 1.5 !important;
+  margin-bottom: 1.2rem !important;
+}
+
+.up-idioma-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.85rem;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 0.3rem;
+}
+
+.up-idioma-card {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--theme-border, #1e293b);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  user-select: none;
+}
+
+.up-idioma-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--theme-accent, #38bdf8);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.up-idioma-card.active {
+  border-color: var(--theme-accent, #3b82f6);
+  background: rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.3);
+}
+
+.up-idioma-flag {
+  font-size: 2.2rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.up-idioma-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.up-idioma-name {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.up-idioma-code {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.up-idioma-active-badge {
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--theme-accent, #38bdf8);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.up-idioma-settings-btn {
+  background: rgba(56, 189, 248, 0.12) !important;
+  color: var(--theme-accent, #38bdf8) !important;
+  border: 1px solid var(--theme-border, #38bdf8) !important;
+}
+
+.up-idioma-settings-btn:hover {
+  background: rgba(56, 189, 248, 0.25) !important;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 600px) {
+  .up-idioma-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* Esconde a barra e avisos do Google Translate */
+.goog-te-banner-frame,
+.skiptranslate,
+#goog-gt-tt {
+  display: none !important;
+}
+
+body {
+  top: 0px !important;
+}
+/* Esconde a barra e avisos padrão do Google Translate */
+.goog-te-banner-frame,
+.skiptranslate,
+#goog-gt-tt {
+  display: none !important;
+}
+
+body {
+  top: 0px !important;
+  transition: opacity 0.25s ease-in-out;
+}
+
+/* Transição suave para evitar o piscar das palavras */
+body.lang-translating {
+  opacity: 0.05 !important;
+  pointer-events: none !important;
+}
+
+body.lang-ready {
+  opacity: 1 !important;
+}
