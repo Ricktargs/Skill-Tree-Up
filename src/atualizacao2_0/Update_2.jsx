@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './Update_2.css';
-import { playWebAudioAlarm } from './Update_2';
+import { playWebAudioAlarm, usePomodoro } from './Update_2.js';
+
+export { usePomodoro };
 
 // 1. BOTÃO DO POMODORO NA TELA PRINCIPAL
 export function PomodoroIconButton({ pomodoro, playSound }) {

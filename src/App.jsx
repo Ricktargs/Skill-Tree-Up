@@ -3,12 +3,10 @@ import { useGameData, PRESET_DECKS, getXpNeededForLevel } from './hooks/useGameD
 import EmojiPicker from 'emoji-picker-react';
 import confetti from 'canvas-confetti';
 import './App.css';
-import './App.css';
 import './SetMobileGrande.css';
 import './SetMobilePequeno.css';
-
-import { usePomodoro } from './atualizacao2_0/Update_2';
-import { PomodoroModal, PomodoroWidget } from './atualizacao2_0/Update_2.jsx';
+import { EditMissionsModal } from './EditMissionsModal.jsx';
+import { usePomodoro, PomodoroModal, PomodoroWidget } from './atualizacao2_0/Update_2.jsx';
 import { useTaskUpdate } from './atualizacao2_0/TaskUpdate.js';
 import { useLanguage, UpIdiomaModal } from './atualizacao2_0/UpIdioma.jsx';
 import { TaskModal, TaskAlert, TaskBadge } from './atualizacao2_0/TaskUpdate.jsx';
@@ -118,7 +116,7 @@ const getClampedMenuPos = (clientX, clientY, width = 220, height = 200) => {
 export default function App() {
   const pomodoro = usePomodoro();
   const taskState = useTaskUpdate();
- const { t } = useLanguage();
+  const { t } = useLanguage();
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
 
   const {
@@ -185,7 +183,12 @@ export default function App() {
     resetRefreshesCountHack,
     completeMission,
     addMiniMissionToSkill,
-    deleteMiniMissionFromSkill
+    deleteMiniMissionFromSkill,
+    dailyMissionsQuota,
+    setDailyMissionsQuota,
+    prioritizedMissions,
+    togglePrioritizeMission,
+    updateMiniMissionText
   } = useGameData();
 
   const [isEditingNickname, setIsEditingNickname] = useState(false);
@@ -223,6 +226,8 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [isMissionsModalOpen, setIsMissionsModalOpen] = useState(false);
+  const [isEditMissionsModalOpen, setIsEditMissionsModalOpen] = useState(false);
+  const [isMissionsHistoryModalOpen, setIsMissionsHistoryModalOpen] = useState(false);
   const [isMiniMissionsModalOpen, setIsMiniMissionsModalOpen] = useState(false);
   const [miniMissionsModalTab, setMiniMissionsModalTab] = useState('list');
   const [newMiniMissionText, setNewMiniMissionText] = useState('');
@@ -234,7 +239,7 @@ export default function App() {
   const [confirmClearSkills, setConfirmClearSkills] = useState(false);
 
   const [isCategoryFilterModalOpen, setIsCategoryFilterModalOpen] = useState(false);
-const [selectedFolderFilters, setSelectedFolderFilters] = useState(() => {
+  const [selectedFolderFilters, setSelectedFolderFilters] = useState(() => {
     try {
       const saved = localStorage.getItem('selected_folder_filters_v1');
       return saved ? JSON.parse(saved) : [];
@@ -247,10 +252,12 @@ const [selectedFolderFilters, setSelectedFolderFilters] = useState(() => {
     try {
       localStorage.setItem('selected_folder_filters_v1', JSON.stringify(selectedFolderFilters));
     } catch (e) {}
-  }, [selectedFolderFilters]);  const [selectedFolderInList, setSelectedFolderInList] = useState('');
+  }, [selectedFolderFilters]);
+
+  const [selectedFolderInList, setSelectedFolderInList] = useState('');
   
   const [isFolderDropdownOpen, setIsFolderDropdownOpen] = useState(false);
-const [deletingFolderName, setDeletingFolderName] = useState(null);
+  const [deletingFolderName, setDeletingFolderName] = useState(null);
   const [deletedFolders, setDeletedFolders] = useState(() => {
     try {
       const saved = localStorage.getItem('rpg_deleted_folders_v1');
@@ -266,7 +273,7 @@ const [deletingFolderName, setDeletingFolderName] = useState(null);
     } catch (e) {}
   }, [deletedFolders]);
 
-const [editingFolderName, setEditingFolderName] = useState(null);
+  const [editingFolderName, setEditingFolderName] = useState(null);
   const [tempFolderNameInput, setTempFolderNameInput] = useState('');
 
   const handleRenameFolder = (oldName, newName) => {
@@ -277,7 +284,6 @@ const [editingFolderName, setEditingFolderName] = useState(null);
     }
     playSound('click');
 
-    // 1. Atualiza o nome da pasta em todas as habilidades pertencentes a ela
     setSkills((prevSkills) =>
       prevSkills.map((s) => {
         if ((s.folder || 'Geral').trim() === oldName) {
@@ -287,13 +293,10 @@ const [editingFolderName, setEditingFolderName] = useState(null);
       })
     );
 
-    // 2. Oculta o nome antigo para evitar duplicação e garante o novo nome ativo
     setDeletedFolders((prev) => [...new Set([...prev, oldName])].filter((f) => f !== trimmed));
 
-    // 3. Registra a nova pasta
     if (addFolder) addFolder(trimmed);
 
-    // 4. Atualiza os filtros de visualização selecionados
     setSelectedFolderFilters((prev) =>
       prev.map((f) => (f === oldName ? trimmed : f))
     );
@@ -301,7 +304,7 @@ const [editingFolderName, setEditingFolderName] = useState(null);
     setEditingFolderName(null);
   };
 
-const [draggedFolderName, setDraggedFolderName] = useState(null);
+  const [draggedFolderName, setDraggedFolderName] = useState(null);
   const [dragOverFolderName, setDragOverFolderName] = useState(null);
 
   const [customFolderOrder, setCustomFolderOrder] = useState(() => {
@@ -364,7 +367,6 @@ const [draggedFolderName, setDraggedFolderName] = useState(null);
     if (folderName === 'Geral') return;
     playSound('delete');
 
-    // 1. Mover todas as habilidades desta pasta com segurança para a pasta 'Geral'
     setSkills((prevSkills) =>
       prevSkills.map((s) => {
         if ((s.folder || 'Geral').trim() === folderName) {
@@ -374,18 +376,15 @@ const [draggedFolderName, setDraggedFolderName] = useState(null);
       })
     );
 
-    // 2. Registrar a pasta na lista de excluídas
     setDeletedFolders((prev) => [...new Set([...prev, folderName])]);
-
-    // 3. Remover dos filtros ativos
     setSelectedFolderFilters((prev) => prev.filter((f) => f !== folderName));
   };
+
   const [draggedSkillId, setDraggedSkillId] = useState(null);
   const [dragOverFolder, setDragOverFolder] = useState(null);
   const [folderSortOrder, setFolderSortOrder] = useState('default');
   const [folderCardContextMenu, setFolderCardContextMenu] = useState(null);
 
-  /* DRAG & DROP NO EDITOR DE LAYOUT */
   const [draggedLayoutIdx, setDraggedLayoutIdx] = useState(null);
   const [dragOverLayoutIdx, setDragOverLayoutIdx] = useState(null);
 
@@ -461,6 +460,7 @@ const [draggedFolderName, setDraggedFolderName] = useState(null);
     setIsSearchOpen(false);
     setIsHackModalOpen(false);
     setIsMissionsModalOpen(false);
+    setIsEditMissionsModalOpen(false);
     setIsMiniMissionsModalOpen(false);
     setIsCategoryFilterModalOpen(false);
     setIsCreateFolderModalOpen(false);
@@ -519,7 +519,6 @@ const [draggedFolderName, setDraggedFolderName] = useState(null);
     setTempNickname(nickname);
   }, [nickname]);
 
-  // === RESET AUTOMÁTICO DE MISSÕES E SORTEIOS ÀS 04:00 DA MADRUGADA ===
   useEffect(() => {
     const getGameDayKey = (date = new Date()) => {
       const d = new Date(date);
@@ -900,91 +899,88 @@ const [draggedFolderName, setDraggedFolderName] = useState(null);
     handleApplyCustomColorDirectly(pickedColorHex);
   };
 
-const handleExportData = () => {
-  playSound('click');
-  const baseExport = exportAllData();
+  const handleExportData = () => {
+    playSound('click');
+    const baseExport = exportAllData();
 
-  let savedTasks = null;
-  try {
-    const rawTasks = localStorage.getItem('task_update_lists_v1');
-    if (rawTasks) savedTasks = JSON.parse(rawTasks);
-  } catch (e) {}
+    let savedTasks = null;
+    try {
+      const rawTasks = localStorage.getItem('task_update_lists_v1');
+      if (rawTasks) savedTasks = JSON.parse(rawTasks);
+    } catch (e) {}
 
-  const exportObject = {
-    ...baseExport,
-    // Tarefas e Pomodoro
-    taskUpdateLists: savedTasks || taskState?.taskLists || taskState?.lists || [],
-    taskUpdateLang: localStorage.getItem('task_update_lang_v1') || taskState?.language || 'pt-BR',
-    pomodoroPresets: pomodoro?.modePresets,
-    pomodoroSound: pomodoro?.soundOption,
-    // PREFERÊNCIAS DAS PASTAS
-    folderCustomOrder: JSON.parse(localStorage.getItem('rpg_custom_folder_order_v1') || '[]'),
-    folderDeletedList: JSON.parse(localStorage.getItem('rpg_deleted_folders_v1') || '[]'),
-    folderFilters: JSON.parse(localStorage.getItem('selected_folder_filters_v1') || '[]')
+    const exportObject = {
+      ...baseExport,
+      taskUpdateLists: savedTasks || taskState?.taskLists || taskState?.lists || [],
+      taskUpdateLang: localStorage.getItem('task_update_lang_v1') || taskState?.language || 'pt-BR',
+      pomodoroPresets: pomodoro?.modePresets,
+      pomodoroSound: pomodoro?.soundOption,
+      folderCustomOrder: JSON.parse(localStorage.getItem('rpg_custom_folder_order_v1') || '[]'),
+      folderDeletedList: JSON.parse(localStorage.getItem('rpg_deleted_folders_v1') || '[]'),
+      folderFilters: JSON.parse(localStorage.getItem('selected_folder_filters_v1') || '[]')
+    };
+
+    const now = new Date();
+    const fileName = `skill-tree-backup-${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}.json`;
+
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportObject, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', fileName);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
   };
 
-  const now = new Date();
-  const fileName = `skill-tree-backup-${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}.json`;
+  const handleFileChange = (e) => {
+    const fileReader = new FileReader();
+    const file = e.target.files[0];
 
-  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportObject, null, 2));
-  const downloadAnchor = document.createElement('a');
-  downloadAnchor.setAttribute('href', dataStr);
-  downloadAnchor.setAttribute('download', fileName);
-  document.body.appendChild(downloadAnchor);
-  downloadAnchor.click();
-  downloadAnchor.remove();
-};
+    if (file) {
+      fileReader.readAsText(file, 'UTF-8');
+      fileReader.onload = (event) => {
+        try {
+          const parsedData = JSON.parse(event.target.result);
 
-const handleFileChange = (e) => {
-  const fileReader = new FileReader();
-  const file = e.target.files[0];
+          const success = importData(parsedData);
 
-  if (file) {
-    fileReader.readAsText(file, 'UTF-8');
-    fileReader.onload = (event) => {
-      try {
-        const parsedData = JSON.parse(event.target.result);
+          if (parsedData.taskUpdateLists) {
+            localStorage.setItem('task_update_lists_v1', JSON.stringify(parsedData.taskUpdateLists));
+          }
+          if (parsedData.taskUpdateLang) {
+            localStorage.setItem('task_update_lang_v1', parsedData.taskUpdateLang);
+          }
+          if (parsedData.pomodoroPresets) {
+            localStorage.setItem('pomodoro_mode_presets_v3', JSON.stringify(parsedData.pomodoroPresets));
+          }
+          if (parsedData.pomodoroSound) {
+            localStorage.setItem('pomodoro_saved_sound_option', parsedData.pomodoroSound);
+          }
 
-        const success = importData(parsedData);
+          if (parsedData.folderCustomOrder) {
+            localStorage.setItem('rpg_custom_folder_order_v1', JSON.stringify(parsedData.folderCustomOrder));
+          }
+          if (parsedData.folderDeletedList) {
+            localStorage.setItem('rpg_deleted_folders_v1', JSON.stringify(parsedData.folderDeletedList));
+          }
+          if (parsedData.folderFilters) {
+            localStorage.setItem('selected_folder_filters_v1', JSON.stringify(parsedData.folderFilters));
+          }
 
-        // Restaura Tarefas e Pomodoro
-        if (parsedData.taskUpdateLists) {
-          localStorage.setItem('task_update_lists_v1', JSON.stringify(parsedData.taskUpdateLists));
-        }
-        if (parsedData.taskUpdateLang) {
-          localStorage.setItem('task_update_lang_v1', parsedData.taskUpdateLang);
-        }
-        if (parsedData.pomodoroPresets) {
-          localStorage.setItem('pomodoro_mode_presets_v3', JSON.stringify(parsedData.pomodoroPresets));
-        }
-        if (parsedData.pomodoroSound) {
-          localStorage.setItem('pomodoro_saved_sound_option', parsedData.pomodoroSound);
-        }
-
-        // Restaura Preferências do Gerenciador de Pastas
-        if (parsedData.folderCustomOrder) {
-          localStorage.setItem('rpg_custom_folder_order_v1', JSON.stringify(parsedData.folderCustomOrder));
-        }
-        if (parsedData.folderDeletedList) {
-          localStorage.setItem('rpg_deleted_folders_v1', JSON.stringify(parsedData.folderDeletedList));
-        }
-        if (parsedData.folderFilters) {
-          localStorage.setItem('selected_folder_filters_v1', JSON.stringify(parsedData.folderFilters));
-        }
-
-        if (success) {
-          playSound('train');
-          setIsSettingsModalOpen(false);
-          window.location.reload();
-        } else {
+          if (success) {
+            playSound('train');
+            setIsSettingsModalOpen(false);
+            window.location.reload();
+          } else {
+            playSound('error');
+          }
+        } catch (error) {
           playSound('error');
         }
-      } catch (error) {
-        playSound('error');
-      }
-    };
-  }
-};
+      };
+    }
+  };
+
   const handleContextMenu = (e, skill) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1102,7 +1098,6 @@ const handleFileChange = (e) => {
   });
 
   const visibleSkills = getOrderedSkills(rawVisibleSkills);
-
   const hiddenSkills = skills.filter((s) => hiddenSkillIds.includes(s.id));
 
   const RANK_MILESTONES = [
@@ -1120,7 +1115,7 @@ const handleFileChange = (e) => {
     { level: 480, rank: 'Mago Supremo (Máximo)' }
   ];
 
-const rawAvailableFolders = Array.from(
+  const rawAvailableFolders = Array.from(
     new Set([...(folders || []), 'Geral', ...skills.map((s) => s.folder || 'Geral')])
   ).filter((f) => Boolean(f) && !deletedFolders.includes(f));
 
@@ -1131,6 +1126,22 @@ if (folderSortOrder === 'a-z') {
     otherFolders.sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
   } else if (folderSortOrder === 'z-a') {
     otherFolders.sort((a, b) => b.localeCompare(a, 'pt-BR', { sensitivity: 'base' }));
+  } else if (folderSortOrder === 'more-skills') {
+    otherFolders.sort((a, b) => {
+      const countA = skills.filter((s) => (s.folder || 'Geral').trim() === a).length;
+      const countB = skills.filter((s) => (s.folder || 'Geral').trim() === b).length;
+      return countB - countA;
+    });
+  } else if (folderSortOrder === 'less-skills') {
+    otherFolders.sort((a, b) => {
+      const countA = skills.filter((s) => (s.folder || 'Geral').trim() === a).length;
+      const countB = skills.filter((s) => (s.folder || 'Geral').trim() === b).length;
+      return countA - countB;
+    });
+  } else if (folderSortOrder === 'newest') {
+    otherFolders.sort((a, b) => rawAvailableFolders.indexOf(b) - rawAvailableFolders.indexOf(a));
+  } else if (folderSortOrder === 'oldest') {
+    otherFolders.sort((a, b) => rawAvailableFolders.indexOf(a) - rawAvailableFolders.indexOf(b));
   } else if (customFolderOrder && customFolderOrder.length > 0) {
     otherFolders.sort((a, b) => {
       const idxA = customFolderOrder.indexOf(a);
@@ -1185,7 +1196,6 @@ if (folderSortOrder === 'a-z') {
       }}
     >
       <div className="top-left-nav-buttons" style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
-        {/* Coluna vertical: Perfil, Pomodoro e Tarefas */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <button
             className="top-icon-button"
@@ -1239,7 +1249,6 @@ if (folderSortOrder === 'a-z') {
           )}
         </button>
 
-        {/* === ALERTA COLOCADO AQUI, AO LADO DAS MISSÕES === */}
         <TaskAlert taskState={taskState} />
 
         {pendingTransfers && pendingTransfers.length > 0 && (
@@ -1353,17 +1362,17 @@ if (folderSortOrder === 'a-z') {
             )}
           </div>
 
-<div className="level-badge-row">
-  <span className="hero-level-title">{t('hero_level', 'Nível')} {playerLevel}</span>
-  <button
-    type="button"
-    className="inspect-level-btn"
-    onClick={() => { playSound('click'); setIsLevelInfoModalOpen(true); }}
-    title="Ver tabela de patentes e pontuação"
-  >
-    📊 {t('hero_inspect_levels', 'Ver Níveis')}
-  </button>
-</div>
+          <div className="level-badge-row">
+            <span className="hero-level-title">{t('hero_level', 'Nível')} {playerLevel}</span>
+            <button
+              type="button"
+              className="inspect-level-btn"
+              onClick={() => { playSound('click'); setIsLevelInfoModalOpen(true); }}
+              title="Ver tabela de patentes e pontuação"
+            >
+              📊 {t('hero_inspect_levels', 'Ver Níveis')}
+            </button>
+          </div>
           <span className="hero-rank">{getRankTitle(playerLevel)}</span>
 
           <div
@@ -1967,9 +1976,33 @@ if (folderSortOrder === 'a-z') {
             onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: '1100px', width: '95vw', maxHeight: '90vh', overflowY: 'auto' }}
           >
-            <div className="modal-header-row" style={{ justifyContent: 'space-between', width: '100%' }}>
-              <h2>📜 Missões de Hoje</h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+<div className="modal-header-row" style={{ justifyContent: 'space-between', width: '100%' }}>
+  <h2>📜 Missões de Hoje</h2>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+    <button
+      type="button"
+      className="cancel-button"
+      style={{ padding: '0.35rem 0.8rem', fontSize: '0.8rem', cursor: 'pointer' }}
+      onClick={() => {
+        if (playSound) playSound('click');
+        setIsMissionsHistoryModalOpen(true);
+      }}
+    >
+      Histórico
+    </button>
+
+    <button
+      type="button"
+      className="cancel-button"
+      style={{ padding: '0.35rem 0.8rem', fontSize: '0.8rem', cursor: 'pointer' }}
+      onClick={() => {
+        if (playSound) playSound('click');
+        setIsEditMissionsModalOpen(true);
+      }}
+    >
+      Editar Missões
+    </button>
+                
                 <button
                   type="button"
                   className="cancel-button"
@@ -2014,7 +2047,7 @@ if (folderSortOrder === 'a-z') {
             </div>
 
             <p style={{ fontSize: '0.88rem', color: '#94a3b8', margin: '0.5rem 0 1rem 0' }}>
-              Abaixo estão até <strong>5 missões sorteadas aleatoriamente</strong> para hoje. As missões concluídas são mantidas, enquanto as não-concluídas podem ser resorteadas até <strong>2x por dia</strong> ({dailyRefreshesLeft}/2 restantes). Complete cada uma para resgatar <strong>1 ou 2 Diamantes 💎</strong>!
+              Abaixo estão até <strong>{dailyMissionsQuota} missões sorteadas aleatoriamente</strong> para hoje. As missões concluídas são mantidas, enquanto as não-concluídas podem ser resorteadas até <strong>2x por dia</strong> ({dailyRefreshesLeft}/2 restantes). Complete cada uma para resgatar <strong>1 ou 2 Diamantes 💎</strong>!
             </p>
 
             {(!dailyMissions || dailyMissions.length === 0) ? (
@@ -2034,50 +2067,54 @@ if (folderSortOrder === 'a-z') {
                   padding: '0.5rem 0.2rem'
                 }}
               >
-                {dailyMissions.map((mission) => (
-                  <div
-                    key={mission.id}
-                    className={`mission-card-item ${mission.completed ? 'completed' : ''}`}
-                  >
-                    <div>
-                      <div
-                        className="mission-card-header"
-                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}
-                      >
-                        <span
-                          className="mission-skill-badge"
-                          title={mission.skillName}
-                        >
-                          {mission.skillName}
-                        </span>
-                        <span
-                          className="mission-reward-badge"
-                        >
-                          +{mission.rewardDiamonds || 1} 💎
-                        </span>
-                      </div>
-                      <div
-                        className="mission-text-content"
-                        style={{ fontSize: '0.9rem', color: '#f8fafc', marginBottom: '1.2rem', lineHeight: '1.4' }}
-                      >
-                        {mission.text}
-                      </div>
-                    </div>
+                {dailyMissions.map((mission) => {
+                  const isRare = (mission.rewardDiamonds || 0) >= 5;
 
-                    <button
-                      className={`mission-complete-btn ${mission.completed ? 'is-done' : ''}`}
-                      onClick={() => {
-                        if (!mission.completed) {
-                          playSound('train');
-                          completeMission(mission.id);
-                        }
-                      }}
-                      disabled={mission.completed}
+                  return (
+                    <div
+                      key={mission.id}
+                      className={`mission-card-item ${mission.completed ? 'completed' : ''} ${isRare ? 'rare-mission-card' : ''}`}
                     >
-                      {mission.completed ? 'Concluída ✓' : 'Concluir Missão'}
-                    </button>
-                  </div>
-                ))}
+                      <div>
+                        <div
+                          className="mission-card-header"
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}
+                        >
+                          <span
+                            className="mission-skill-badge"
+                            title={mission.skillName}
+                          >
+                            {mission.skillName}
+                          </span>
+                          <span
+                            className="mission-reward-badge"
+                          >
+                            +{mission.rewardDiamonds || 1} 💎
+                          </span>
+                        </div>
+                        <div
+                          className="mission-text-content"
+                          style={{ fontSize: '0.9rem', color: '#f8fafc', marginBottom: '1.2rem', lineHeight: '1.4' }}
+                        >
+                          {mission.text}
+                        </div>
+                      </div>
+
+                      <button
+                        className={`mission-complete-btn ${mission.completed ? 'is-done' : ''}`}
+                        onClick={() => {
+                          if (!mission.completed) {
+                            playSound('train');
+                            completeMission(mission.id);
+                          }
+                        }}
+                        disabled={mission.completed}
+                      >
+                        {mission.completed ? 'Concluída ✓' : 'Concluir Missão'}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -2243,7 +2280,7 @@ if (folderSortOrder === 'a-z') {
                 </button>
               </div>
 
-              <div className="folder-sort-container">
+               <div className="folder-sort-container">
                 <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 'bold' }}>Ordem das Pastas:</span>
                 <select
                   value={folderSortOrder}
@@ -2253,6 +2290,10 @@ if (folderSortOrder === 'a-z') {
                   <option value="default">Padrão</option>
                   <option value="a-z">A a Z (Alfabética)</option>
                   <option value="z-a">Z a A (Inversa)</option>
+                  <option value="more-skills">Mais Habilidades</option>
+                  <option value="less-skills">Menos Habilidades</option>
+                  <option value="newest">Mais Novos</option>
+                  <option value="oldest">Mais Antigos</option>
                 </select>
               </div>
             </div>
@@ -2271,7 +2312,7 @@ if (folderSortOrder === 'a-z') {
                   );
                 });
 
-const isFolderVisible = selectedFolderFilters.length === 0 || selectedFolderFilters.includes(folderName);
+                const isFolderVisible = selectedFolderFilters.length === 0 || selectedFolderFilters.includes(folderName);
                 const isDragOverThis = dragOverFolder === folderName;
                 const isFolderBeingDragged = draggedFolderName === folderName;
                 const isFolderDragTarget = dragOverFolderName === folderName && draggedFolderName !== folderName;
@@ -2402,7 +2443,7 @@ const isFolderVisible = selectedFolderFilters.length === 0 || selectedFolderFilt
                             Não
                           </button>
                         </div>
-) : (
+                      ) : (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           {folderName !== 'Geral' && (
                             <button
@@ -2454,7 +2495,7 @@ const isFolderVisible = selectedFolderFilters.length === 0 || selectedFolderFilt
                           </label>
                         </div>
                       )}
-                                          </div>
+                    </div>
 
                     <button
                       type="button"
@@ -2491,84 +2532,91 @@ const isFolderVisible = selectedFolderFilters.length === 0 || selectedFolderFilt
                         paddingRight: '0.2rem'
                       }}
                     >
-                      {folderSkills.length === 0 ? (
-                        <div style={{ fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic', textAlign: 'center', marginTop: '1.5rem' }}>
-                          Nenhuma habilidade nesta pasta...
-                        </div>
-                      ) : (
-                        folderSkills.map((sk) => {
-                          const isMax = sk.level >= sk.maxLevel;
-                          const skillColor = sk.color || '#3b82f6';
+{folderSkills.length === 0 ? (
+  <div style={{ fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic', textAlign: 'center', padding: '1rem 0' }}>
+    Nenhuma habilidade nesta pasta...
+  </div>
+) : (
+  folderSkills.map((sk) => {
+    const isMax = sk.level >= sk.maxLevel;
+    const skillColor = sk.color || '#3b82f6';
 
-                          return (
-                            <div
-                              key={sk.id}
-                            draggable
-                              onDragStart={(e) => {
-                                e.stopPropagation();
-                                setDraggedSkillId(sk.id);
-                              }}
-                              onDragEnd={() => {
-                                setDraggedSkillId(null);
-                                setDragOverFolder(null);
-                              }}
-                              onTouchStart={(e) => handleCardTouchStart(e, sk, true)}
-                              onTouchEnd={handleCardTouchEndOrMove}
-                              onTouchMove={handleCardTouchEndOrMove}
-                              onContextMenu={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                playSound('click');
-                                const pos = getClampedMenuPos(e.clientX, e.clientY, 200, 200);
-                                setFolderCardContextMenu({
-                                  x: pos.x,
-                                  y: pos.y,
-                                  skill: sk
-                                });
-                              }}
-                              className="skill-card"
-                              style={{
-                                ...getCardStyle(false, skillColor),
-                                borderColor: isMax ? '#facc15' : undefined,
-                                boxShadow: isMax ? '0 0 8px rgba(250, 204, 21, 0.4)' : 'none',
-                                padding: '0.6rem 0.8rem',
-                                cursor: 'grab',
-                                userSelect: 'none',
-                                minHeight: 'auto',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.4rem'
-                              }}
-                            >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span className="skill-name" style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>
-                                  ⠿ {sk.title || sk.name}
-                                </span>
-                                <span className="level-text" style={{ fontSize: '0.75rem' }}>
-                                  Lvl {sk.level}/{sk.maxLevel}
-                                </span>
-                              </div>
+    return (
+      <div
+        key={sk.id}
+        draggable
+        onDragStart={(e) => {
+          e.stopPropagation();
+          setDraggedSkillId(sk.id);
+        }}
+        onDragEnd={() => {
+          setDraggedSkillId(null);
+          setDragOverFolder(null);
+        }}
+        onTouchStart={(e) => handleCardTouchStart(e, sk, true)}
+        onTouchEnd={handleCardTouchEndOrMove}
+        onTouchMove={handleCardTouchEndOrMove}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          playSound('click');
+          const pos = getClampedMenuPos(e.clientX, e.clientY, 200, 200);
+          setFolderCardContextMenu({
+            x: pos.x,
+            y: pos.y,
+            skill: sk
+          });
+        }}
+        onClick={(e) => {
+          if (e.target.closest('button') || e.target.closest('input')) return;
+          playSound('click');
+          setIsCategoryFilterModalOpen(false);
+          setEditingSkill({ ...sk });
+          setIsCustomMaxLevelInput(false);
+        }}
+        className="skill-card"
+        style={{
+          ...getCardStyle(false, skillColor),
+          borderColor: isMax ? '#facc15' : undefined,
+          boxShadow: isMax ? '0 0 8px rgba(250, 204, 21, 0.4)' : 'none',
+          padding: '0.6rem 0.8rem',
+          cursor: 'pointer',
+          userSelect: 'none',
+          minHeight: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.4rem'
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span className="skill-name" style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#f8fafc' }}>
+            ⁞⁞ {sk.title || sk.name}
+          </span>
+          <span className="level-text" style={{ fontSize: '0.75rem' }}>
+            Lvl {sk.level}/{sk.maxLevel}
+          </span>
+        </div>
 
-                              <div className="segments-center-zone" style={{ margin: 0 }}>
-                                <div className="segments-bar">
-                                  {renderSegmentBars(sk.level, sk.maxLevel, skillColor, isMax)}
-                                </div>
-                              </div>
+        <div className="segments-center-zone" style={{ margin: 0 }}>
+          <div className="segments-bar">
+            {renderSegmentBars(sk.level, sk.maxLevel, skillColor, isMax)}
+          </div>
+        </div>
 
-                              <div style={{ fontSize: '0.75rem', opacity: 0.85, color: 'var(--theme-accent, #38bdf8)', wordBreak: 'break-word' }}>
-                                Cat: {sk.category || 'Geral'}
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
+        <div style={{ fontSize: '0.75rem', opacity: 0.85, color: 'var(--theme-accent, #38bdf8)' }}>
+          Cat: {sk.category || 'Geral'}
+        </div>
+      </div>
+    );
+  })
+)}
                     </div>
                   </div>
                 );
               })}
             </div>
 
-<div className="modal-actions-bar" style={{ marginTop: '1rem', position: 'relative' }}>
+            <div className="modal-actions-bar" style={{ marginTop: '1rem', position: 'relative' }}>
               <button
                 type="button"
                 className="cancel-button"
@@ -2702,7 +2750,8 @@ const isFolderVisible = selectedFolderFilters.length === 0 || selectedFolderFilt
               >
                 Concluído
               </button>
-            </div>        </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -3317,11 +3366,13 @@ const isFolderVisible = selectedFolderFilters.length === 0 || selectedFolderFilt
         </div>
       )}
 
+      {/* MODAL CONFIGURAÇÕES E DADOS (PADRONIZADO COM 1 COR ÚNICA DE BOTÕES) */}
       {isSettingsModalOpen && (
         <div className="modal-backdrop" onClick={() => { playSound('click'); setIsSettingsModalOpen(false); }}>
           <div className="modal-window settings-modal-window" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header-row">
-             <h3>{t('modal_settings_title', 'Configurações e Dados')}</h3>              <button className="close-popup-btn" onClick={() => { playSound('click'); setIsSettingsModalOpen(false); }}>×</button>
+              <h3>{t('modal_settings_title', 'Configurações e Dados')}</h3>
+              <button className="close-popup-btn" onClick={() => { playSound('click'); setIsSettingsModalOpen(false); }}>×</button>
             </div>
 
             <div className="settings-content">
@@ -3329,39 +3380,50 @@ const isFolderVisible = selectedFolderFilters.length === 0 || selectedFolderFilt
                 Gerencie seus dados de progresso ou consulte a lista completa de atalhos e comandos do programa.
               </p>
 
-              <div className="backup-actions">
+<div className="backup-actions">
                 <button
-                  className="backup-btn commands-btn"
+                  className="backup-btn"
+                  style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--theme-border, #334155)', color: '#fff' }}
                   onClick={() => { playSound('click'); setIsBoxColorModalOpen(true); }}
                 >
-                   Cor da Caixa
+                  Cor da Caixa
                 </button>
 
                 <button
-                  className="backup-btn commands-btn"
+                  className="backup-btn"
+                  style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--theme-border, #334155)', color: '#fff' }}
                   onClick={() => { playSound('click'); setIsSkillSettingsModalOpen(true); }}
                 >
-                   Habilidades
+                  Habilidades
                 </button>
 
                 <button
-                  className="backup-btn commands-btn"
+                  className="backup-btn"
+                  style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--theme-border, #334155)', color: '#fff' }}
                   onClick={() => { playSound('click'); setIsCommandsModalOpen(true); }}
                 >
-                   Comandos do Sistema
+                  Comandos do Sistema
                 </button>
 
-               <button
-                  className="backup-btn commands-btn up-idioma-settings-btn"
+                <button
+                  className="backup-btn"
+                  style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--theme-border, #334155)', color: '#fff' }}
                   onClick={() => { playSound('click'); setIsLanguageModalOpen(true); }}
                 >
-                 {t('btn_language', 'Idioma do Sistema')}                </button>
+                  {t('btn_language', 'Idioma do Sistema')}
+                </button>
 
-<button className="backup-btn export-btn" onClick={handleExportData}>
-  {t('btn_backup', 'Fazer Backup')}
-</button>
                 <button
-                  className="backup-btn import-btn"
+                  className="backup-btn"
+                  style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--theme-border, #334155)', color: '#fff' }}
+                  onClick={handleExportData}
+                >
+                  {t('btn_backup', 'Fazer Backup')}
+                </button>
+
+                <button
+                  className="backup-btn"
+                  style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--theme-border, #334155)', color: '#fff' }}
                   onClick={() => { playSound('click'); fileInputRef.current && fileInputRef.current.click(); }}
                 >
                   Importar Backup
@@ -3832,30 +3894,31 @@ const isFolderVisible = selectedFolderFilters.length === 0 || selectedFolderFilt
                           toggleBatchSelection();
                         }
                       }}
-                         style={{
-                          ...getCardStyle(isMax, skillColor),
-                          cursor: isBatchSelectMode ? 'pointer' : 'grab',
-                          opacity: isBeingDragged ? 0.4 : 1,
-                          borderStyle: isDragTarget ? 'dashed' : 'solid',
-                          borderWidth: isCheckedBatch || isDragTarget ? '2px' : '1px',
-                          borderColor: isCheckedBatch
-                            ? '#f87171'
-                            : isDragTarget
-                            ? 'var(--theme-accent, #38bdf8)'
-                            : boxColorType === 'theme'
-                            ? activeThemePreset.border
-                            : isMax
-                            ? '#facc15'
-                            : skillColor,
-                          boxShadow: isCheckedBatch
-                            ? '0 0 14px rgba(248, 113, 113, 0.5)'
-                            : isDragTarget
-                            ? '0 0 15px rgba(56, 189, 248, 0.4)'
-                            : isMax
-                            ? '0 0 10px rgba(250, 204, 21, 0.3)'
-                            : `0 0 8px ${skillColor.startsWith && skillColor.startsWith('#') ? skillColor + '40' : skillColor}`,
-                          ...(isCheckedBatch ? { backgroundColor: 'rgba(127, 29, 29, 0.25)' } : {})
-                        }}                 >
+                      style={{
+                        ...getCardStyle(isMax, skillColor),
+                        cursor: isBatchSelectMode ? 'pointer' : 'grab',
+                        opacity: isBeingDragged ? 0.4 : 1,
+                        borderStyle: isDragTarget ? 'dashed' : 'solid',
+                        borderWidth: isCheckedBatch || isDragTarget ? '2px' : '1px',
+                        borderColor: isCheckedBatch
+                          ? '#f87171'
+                          : isDragTarget
+                          ? 'var(--theme-accent, #38bdf8)'
+                          : boxColorType === 'theme'
+                          ? activeThemePreset.border
+                          : isMax
+                          ? '#facc15'
+                          : skillColor,
+                        boxShadow: isCheckedBatch
+                          ? '0 0 14px rgba(248, 113, 113, 0.5)'
+                          : isDragTarget
+                          ? '0 0 15px rgba(56, 189, 248, 0.4)'
+                          : isMax
+                          ? '0 0 10px rgba(250, 204, 21, 0.3)'
+                          : `0 0 8px ${skillColor.startsWith && skillColor.startsWith('#') ? skillColor + '40' : skillColor}`,
+                        ...(isCheckedBatch ? { backgroundColor: 'rgba(127, 29, 29, 0.25)' } : {})
+                      }}
+                    >
                       {!isBatchSelectMode && (
                         <div className="reorder-button-group" onClick={(e) => e.stopPropagation()}>
                           <button
@@ -4867,7 +4930,7 @@ const isFolderVisible = selectedFolderFilters.length === 0 || selectedFolderFilt
         </div>
       )}
 
-{/* COMPONENTES DO POMODORO E TAREFAS */}
+      {/* COMPONENTES DO POMODORO E TAREFAS */}
       <PomodoroModal pomodoro={pomodoro} playSound={playSound} />
       <PomodoroWidget pomodoro={pomodoro} playSound={playSound} />
       <TaskModal taskState={taskState} playSound={playSound} />
@@ -4876,6 +4939,86 @@ const isFolderVisible = selectedFolderFilters.length === 0 || selectedFolderFilt
         onClose={() => setIsLanguageModalOpen(false)}
         playSound={playSound}
       />
+{/* ... outros modais do final do App.jsx ... */}
+
+      <EditMissionsModal
+        isOpen={isEditMissionsModalOpen}
+        onClose={() => setIsEditMissionsModalOpen(false)}
+        skills={skills}
+        dailyMissionsQuota={dailyMissionsQuota}
+        setDailyMissionsQuota={setDailyMissionsQuota}
+        prioritizedMissions={prioritizedMissions}
+        togglePrioritizeMission={togglePrioritizeMission}
+        updateMiniMissionText={updateMiniMissionText}
+        playSound={playSound}
+      />
+
+      {/* === COLE O PASSO 3 AQUI (LOGO ABAIXO DO EditMissionsModal) === */}
+      {isMissionsHistoryModalOpen && (
+        <div className="modal-backdrop high-z-backdrop" onClick={() => { playSound('click'); setIsMissionsHistoryModalOpen(false); }}>
+          <div className="modal-window high-z-window" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '650px', width: '92vw' }}>
+            <div className="modal-header-row">
+              <h3>Histórico de Missões Concluídas</h3>
+              <button className="close-popup-btn" onClick={() => { playSound('click'); setIsMissionsHistoryModalOpen(false); }}>✕</button>
+            </div>
+
+            <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '0.5rem 0 1rem 0' }}>
+              Lista das missões concluídas e recompensas resgatadas.
+            </p>
+
+            {(!dailyMissions || dailyMissions.filter((m) => m.completed).length === 0) ? (
+              <div style={{ textAlign: 'center', padding: '2rem 0', color: '#94a3b8', fontSize: '0.9rem' }}>
+                Nenhuma missão foi concluída ainda.
+              </div>
+            ) : (
+              <div style={{ maxHeight: '350px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem', paddingRight: '0.3rem' }}>
+                {dailyMissions
+                  .filter((m) => m.completed)
+                  .map((mission) => (
+                    <div
+                      key={mission.id}
+                      style={{
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        border: '1px solid var(--theme-border, rgba(255, 255, 255, 0.1))',
+                        borderRadius: '8px',
+                        padding: '0.75rem 1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.8rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--theme-accent, #38bdf8)', fontWeight: 'bold' }}>
+                          {mission.skillName}
+                        </span>
+                        <span style={{ fontSize: '0.9rem', color: '#f8fafc' }}>
+                          {mission.text}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#34d399', fontWeight: 'bold' }}>
+                          Concluída ✓
+                        </span>
+                        <span style={{ fontSize: '0.85rem', color: '#facc15', fontWeight: 'bold' }}>
+                          +{mission.rewardDiamonds || 1} 💎
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+
+            <div className="modal-actions-bar" style={{ marginTop: '1.2rem' }}>
+              <button className="confirm-button" onClick={() => { playSound('click'); setIsMissionsHistoryModalOpen(false); }}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ============================================================ */}
+
     </div>
   );
 }

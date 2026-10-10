@@ -73,37 +73,65 @@ export const calculateTotalXpFromSkills = (skillsList) => {
   }, 0);
 };
 
-export const generateDailyMissionsFromSkills = (skillsList) => {
+export const generateDailyMissionsFromSkills = (skillsList, quota = 5, prioritizedKeys = []) => {
   if (!Array.isArray(skillsList)) return [];
 
-  const pool = [];
+  const prioritizedPool = [];
+  const normalPool = [];
+
   skillsList.forEach((skill) => {
     if (Array.isArray(skill.miniMissions)) {
       skill.miniMissions.forEach((text) => {
         if (text && text.trim()) {
-          pool.push({
+          const itemText = text.trim();
+          const key1 = `${skill.id}___${itemText}`;
+          const key2 = `${skill.id}_${itemText}`;
+
+          const isPrioritized = Array.isArray(prioritizedKeys) && prioritizedKeys.some((pKey) => {
+            if (!pKey) return false;
+            return pKey === key1 || pKey === key2 || (pKey.includes(skill.id) && pKey.includes(itemText));
+          });
+
+          const missionData = {
             skillId: skill.id,
             skillName: skill.title || skill.name,
-            text: text.trim()
-          });
+            text: itemText,
+            key: key1
+          };
+
+          if (isPrioritized) {
+            prioritizedPool.push(missionData);
+          } else {
+            normalPool.push(missionData);
+          }
         }
       });
     }
   });
 
-  if (pool.length === 0) return [];
+  const selected = [...prioritizedPool];
 
-  const shuffled = [...pool].sort(() => 0.5 - Math.random());
-  const selected = shuffled.slice(0, 5);
+  if (selected.length > quota) {
+    selected.length = quota;
+  } else if (selected.length < quota && normalPool.length > 0) {
+    const shuffledNormals = [...normalPool].sort(() => 0.5 - Math.random());
+    const needed = quota - selected.length;
+    selected.push(...shuffledNormals.slice(0, needed));
+  }
 
-  return selected.map((m, idx) => ({
-    id: `dm_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`,
-    skillId: m.skillId,
-    skillName: m.skillName,
-    text: m.text,
-    rewardDiamonds: Math.random() < 0.5 ? 1 : 2,
-    completed: false
-  }));
+  return selected.map((m, idx) => {
+    const rand = Math.random();
+    const reward = rand < 0.02 ? 5 : (Math.random() < 0.5 ? 1 : 2);
+
+    return {
+      id: `dm_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`,
+      skillId: m.skillId,
+      skillName: m.skillName,
+      text: m.text,
+      rewardDiamonds: reward,
+      completed: false
+    };
+  });
 };
 
 const DEFAULT_PROFILE_DATA = {
@@ -131,6 +159,8 @@ const DEFAULT_PROFILE_DATA = {
   ],
   diamonds: 5,
   dailyMissions: [],
+  dailyMissionsQuota: 5,
+  prioritizedMissions: [],
   lastMissionsDate: '',
   dailyBonusClaimed: false,
   dailyRefreshesCount: 0,
@@ -175,6 +205,8 @@ export function useGameData() {
           skills: parsed.skills || [],
           diamonds: Number(parsed.diamonds) || 0,
           dailyMissions: parsed.dailyMissions || [],
+          dailyMissionsQuota: Number(parsed.dailyMissionsQuota) || 5,
+          prioritizedMissions: Array.isArray(parsed.prioritizedMissions) ? parsed.prioritizedMissions : [],
           lastMissionsDate: parsed.lastMissionsDate || '',
           dailyBonusClaimed: !!parsed.dailyBonusClaimed,
           dailyRefreshesCount: Number(parsed.dailyRefreshesCount) || 0,
@@ -202,6 +234,71 @@ export function useGameData() {
   const [skills, setSkills] = useState(initialData.skills);
   const [diamonds, setDiamonds] = useState(initialData.diamonds);
   const [dailyMissions, setDailyMissions] = useState(initialData.dailyMissions);
+  const [dailyMissionsQuota, setDailyMissionsQuota] = useState(() => initialData.dailyMissionsQuota || 5);
+  const [prioritizedMissions, setPrioritizedMissions] = useState(() => initialData.prioritizedMissions || []);
+
+  const togglePrioritizeMission = (skillIdOrKey, text) => {
+    let key1 = '';
+    let key2 = '';
+    if (text !== undefined && text !== null) {
+      key1 = `${skillIdOrKey}___${text.trim()}`;
+      key2 = `${skillIdOrKey}_${text.trim()}`;
+    } else if (typeof skillIdOrKey === 'string') {
+      key1 = skillIdOrKey.trim();
+      key2 = skillIdOrKey.trim();
+    }
+
+    setPrioritizedMissions((prev) => {
+      const exists = prev.some((k) => k === key1 || k === key2 || (text && k.includes(skillIdOrKey) && k.includes(text.trim())));
+      if (exists) {
+        return prev.filter((k) => k !== key1 && k !== key2 && !(text && k.includes(skillIdOrKey) && k.includes(text.trim())));
+      } else {
+        return [...prev, key1 || key2];
+      }
+    });
+  };
+
+  const updateMiniMissionText = (skillId, oldText, newText) => {
+    const oldTrimmed = oldText ? oldText.trim() : '';
+    const newTrimmed = newText ? newText.trim() : '';
+    if (!newTrimmed || oldTrimmed === newTrimmed) return;
+
+    // 1. Atualiza no cadastro de Habilidades (skills)
+    setSkills((prevSkills) =>
+      prevSkills.map((skill) => {
+        if (skill.id === skillId && Array.isArray(skill.miniMissions)) {
+          const updated = skill.miniMissions.map((t) =>
+            t.trim() === oldTrimmed ? newTrimmed : t
+          );
+          return { ...skill, miniMissions: updated };
+        }
+        return skill;
+      })
+    );
+
+    // 2. Atualiza nas Missões Diárias mantendo ID, diamantes e conclusão intactos
+    setDailyMissions((prevMissions) =>
+      (prevMissions || []).map((mission) => {
+        if (mission.skillId === skillId && mission.text.trim() === oldTrimmed) {
+          return { ...mission, text: newTrimmed };
+        }
+        return mission;
+      })
+    );
+
+    // 3. Atualiza na lista de priorizadas
+    setPrioritizedMissions((prev) =>
+      (prev || []).map((key) => {
+        const key1 = `${skillId}___${oldTrimmed}`;
+        const key2 = `${skillId}_${oldTrimmed}`;
+        if (key === key1 || key === key2) {
+          return `${skillId}___${newTrimmed}`;
+        }
+        return key;
+      })
+    );
+  };
+
   const [lastMissionsDate, setLastMissionsDate] = useState(initialData.lastMissionsDate);
   const [dailyBonusClaimed, setDailyBonusClaimed] = useState(initialData.dailyBonusClaimed);
   const [dailyRefreshesCount, setDailyRefreshesCount] = useState(initialData.dailyRefreshesCount);
@@ -214,19 +311,51 @@ export function useGameData() {
   const [history, setHistory] = useState([]);
   const [future, setFuture] = useState([]);
 
+  // SINCRONIZAÇÃO PRESERVANDO AS MISSÕES EXISTENTES E SEUS DIAMANTES
   useEffect(() => {
     const todayStr = new Date().toISOString().slice(0, 10);
-    if (lastMissionsDate !== todayStr || dailyMissions.length === 0) {
-      const freshMissions = generateDailyMissionsFromSkills(skills);
-      if (freshMissions.length > 0) {
-        setDailyMissions(freshMissions);
+    const isNewDay = lastMissionsDate !== todayStr;
+
+    if (isNewDay) {
+      const fresh = generateDailyMissionsFromSkills(skills, dailyMissionsQuota, prioritizedMissions);
+      if (fresh.length > 0) {
+        setDailyMissions(fresh);
         setLastMissionsDate(todayStr);
         setDailyBonusClaimed(false);
         setDailyRefreshesCount(0);
         setLastRefreshesDate(todayStr);
       }
+    } else {
+      setDailyMissions((prevMissions) => {
+        const current = Array.isArray(prevMissions) ? prevMissions : [];
+        const targetQuota = Number(dailyMissionsQuota) || 5;
+
+        // Se a quantidade atual já for suficiente, apenas corta sem alterar o conteúdo ou diamantes das existentes
+        if (current.length >= targetQuota) {
+          return current.slice(0, targetQuota);
+        }
+
+        // Se aumentou a quota, PRESERVA TODAS as missões existentes
+        const slotsNeeded = targetQuota - current.length;
+        const existingKeys = new Set(current.map((m) => `${m.skillId}___${m.text.trim()}`));
+
+        const availableSkills = skills.map((s) => ({
+          ...s,
+          miniMissions: (s.miniMissions || []).filter(
+            (text) => !existingKeys.has(`${s.id}___${text.trim()}`)
+          )
+        }));
+
+        const newDrawn = generateDailyMissionsFromSkills(
+          availableSkills,
+          slotsNeeded,
+          prioritizedMissions
+        );
+
+        return [...current, ...newDrawn];
+      });
     }
-  }, [skills, lastMissionsDate, dailyMissions.length]);
+  }, [skills, dailyMissionsQuota, prioritizedMissions]);
 
   useEffect(() => {
     localStorage.setItem('rpg_profiles_list', JSON.stringify(profiles));
@@ -257,6 +386,8 @@ export function useGameData() {
       skills,
       diamonds,
       dailyMissions,
+      dailyMissionsQuota,
+      prioritizedMissions,
       lastMissionsDate,
       dailyBonusClaimed,
       dailyRefreshesCount,
@@ -280,6 +411,8 @@ export function useGameData() {
     skills,
     diamonds,
     dailyMissions,
+    dailyMissionsQuota,
+    prioritizedMissions,
     lastMissionsDate,
     dailyBonusClaimed,
     dailyRefreshesCount,
@@ -318,39 +451,28 @@ export function useGameData() {
     const completedMissions = (dailyMissions || []).filter((m) => m.completed);
     const completedKeys = new Set(completedMissions.map((m) => `${m.skillId}_${m.text}`));
 
-    const availablePool = [];
-    skills.forEach((skill) => {
-      if (Array.isArray(skill.miniMissions)) {
-        skill.miniMissions.forEach((text) => {
-          if (text && text.trim()) {
-            const key = `${skill.id}_${text.trim()}`;
-            if (!completedKeys.has(key)) {
-              availablePool.push({
-                skillId: skill.id,
-                skillName: skill.title || skill.name,
-                text: text.trim()
-              });
-            }
-          }
-        });
-      }
-    });
+    const availableSkills = skills.map((s) => ({
+      ...s,
+      miniMissions: (s.miniMissions || []).filter(
+        (text) => !completedKeys.has(`${s.id}_${text.trim()}`)
+      )
+    }));
 
-    const slotsNeeded = Math.max(0, 5 - completedMissions.length);
+    const slotsNeeded = Math.max(0, dailyMissionsQuota - completedMissions.length);
 
-    if (availablePool.length === 0 && slotsNeeded > 0) {
+    if (slotsNeeded <= 0) {
       return { success: false, reason: 'no_uncompleted_available' };
     }
 
-    const shuffled = [...availablePool].sort(() => 0.5 - Math.random());
-    const newDrawnMissions = shuffled.slice(0, slotsNeeded).map((m, idx) => ({
-      id: `dm_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`,
-      skillId: m.skillId,
-      skillName: m.skillName,
-      text: m.text,
-      rewardDiamonds: Math.random() < 0.5 ? 1 : 2,
-      completed: false
-    }));
+    const newDrawnMissions = generateDailyMissionsFromSkills(
+      availableSkills,
+      slotsNeeded,
+      prioritizedMissions
+    );
+
+    if (newDrawnMissions.length === 0) {
+      return { success: false, reason: 'no_uncompleted_available' };
+    }
 
     const updatedMissions = [...completedMissions, ...newDrawnMissions];
     const newUsedCount = usedCount + 1;
@@ -364,7 +486,7 @@ export function useGameData() {
   };
 
   const resetDailyMissionsHack = () => {
-    const freshMissions = generateDailyMissionsFromSkills(skills);
+    const freshMissions = generateDailyMissionsFromSkills(skills, dailyMissionsQuota, prioritizedMissions);
     const currentTodayStr = new Date().toISOString().slice(0, 10);
     setDailyMissions(freshMissions);
     setLastMissionsDate(currentTodayStr);
@@ -395,6 +517,8 @@ export function useGameData() {
     setSkills(targetData.skills);
     setDiamonds(targetData.diamonds || 0);
     setDailyMissions(targetData.dailyMissions || []);
+    setDailyMissionsQuota(targetData.dailyMissionsQuota || 5);
+    setPrioritizedMissions(targetData.prioritizedMissions || []);
     setLastMissionsDate(targetData.lastMissionsDate || '');
     setDailyBonusClaimed(!!targetData.dailyBonusClaimed);
     setDailyRefreshesCount(targetData.dailyRefreshesCount || 0);
@@ -425,6 +549,8 @@ export function useGameData() {
       skills: [],
       diamonds: 0,
       dailyMissions: [],
+      dailyMissionsQuota: 5,
+      prioritizedMissions: [],
       lastMissionsDate: '',
       dailyBonusClaimed: false,
       dailyRefreshesCount: 0,
@@ -750,6 +876,8 @@ export function useGameData() {
       skills,
       diamonds,
       dailyMissions,
+      dailyMissionsQuota,
+      prioritizedMissions,
       lastMissionsDate,
       dailyBonusClaimed,
       dailyRefreshesCount,
@@ -810,6 +938,8 @@ export function useGameData() {
         setSkills(activeData.skills || []);
         setDiamonds(activeData.diamonds || 0);
         setDailyMissions(activeData.dailyMissions || []);
+        setDailyMissionsQuota(activeData.dailyMissionsQuota || 5);
+        setPrioritizedMissions(activeData.prioritizedMissions || []);
         setLastMissionsDate(activeData.lastMissionsDate || '');
         setDailyBonusClaimed(!!activeData.dailyBonusClaimed);
         setDailyRefreshesCount(activeData.dailyRefreshesCount || 0);
@@ -819,31 +949,6 @@ export function useGameData() {
         setHiddenSkillIds(activeData.hiddenSkillIds || []);
         setPendingTransfers(activeData.pendingTransfers || []);
 
-        setHistory([]);
-        setFuture([]);
-        return true;
-      }
-
-      if (data.skills) {
-        setSkills(data.skills);
-        if (data.nickname) setNickname(data.nickname);
-        if (data.avatar) setAvatar(data.avatar);
-        if (data.currentTheme) setCurrentTheme(data.currentTheme);
-        if (data.boxColorType) setBoxColorType(data.boxColorType);
-        if (data.linkSkillsByCategory !== undefined) setLinkSkillsByCategory(!!data.linkSkillsByCategory);
-        if (data.extraXp) setExtraXp(data.extraXp);
-        if (data.xpHistory) setXpHistory(data.xpHistory);
-        if (data.folders) setFolders(data.folders);
-        if (data.diamonds !== undefined) setDiamonds(data.diamonds);
-        if (data.dailyMissions) setDailyMissions(data.dailyMissions);
-        if (data.lastMissionsDate) setLastMissionsDate(data.lastMissionsDate);
-        if (data.dailyBonusClaimed !== undefined) setDailyBonusClaimed(data.dailyBonusClaimed);
-        if (data.dailyRefreshesCount !== undefined) setDailyRefreshesCount(data.dailyRefreshesCount);
-        if (data.lastRefreshesDate) setLastRefreshesDate(data.lastRefreshesDate);
-        if (data.customColorDeck) setCustomColorDeck(data.customColorDeck);
-        if (data.activeDeckId) setActiveDeckId(data.activeDeckId);
-        if (data.hiddenSkillIds) setHiddenSkillIds(data.hiddenSkillIds);
-        if (data.pendingTransfers) setPendingTransfers(data.pendingTransfers);
         setHistory([]);
         setFuture([]);
         return true;
@@ -943,6 +1048,11 @@ export function useGameData() {
     resetRefreshesCountHack,
     completeMission,
     addMiniMissionToSkill,
-    deleteMiniMissionFromSkill
+    deleteMiniMissionFromSkill,
+    updateMiniMissionText,
+    dailyMissionsQuota,
+    setDailyMissionsQuota,
+    prioritizedMissions,
+    togglePrioritizeMission
   };
 }
