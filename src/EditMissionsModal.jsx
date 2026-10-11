@@ -13,6 +13,9 @@ export function EditMissionsModal({
 }) {
   const [editingKey, setEditingKey] = useState(null);
   const [tempText, setTempText] = useState('');
+  // Estado para controlar a janela de anotações do nível
+const [levelInfoModal, setLevelInfoModal] = useState({ isOpen: false, levelNumber: null });
+const [levelDescriptions, setLevelDescriptions] = useState({}); // Guarda o texto das anotações de cada nível
 
   if (!isOpen) return null;
 

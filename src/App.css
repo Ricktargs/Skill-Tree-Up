@@ -2536,3 +2536,33 @@ kbd {
   background: rgba(239, 68, 68, 0.2) !important;
   transform: scale(1.15);
 }
+/* ===================================================
+   ESTILO DO BOTÃO "INFO" E TEXTAREA
+   =================================================== */
+
+/* Botão info ao lado do Nível usando a cor do tema */
+.btn-level-info {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--theme-accent, #38bdf8);
+  border: 1px solid var(--theme-accent, #38bdf8);
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1.2;
+  opacity: 0.85;
+}
+
+.btn-level-info:hover {
+  background: var(--theme-accent, #38bdf8);
+  color: #000000;
+  opacity: 1;
+}
+
+/* Foco da caixa de texto acompanhando a cor do tema */
+.info-textarea:focus {
+  border-color: var(--theme-accent, #38bdf8) !important;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}

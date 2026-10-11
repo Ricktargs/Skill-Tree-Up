@@ -231,6 +231,9 @@ export default function App() {
   const [isMiniMissionsModalOpen, setIsMiniMissionsModalOpen] = useState(false);
   const [miniMissionsModalTab, setMiniMissionsModalTab] = useState('list');
   const [newMiniMissionText, setNewMiniMissionText] = useState('');
+  const [editingMiniIdx, setEditingMiniIdx] = useState(null);
+const [tempMiniText, setTempMiniText] = useState('');
+const [confirmDeleteMiniIdx, setConfirmDeleteMiniIdx] = useState(null);
 
   const [isHackModalOpen, setIsHackModalOpen] = useState(false);
   const [hackXpInput, setHackXpInput] = useState('');
@@ -406,6 +409,25 @@ export default function App() {
   const [newColor, setNewColor] = useState('#3b82f6');
 
   const [editingSkill, setEditingSkill] = useState(null);
+  const handleSaveMiniEdit = (idx, oldText) => {
+  const trimmed = tempMiniText.trim();
+  if (trimmed && trimmed !== oldText.trim()) {
+    if (playSound) playSound('train');
+    if (updateMiniMissionText) {
+      updateMiniMissionText(editingSkill.id, oldText, trimmed);
+    }
+    setEditingSkill((prev) => {
+      if (!prev || !prev.miniMissions) return prev;
+      const updated = [...prev.miniMissions];
+      updated[idx] = trimmed;
+      return { ...prev, miniMissions: updated };
+    });
+  }
+  setEditingMiniIdx(null);
+  setTempMiniText('');
+};
+  // Estado para controlar a janela popup de "info" do nível
+const [levelInfoModal, setLevelInfoModal] = useState({ isOpen: false, levelNumber: null });
   const [shakingSkillId, setShakingSkillId] = useState(null);
   const [activeTasksSkill, setActiveTasksSkill] = useState(null);
   const [isCustomMaxLevelInput, setIsCustomMaxLevelInput] = useState(false);
@@ -2172,26 +2194,135 @@ if (folderSortOrder === 'a-z') {
                     Nenhuma mini missão cadastrada para esta habilidade.
                   </div>
                 ) : (
-                  editingSkill.miniMissions.map((mm, idx) => (
-                    <div key={idx} className="mini-mission-row-item">
-                      <span style={{ fontSize: '0.9rem', color: '#f8fafc' }}>{mm}</span>
-                      <button 
-                        type="button"
-                        className="editor-remove-btn" 
-                        onClick={() => {
-                          playSound('delete');
-                          deleteMiniMissionFromSkill(editingSkill.id, idx);
-                          setEditingSkill((prev) => ({
-                            ...prev,
-                            miniMissions: (prev.miniMissions || []).filter((_, i) => i !== idx)
-                          }));
-                        }}
-                        title="Excluir mini missão"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))
+editingSkill.miniMissions.map((mm, idx) => {
+  const isEditingThis = editingMiniIdx === idx;
+  const isConfirmingDelete = confirmDeleteMiniIdx === idx;
+
+  return (
+    <div
+      key={idx}
+      className="mini-mission-row-item"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '0.8rem',
+        padding: '0.65rem 0.8rem',
+        background: 'rgba(0, 0, 0, 0.25)',
+        border: '1px solid var(--theme-border, rgba(255, 255, 255, 0.1))',
+        borderRadius: '8px',
+        marginBottom: '0.5rem'
+      }}
+    >
+      {/* 1. MODO EDITAR OU EXIBIR TEXTO DA MINI MISSÃO */}
+      {isEditingThis ? (
+        <input
+          type="text"
+          value={tempMiniText}
+          onChange={(e) => setTempMiniText(e.target.value)}
+          onBlur={() => handleSaveMiniEdit(idx, mm)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSaveMiniEdit(idx, mm);
+            if (e.key === 'Escape') {
+              setEditingMiniIdx(null);
+              setTempMiniText('');
+            }
+          }}
+          autoFocus
+          style={{
+            flex: 1,
+            padding: '0.4rem 0.6rem',
+            background: 'rgba(0, 0, 0, 0.5)',
+            border: '1px solid var(--theme-accent, #38bdf8)',
+            borderRadius: '6px',
+            color: '#fff',
+            fontSize: '0.88rem',
+            outline: 'none'
+          }}
+        />
+      ) : (
+        <span
+          onClick={() => {
+            if (playSound) playSound('click');
+            setEditingMiniIdx(idx);
+            setTempMiniText(mm);
+            setConfirmDeleteMiniIdx(null);
+          }}
+          title="Clique diretamente para editar esta mini missão"
+          style={{
+            fontSize: '0.9rem',
+            color: '#f8fafc',
+            cursor: 'pointer',
+            flex: 1,
+            wordBreak: 'break-word'
+          }}
+        >
+          {mm}
+        </span>
+      )}
+
+      {/* 2. CONFIRMAÇÃO DE EXCLUSÃO NA MESMA LINHA (SEM POPUP) */}
+      {isConfirmingDelete ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <span style={{ fontSize: '0.78rem', color: '#f87171', fontWeight: 'bold' }}>Certeza?</span>
+          <button
+            type="button"
+            style={{
+              padding: '0.25rem 0.55rem',
+              fontSize: '0.75rem',
+              fontWeight: 'bold',
+              background: '#ef4444',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+            onClick={() => {
+              if (playSound) playSound('delete');
+              deleteMiniMissionFromSkill(editingSkill.id, idx);
+              setEditingSkill((prev) => ({
+                ...prev,
+                miniMissions: (prev.miniMissions || []).filter((_, i) => i !== idx)
+              }));
+              setConfirmDeleteMiniIdx(null);
+            }}
+          >
+            Sim
+          </button>
+          <button
+            type="button"
+            style={{
+              padding: '0.25rem 0.55rem',
+              fontSize: '0.75rem',
+              fontWeight: 'bold',
+              background: 'rgba(255, 255, 255, 0.15)',
+              color: '#cbd5e1',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+            onClick={() => setConfirmDeleteMiniIdx(null)}
+          >
+            Não
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="editor-remove-btn"
+          onClick={() => {
+            if (playSound) playSound('click');
+            setConfirmDeleteMiniIdx(idx);
+            setEditingMiniIdx(null);
+          }}
+          title="Excluir mini missão"
+        >
+          ✕
+        </button>
+      )}
+    </div>
+  );
+})
                 )}
               </div>
             ) : (
@@ -4854,11 +4985,21 @@ if (folderSortOrder === 'a-z') {
                       key={lvlNum}
                       className={`level-card-item ${isCurrentActive ? 'active-level' : ''} ${isPassed ? 'passed-level' : ''}`}
                     >
-                      <div className="level-card-header">
-                        <span className="level-card-badge">Nível {lvlNum}</span>
-                        {isCurrentActive && <span className="current-indicator">EM PROGRESSO</span>}
-                        {isPassed && <span className="passed-indicator">CONCLUÍDO</span>}
-                      </div>
+<div className="level-card-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+  <span className="level-card-badge">Nível {lvlNum}</span>
+
+  {/* Botão info - abre a janela de Info/Descritivo */}
+  <button
+    type="button"
+    className="btn-level-info"
+    onClick={() => setLevelInfoModal({ isOpen: true, levelNumber: lvlNum })}
+  >
+    info
+  </button>
+
+  {isCurrentActive && <span className="current-indicator">EM PROGRESSO</span>}
+  {isPassed && <span className="passed-indicator">CONCLUÍDO</span>}
+</div>
 
                       <textarea
                         rows={2}
@@ -5018,7 +5159,76 @@ if (folderSortOrder === 'a-z') {
         </div>
       )}
       {/* ============================================================ */}
+{/* JANELA POPUP DE INFO / DESCRITIVO DO NÍVEL */}
+{levelInfoModal.isOpen && (
+  <div
+    className="modal-backdrop high-z-backdrop"
+    onClick={() => setLevelInfoModal({ isOpen: false, levelNumber: null })}
+  >
+    <div
+      className="modal-window high-z-window"
+      onClick={(e) => e.stopPropagation()}
+      style={{ maxWidth: '480px', width: '92vw' }}
+    >
+      {/* Cabeçalho do Modal com estilo do Tema */}
+      <div className="modal-header-row">
+        <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--theme-accent, #38bdf8)' }}>
+          Info/Descritivo - Nível {levelInfoModal.levelNumber}
+        </h3>
+        <button
+          type="button"
+          className="close-popup-btn"
+          onClick={() => setLevelInfoModal({ isOpen: false, levelNumber: null })}
+        >
+          ✕
+        </button>
+      </div>
 
+      {/* Corpo com Caixa de Texto separada em levelInfos */}
+      <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+        <textarea
+          className="info-textarea"
+          placeholder="Escreva aqui anotações, descrições ou observações para este nível..."
+          rows={6}
+          value={editingSkill?.levelInfos?.[levelInfoModal.levelNumber] || ''}
+          onChange={(e) => {
+            const val = e.target.value;
+            setEditingSkill((prev) => ({
+              ...prev,
+              levelInfos: {
+                ...(prev?.levelInfos || {}),
+                [levelInfoModal.levelNumber]: val
+              }
+            }));
+          }}
+          style={{
+            width: '100%',
+            background: 'rgba(0, 0, 0, 0.4)',
+            border: '1px solid var(--theme-border, rgba(255, 255, 255, 0.15))',
+            borderRadius: '8px',
+            padding: '0.75rem',
+            color: '#f8fafc',
+            fontSize: '0.88rem',
+            resize: 'vertical',
+            outline: 'none',
+            boxSizing: 'border-box'
+          }}
+        />
+      </div>
+
+      {/* Ações do Modal */}
+      <div className="modal-actions-bar">
+        <button
+          type="button"
+          className="confirm-button"
+          style={{ width: '100%', background: 'var(--theme-accent, #38bdf8)', color: '#000', fontWeight: 'bold' }}
+          onClick={() => setLevelInfoModal({ isOpen: false, levelNumber: null })}
+        >
+          Concluído
+        </button>
+      </div>
     </div>
+  </div>
+)}    </div>
   );
 }
