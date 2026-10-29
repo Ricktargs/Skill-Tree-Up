@@ -5306,11 +5306,11 @@ editingSkill.miniMissions.map((mm, idx) => {
             <div className="objectives-section-wrapper">
 <div className="modules-header-bar" style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginBottom: '1.2rem', background: 'rgba(0, 0, 0, 0.2)', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--theme-border, #334155)' }}>
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-    <h3 className="section-label-large" style={{ margin: 0 }}>Metas e Sub-tarefas por Nível</h3>
+    <h3 className="section-label-large" style={{ margin: 0 }}>Metas e Níveis</h3>
 
     {/* Seletor, Renomear e Excluir Módulo */}
     <div className="module-selector-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-      <label style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 'bold' }}>Módulo Ativo:</label>
+      <label style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 'bold' }}>Módulo/Curso:</label>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
         {/* Controles de Ação (Apenas para Módulos criados pelo utilizador) */}
@@ -5521,7 +5521,7 @@ editingSkill.miniMissions.map((mm, idx) => {
               cursor: 'pointer'
             }}
           >
-            <option value="default">Módulo Principal (Geral)</option>
+            <option value="default">Módulo Geral</option>
             {(editingSkill.modules || []).map((mod) => (
               <option key={mod.id} value={mod.id}>
                 {mod.name}
