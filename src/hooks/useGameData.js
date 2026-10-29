@@ -60,16 +60,25 @@ export const calculatePlayerLevelStats = (totalXp) => {
 
 export const calculateTotalXpFromSkills = (skillsList) => {
   if (!Array.isArray(skillsList)) return 0;
-  return skillsList.reduce((acc, skill) => {
-    const currentLvl = Number(skill.level) || 0;
-    const maxLvl = Number(skill.maxLevel) || 10;
-    if (currentLvl <= 0) return acc;
+  return skillsList.reduce((total, skill) => {
+    let skillLevelsSum = 0;
 
-    if (currentLvl >= maxLvl) {
-      return acc + ((maxLvl - 1) * 10 + 50);
-    } else {
-      return acc + currentLvl * 10;
+    // Pega o nível do Módulo Principal (Geral)
+    const defaultLvl = skill.defaultLevel !== undefined
+      ? skill.defaultLevel
+      : (skill.activeModuleId === 'default' || !skill.activeModuleId ? Number(skill.level) || 0 : 0);
+
+    skillLevelsSum += defaultLvl;
+
+    // Soma os níveis de todos os outros módulos criados na habilidade
+    if (Array.isArray(skill.modules)) {
+      skill.modules.forEach((mod) => {
+        skillLevelsSum += (Number(mod.level) || 0);
+      });
     }
+
+    // Retorna a soma de XP de todos os módulos combinados
+    return total + (skillLevelsSum * 10);
   }, 0);
 };
 
@@ -752,7 +761,7 @@ export function useGameData() {
     return found ? found.colors : PRESET_DECKS[0].colors;
   };
 
-  const trainSkill = (skillId) => {
+const trainSkill = (skillId) => {
     let isMaxed = false;
     let gainedSkillTitle = '';
     let gainedCategory = 'Geral';
@@ -760,17 +769,55 @@ export function useGameData() {
     let newLvl = 1;
 
     const updated = skills.map((s) => {
-      if (s.id === skillId && s.level < s.maxLevel) {
-        newLvl = s.level + 1;
-        gainedSkillTitle = s.title;
-        gainedCategory = s.category || 'Geral';
-        if (newLvl >= s.maxLevel) {
-          isMaxed = true;
-          gainedXpAmount = 50;
+      if (s.id !== skillId) return s;
+
+      gainedSkillTitle = s.title;
+      gainedCategory = s.category || 'Geral';
+      const activeId = s.activeModuleId || 'default';
+
+      // Se estiver treinando dentro de um Módulo Adicional
+      if (activeId !== 'default' && Array.isArray(s.modules)) {
+        const updatedModules = s.modules.map((m) => {
+          if (m.id === activeId) {
+            const currentLvl = Number(m.level) || 0;
+            const maxLvl = Number(m.maxLevel) || 10;
+            if (currentLvl < maxLvl) {
+              newLvl = currentLvl + 1;
+              if (newLvl >= maxLvl) {
+                isMaxed = true;
+                gainedXpAmount = 50;
+              }
+            } else {
+              newLvl = currentLvl;
+            }
+            return { ...m, level: newLvl };
+          }
+          return m;
+        });
+        const activeMod = updatedModules.find((m) => m.id === activeId);
+        return {
+          ...s,
+          level: activeMod ? activeMod.level : s.level,
+          modules: updatedModules
+        };
+      } else {
+        // Se estiver treinando no Módulo Principal (Geral)
+        const currentLvl = Number(s.level) || 0;
+        const maxLvl = Number(s.maxLevel) || 10;
+        if (currentLvl < maxLvl) {
+          newLvl = currentLvl + 1;
+          if (newLvl >= maxLvl) {
+            isMaxed = true;
+            gainedXpAmount = 50;
+          }
+          return {
+            ...s,
+            level: newLvl,
+            defaultLevel: newLvl
+          };
         }
-        return { ...s, level: newLvl };
+        return s;
       }
-      return s;
     });
 
     if (gainedSkillTitle) {

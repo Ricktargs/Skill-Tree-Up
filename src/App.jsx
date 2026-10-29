@@ -114,6 +114,9 @@ const getClampedMenuPos = (clientX, clientY, width = 220, height = 200) => {
 };
 
 export default function App() {
+  // Estado para controlar a janela popup de "info" do nível
+  const [levelInfoModal, setLevelInfoModal] = useState({ isOpen: false, levelNumber: null });
+
   const pomodoro = usePomodoro();
   const taskState = useTaskUpdate();
   const { t } = useLanguage();
@@ -596,7 +599,7 @@ const handleExportSkillData = () => {
   URL.revokeObjectURL(url);
   if (playSound) playSound('click');
 };
-  const handleSaveMiniEdit = (idx, oldText) => {
+const handleSaveMiniEdit = (idx, oldText) => {
   const trimmed = tempMiniText.trim();
   if (trimmed && trimmed !== oldText.trim()) {
     if (playSound) playSound('train');
@@ -613,12 +616,10 @@ const handleExportSkillData = () => {
   setEditingMiniIdx(null);
   setTempMiniText('');
 };
-  // Estado para controlar a janela popup de "info" do nível
-const [levelInfoModal, setLevelInfoModal] = useState({ isOpen: false, levelNumber: null });
+
   const [shakingSkillId, setShakingSkillId] = useState(null);
   const [activeTasksSkill, setActiveTasksSkill] = useState(null);
   const [isCustomMaxLevelInput, setIsCustomMaxLevelInput] = useState(false);
-
   const [contextMenu, setContextMenu] = useState(null);
   const [globalContextMenu, setGlobalContextMenu] = useState(null);
 
@@ -986,13 +987,45 @@ const [levelInfoModal, setLevelInfoModal] = useState({ isOpen: false, levelNumbe
     setIsAddModalOpen(false);
   };
 
-  const handleSaveEdit = (e) => {
-    if (e) e.preventDefault();
-    if (!editingSkill) return;
-    playSound('click');
-    updateSkill(editingSkill.id, editingSkill);
-    setEditingSkill(null);
+const handleSaveEdit = (e) => {
+  if (e) e.preventDefault();
+  if (!editingSkill) return;
+  playSound('click');
+
+  let currentActiveId = editingSkill.activeModuleId || 'default';
+  let updatedModules = [...(editingSkill.modules || [])];
+
+  // Preserva o nível, metas e tarefas do módulo aberto no momento de salvar
+  if (currentActiveId !== 'default') {
+    updatedModules = updatedModules.map((mod) => {
+      if (mod.id === currentActiveId) {
+        return {
+          ...mod,
+          level: editingSkill.level,
+          maxLevel: editingSkill.maxLevel,
+          levelDescriptions: editingSkill.levelDescriptions,
+          levelTasks: editingSkill.levelTasks,
+          levelInfos: editingSkill.levelInfos
+        };
+      }
+      return mod;
+    });
+  } else {
+    editingSkill.defaultLevel = editingSkill.level;
+    editingSkill.defaultMaxLevel = editingSkill.maxLevel;
+    editingSkill.defaultLevelDescriptions = editingSkill.levelDescriptions;
+    editingSkill.defaultLevelTasks = editingSkill.levelTasks;
+    editingSkill.defaultLevelInfos = editingSkill.levelInfos;
+  }
+
+  const updatedSkill = {
+    ...editingSkill,
+    modules: updatedModules
   };
+
+  updateSkill(updatedSkill.id, updatedSkill);
+  setEditingSkill(null);
+};
 
   const handleLinkNewSkillInSameCategory = () => {
     if (!editingSkill) return;
@@ -1689,9 +1722,20 @@ if (folderSortOrder === 'a-z') {
                     </div>
 
                     <div className="segments-center-zone">
-                      <div className="current-goal-title">
-                        {isMax ? 'Habilidade Dominada!' : nextGoalText}
-                      </div>
+  {/* Nome do Módulo Ativo acima da Meta do Nível */}
+  {(() => {
+    const activeMod = (skill.modules || []).find((m) => m.id === skill.activeModuleId);
+    const modName = activeMod ? activeMod.name : null;
+    return modName ? (
+      <span style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.1rem' }}>
+        {modName}
+      </span>
+    ) : null;
+  })()}
+
+  <div className="current-goal-title">
+    {isMax ? 'Habilidade Dominada!' : nextGoalText}
+  </div>
 
                       {!isMax && currentTasks.length > 0 && (
                         <div className="tasks-indicator-wrapper">
@@ -5260,7 +5304,333 @@ editingSkill.miniMissions.map((mm, idx) => {
             </div>
 
             <div className="objectives-section-wrapper">
-              <h3 className="section-label-large">Metas e Sub-tarefas por Nível</h3>
+<div className="modules-header-bar" style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginBottom: '1.2rem', background: 'rgba(0, 0, 0, 0.2)', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--theme-border, #334155)' }}>
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+    <h3 className="section-label-large" style={{ margin: 0 }}>Metas e Sub-tarefas por Nível</h3>
+
+    {/* Seletor, Renomear e Excluir Módulo */}
+    <div className="module-selector-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <label style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 'bold' }}>Módulo Ativo:</label>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        {/* Controles de Ação (Apenas para Módulos criados pelo utilizador) */}
+        {editingSkill.activeModuleId && editingSkill.activeModuleId !== 'default' && (
+          <>
+            {/* Confirmação Inline de Exclusão */}
+            {editingSkill.isConfirmingDeleteModule ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', padding: '0.2rem 0.5rem', borderRadius: '6px' }}>
+                <span style={{ fontSize: '0.78rem', color: '#f87171', fontWeight: 'bold' }}>Excluir Módulo?</span>
+                <button
+                  type="button"
+                  className="confirm-yes-btn"
+                  style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', background: '#dc2626' }}
+                  onClick={() => {
+                    if (playSound) playSound('delete');
+                    const deletedId = editingSkill.activeModuleId;
+                    const updatedMods = (editingSkill.modules || []).filter((m) => m.id !== deletedId);
+
+                    setEditingSkill({
+                      ...editingSkill,
+                      modules: updatedMods,
+                      activeModuleId: 'default',
+                      level: editingSkill.defaultLevel ?? 0,
+                      maxLevel: editingSkill.defaultMaxLevel ?? 10,
+                      levelDescriptions: editingSkill.defaultLevelDescriptions ?? {},
+                      levelTasks: editingSkill.defaultLevelTasks ?? {},
+                      levelInfos: editingSkill.defaultLevelInfos ?? {},
+                      isEditingModuleName: false,
+                      isConfirmingDeleteModule: false
+                    });
+                  }}
+                >
+                  Sim
+                </button>
+                <button
+                  type="button"
+                  className="confirm-no-btn"
+                  style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+                  onClick={() => setEditingSkill({ ...editingSkill, isConfirmingDeleteModule: false })}
+                >
+                  Não
+                </button>
+              </div>
+            ) : !editingSkill.isEditingModuleName ? (
+              /* Botões de Lápis (Renomear) e Lixeira (Excluir) ao lado esquerdo */
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <button
+                  type="button"
+                  className="cancel-button"
+                  style={{ padding: '0.35rem 0.55rem', fontSize: '0.9rem', cursor: 'pointer' }}
+                  onClick={() => setEditingSkill({ ...editingSkill, isEditingModuleName: true, isConfirmingDeleteModule: false })}
+                  title="Renomear este módulo"
+                >
+                  ✎
+                </button>
+                <button
+                  type="button"
+                  className="editor-remove-btn"
+                  style={{ width: '30px', height: '30px', fontSize: '0.85rem' }}
+                  onClick={() => setEditingSkill({ ...editingSkill, isConfirmingDeleteModule: true, isEditingModuleName: false })}
+                  title="Excluir este módulo"
+                >
+                  🗑️
+                </button>
+              </div>
+            ) : null}
+          </>
+        )}
+
+        {editingSkill.isEditingModuleName ? (
+          /* Campo Inline para Renomear o Módulo Ativo */
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <input
+              type="text"
+              defaultValue={
+                (editingSkill.modules || []).find((m) => m.id === editingSkill.activeModuleId)?.name || ''
+              }
+              id="renameModuleInput"
+              autoFocus
+              style={{
+                padding: '0.35rem 0.6rem',
+                background: 'rgba(0, 0, 0, 0.5)',
+                border: '1px solid var(--theme-accent, #38bdf8)',
+                borderRadius: '6px',
+                color: '#fff',
+                fontSize: '0.85rem',
+                outline: 'none'
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const newName = e.target.value.trim();
+                  if (newName) {
+                    const updatedMods = (editingSkill.modules || []).map((m) =>
+                      m.id === editingSkill.activeModuleId ? { ...m, name: newName } : m
+                    );
+                    setEditingSkill({ ...editingSkill, modules: updatedMods, isEditingModuleName: false });
+                  }
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="confirm-button"
+              style={{ padding: '0.35rem 0.6rem', fontSize: '0.78rem' }}
+              onClick={() => {
+                const input = document.getElementById('renameModuleInput');
+                const newName = input ? input.value.trim() : '';
+                if (newName) {
+                  const updatedMods = (editingSkill.modules || []).map((m) =>
+                    m.id === editingSkill.activeModuleId ? { ...m, name: newName } : m
+                  );
+                  setEditingSkill({ ...editingSkill, modules: updatedMods, isEditingModuleName: false });
+                }
+              }}
+            >
+              Salvar
+            </button>
+            <button
+              type="button"
+              className="cancel-button"
+              style={{ padding: '0.35rem 0.6rem', fontSize: '0.78rem' }}
+              onClick={() => setEditingSkill({ ...editingSkill, isEditingModuleName: false })}
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          /* Lista Suspensa do Módulo */
+          <select
+            value={editingSkill.activeModuleId || 'default'}
+            onChange={(e) => {
+              const targetModuleId = e.target.value;
+
+              if (targetModuleId === '__SHOW_CREATE_INPUT__') {
+                setEditingSkill({ ...editingSkill, isCreatingModule: true, isConfirmingDeleteModule: false });
+                return;
+              }
+
+              // 1. Salva os dados do módulo que estava aberto ANTES de trocar
+              const currentActiveId = editingSkill.activeModuleId || 'default';
+              let updatedModules = [...(editingSkill.modules || [])];
+
+              if (currentActiveId !== 'default') {
+                updatedModules = updatedModules.map((mod) => {
+                  if (mod.id === currentActiveId) {
+                    return {
+                      ...mod,
+                      level: editingSkill.level,
+                      maxLevel: editingSkill.maxLevel,
+                      levelDescriptions: editingSkill.levelDescriptions,
+                      levelTasks: editingSkill.levelTasks,
+                      levelInfos: editingSkill.levelInfos
+                    };
+                  }
+                  return mod;
+                });
+              } else {
+                editingSkill.defaultLevel = editingSkill.level;
+                editingSkill.defaultMaxLevel = editingSkill.maxLevel;
+                editingSkill.defaultLevelDescriptions = editingSkill.levelDescriptions;
+                editingSkill.defaultLevelTasks = editingSkill.levelTasks;
+                editingSkill.defaultLevelInfos = editingSkill.levelInfos;
+              }
+
+              // 2. Carrega os dados do módulo selecionado
+              if (targetModuleId === 'default') {
+                setEditingSkill({
+                  ...editingSkill,
+                  modules: updatedModules,
+                  activeModuleId: 'default',
+                  level: editingSkill.defaultLevel ?? 0,
+                  maxLevel: editingSkill.defaultMaxLevel ?? 10,
+                  levelDescriptions: editingSkill.defaultLevelDescriptions ?? {},
+                  levelTasks: editingSkill.defaultLevelTasks ?? {},
+                  levelInfos: editingSkill.defaultLevelInfos ?? {},
+                  isCreatingModule: false,
+                  isEditingModuleName: false,
+                  isConfirmingDeleteModule: false
+                });
+              } else {
+                const targetMod = updatedModules.find((m) => m.id === targetModuleId);
+                if (targetMod) {
+                  setEditingSkill({
+                    ...editingSkill,
+                    modules: updatedModules,
+                    activeModuleId: targetModuleId,
+                    level: targetMod.level || 0,
+                    maxLevel: targetMod.maxLevel || 10,
+                    levelDescriptions: targetMod.levelDescriptions || {},
+                    levelTasks: targetMod.levelTasks || {},
+                    levelInfos: targetMod.levelInfos || {},
+                    isCreatingModule: false,
+                    isEditingModuleName: false,
+                    isConfirmingDeleteModule: false
+                  });
+                }
+              }
+            }}
+            style={{
+              padding: '0.45rem 0.8rem',
+              borderRadius: '6px',
+              background: 'rgba(0, 0, 0, 0.5)',
+              border: '1px solid var(--theme-accent, #38bdf8)',
+              color: '#fff',
+              fontSize: '0.85rem',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="default">Módulo Principal (Geral)</option>
+            {(editingSkill.modules || []).map((mod) => (
+              <option key={mod.id} value={mod.id}>
+                {mod.name}
+              </option>
+            ))}
+            <option value="__SHOW_CREATE_INPUT__">+ Criar Novo Módulo...</option>
+          </select>
+        )}
+      </div>
+    </div>
+  </div>
+
+  {/* Campo Inline para Criar Novo Módulo */}
+  {editingSkill.isCreatingModule && (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(15, 23, 42, 0.8)', padding: '0.6rem', borderRadius: '8px', border: '1px dashed var(--theme-accent, #38bdf8)' }}>
+      <input
+        type="text"
+        placeholder="Nome do novo módulo (ex: Design Web, Design Gráfico...)"
+        id="newModuleNameInput"
+        autoFocus
+        style={{
+          flex: 1,
+          padding: '0.45rem 0.7rem',
+          background: 'rgba(0, 0, 0, 0.4)',
+          border: '1px solid var(--theme-border, #334155)',
+          borderRadius: '6px',
+          color: '#fff',
+          fontSize: '0.85rem',
+          outline: 'none'
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const inputVal = e.target.value.trim();
+            if (inputVal) {
+              const newModId = `mod_${Date.now()}`;
+              const newModule = {
+                id: newModId,
+                name: inputVal,
+                maxLevel: 10,
+                level: 0,
+                levelDescriptions: {},
+                levelTasks: {},
+                levelInfos: {}
+              };
+              const updatedModules = [...(editingSkill.modules || []), newModule];
+              setEditingSkill({
+                ...editingSkill,
+                modules: updatedModules,
+                activeModuleId: newModId,
+                level: 0,
+                maxLevel: 10,
+                levelDescriptions: {},
+                levelTasks: {},
+                levelInfos: {},
+                isCreatingModule: false,
+                isConfirmingDeleteModule: false
+              });
+            }
+          }
+        }}
+      />
+      <button
+        type="button"
+        className="confirm-button"
+        style={{ padding: '0.45rem 0.8rem', fontSize: '0.8rem' }}
+        onClick={() => {
+          const inputElem = document.getElementById('newModuleNameInput');
+          const inputVal = inputElem ? inputElem.value.trim() : '';
+          if (inputVal) {
+            const newModId = `mod_${Date.now()}`;
+            const newModule = {
+              id: newModId,
+              name: inputVal,
+              maxLevel: 10,
+              level: 0,
+              levelDescriptions: {},
+              levelTasks: {},
+              levelInfos: {}
+            };
+            const updatedModules = [...(editingSkill.modules || []), newModule];
+            setEditingSkill({
+              ...editingSkill,
+              modules: updatedModules,
+              activeModuleId: newModId,
+              level: 0,
+              maxLevel: 10,
+              levelDescriptions: {},
+              levelTasks: {},
+              levelInfos: {},
+              isCreatingModule: false,
+              isConfirmingDeleteModule: false
+            });
+          }
+        }}
+      >
+        Salvar Módulo
+      </button>
+      <button
+        type="button"
+        className="cancel-button"
+        style={{ padding: '0.45rem 0.7rem', fontSize: '0.8rem' }}
+        onClick={() => setEditingSkill({ ...editingSkill, isCreatingModule: false })}
+      >
+        Cancelar
+      </button>
+    </div>
+  )}
+</div>
               <div className="horizontal-levels-grid">
                 {Array.from({ length: editingSkill.maxLevel }).map((_, idx) => {
                   const lvlNum = idx + 1;
@@ -5352,9 +5722,9 @@ editingSkill.miniMissions.map((mm, idx) => {
               >
                 Cancelar
               </button>
-              <button type="submit" className="confirm-button" onClick={() => playSound('click')}>
-                Salvar Alterações
-              </button>
+<button type="submit" className="confirm-button">
+  Salvar Alterações
+</button>
             </div>
           </form>
         </div>
@@ -5565,26 +5935,25 @@ editingSkill.miniMissions.map((mm, idx) => {
     lineHeight: '1.4'
   }}
 />
-      <div className="modal-actions-bar" style={{ marginTop: '1rem' }}>
-        <button
-          type="button"
-          className="cancel-button"
-          onClick={() => setIsWriteDataOpen(false)}
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          className="confirm-button"
-          onClick={handleSaveWrittenData}
-        >
-          Salvar Dados
-        </button>
+<div className="modal-actions-bar" style={{ marginTop: '1rem' }}>
+          <button
+            type="button"
+            className="cancel-button"
+            onClick={() => setIsWriteDataOpen(false)}
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className="confirm-button"
+            onClick={handleSaveWrittenData}
+          >
+            Salvar Dados
+          </button>
+        </div>
       </div>
     </div>
+  )}
   </div>
-)}
-
-    </div>
   );
 }
