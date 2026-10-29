@@ -2281,7 +2281,7 @@ if (folderSortOrder === 'a-z') {
                       if (result.reason === 'limit_reached') {
                         alert('Você já atingiu o limite máximo de 2 sorteios hoje!');
                       } else if (result.reason === 'no_uncompleted_available') {
-                        alert('Não há outras mini-missões não-concluídas disponíveis para sortear.');
+                        
                       }
                     }
                   }}
