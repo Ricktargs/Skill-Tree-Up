@@ -421,11 +421,13 @@ const generateTextFromSkill = (skill) => {
 
   for (let i = 1; i <= maxLvl; i++) {
     const desc = skill.levelDescriptions?.[i];
+    const info = skill.levelInfos?.[i];
     const tasks = skill.levelTasks?.[i] || [];
 
-    if (desc || tasks.length > 0) {
+    if (desc || info || tasks.length > 0) {
       lines.push(`[Nível ${i}]`);
       if (desc) lines.push(`Meta: ${desc}`);
+      if (info) lines.push(`Info: ${info}`);
       tasks.forEach((t) => {
         if (t.text) lines.push(`- ${t.text}`);
       });
@@ -454,10 +456,12 @@ const processAndApplySkillData = (textData) => {
   if (!textData.trim() || !editingSkill) return;
 
   let newDescriptions = { ...(editingSkill.levelDescriptions || {}) };
+  let newInfos = { ...(editingSkill.levelInfos || {}) };
   let newTasks = { ...(editingSkill.levelTasks || {}) };
   let maxLvlFound = editingSkill.maxLevel || 1;
 
   let parsedDescriptions = {};
+  let parsedInfos = {};
   let parsedTasks = {};
 
   try {
@@ -465,6 +469,13 @@ const processAndApplySkillData = (textData) => {
     if (parsed.levelDescriptions) {
       parsedDescriptions = parsed.levelDescriptions;
       Object.keys(parsed.levelDescriptions).forEach((k) => {
+        const num = parseInt(k, 10);
+        if (num > maxLvlFound) maxLvlFound = num;
+      });
+    }
+    if (parsed.levelInfos) {
+      parsedInfos = parsed.levelInfos;
+      Object.keys(parsed.levelInfos).forEach((k) => {
         const num = parseInt(k, 10);
         if (num > maxLvlFound) maxLvlFound = num;
       });
@@ -497,7 +508,9 @@ const processAndApplySkillData = (textData) => {
 
       if (currentLvl) {
         if (trimmed.toLowerCase().startsWith('meta:') || trimmed.toLowerCase().startsWith('desc:')) {
-          parsedDescriptions[currentLvl] = trimmed.replace(/^(meta|desc|descrição):\s*/i, '');
+          parsedDescriptions[currentLvl] = trimmed.replace(/^(meta|desc|descrição|descricao):\s*/i, '');
+        } else if (trimmed.toLowerCase().startsWith('info:') || trimmed.toLowerCase().startsWith('informação:') || trimmed.toLowerCase().startsWith('informacao:') || trimmed.toLowerCase().startsWith('detalhes:')) {
+          parsedInfos[currentLvl] = trimmed.replace(/^(info|informação|informacao|detalhes):\s*/i, '');
         } else if (trimmed.startsWith('-') || trimmed.startsWith('*') || trimmed.startsWith('>')) {
           const taskText = trimmed.replace(/^[-*>]\s*/, '');
           if (!parsedTasks[currentLvl]) parsedTasks[currentLvl] = [];
@@ -512,6 +525,10 @@ const processAndApplySkillData = (textData) => {
 
   Object.keys(parsedDescriptions).forEach((lvl) => {
     newDescriptions[lvl] = parsedDescriptions[lvl];
+  });
+
+  Object.keys(parsedInfos).forEach((lvl) => {
+    newInfos[lvl] = parsedInfos[lvl];
   });
 
   Object.keys(parsedTasks).forEach((lvl) => {
@@ -551,6 +568,7 @@ const processAndApplySkillData = (textData) => {
     ...editingSkill,
     maxLevel: maxLvlFound,
     levelDescriptions: newDescriptions,
+    levelInfos: newInfos,
     levelTasks: newTasks
   };
 
