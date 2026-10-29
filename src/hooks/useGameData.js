@@ -144,8 +144,8 @@ export const generateDailyMissionsFromSkills = (skillsList, quota = 5, prioritiz
 };
 
 const DEFAULT_PROFILE_DATA = {
-  nickname: 'Herói Principal',
-  avatar: '🛡️',
+  nickname: 'Seu Nick',
+  avatar: '🧙🏻‍♂️',
   currentTheme: 'cyberpunk',
   boxColorType: 'default',
   linkSkillsByCategory: true,
@@ -188,7 +188,7 @@ export function useGameData() {
         return JSON.parse(saved);
       } catch (e) {}
     }
-    return [{ id: 'profile_default', name: 'Herói Principal', avatar: '🛡️' }];
+    return [{ id: 'profile_default', name: 'Seu Nick', avatar: '🧙🏻‍♂️' }];
   });
 
   const [activeProfileId, setActiveProfileId] = useState(() => {
