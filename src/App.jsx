@@ -409,6 +409,175 @@ const [confirmDeleteMiniIdx, setConfirmDeleteMiniIdx] = useState(null);
   const [newColor, setNewColor] = useState('#3b82f6');
 
   const [editingSkill, setEditingSkill] = useState(null);
+  const [showImportOptions, setShowImportOptions] = useState(false);
+const [isWriteDataOpen, setIsWriteDataOpen] = useState(false);
+const [writtenDataText, setWrittenDataText] = useState('');
+const importDataFileRef = useRef(null);
+
+const generateTextFromSkill = (skill) => {
+  if (!skill) return '';
+  let lines = [];
+  const maxLvl = skill.maxLevel || 10;
+
+  for (let i = 1; i <= maxLvl; i++) {
+    const desc = skill.levelDescriptions?.[i];
+    const tasks = skill.levelTasks?.[i] || [];
+
+    if (desc || tasks.length > 0) {
+      lines.push(`[Nível ${i}]`);
+      if (desc) lines.push(`Meta: ${desc}`);
+      tasks.forEach((t) => {
+        if (t.text) lines.push(`- ${t.text}`);
+      });
+      lines.push('');
+    }
+  }
+  return lines.join('\n').trim();
+};
+
+const handleFileImport = (event) => {
+  const file = event.target.files[0];
+  if (!file || !editingSkill) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const content = e.target.result;
+      processAndApplySkillData(content);
+    } catch (err) {
+      alert("Erro ao ler o arquivo importado.");
+    }
+  };
+  reader.readAsText(file);
+};
+
+const processAndApplySkillData = (textData) => {
+  if (!textData.trim() || !editingSkill) return;
+
+  let newDescriptions = { ...(editingSkill.levelDescriptions || {}) };
+  let newTasks = { ...(editingSkill.levelTasks || {}) };
+  let maxLvlFound = editingSkill.maxLevel || 1;
+
+  let parsedDescriptions = {};
+  let parsedTasks = {};
+
+  try {
+    const parsed = JSON.parse(textData);
+    if (parsed.levelDescriptions) {
+      parsedDescriptions = parsed.levelDescriptions;
+      Object.keys(parsed.levelDescriptions).forEach((k) => {
+        const num = parseInt(k, 10);
+        if (num > maxLvlFound) maxLvlFound = num;
+      });
+    }
+    if (parsed.levelTasks) {
+      Object.keys(parsed.levelTasks).forEach((k) => {
+        const num = parseInt(k, 10);
+        if (num > maxLvlFound) maxLvlFound = num;
+        parsedTasks[num] = parsed.levelTasks[k].map((t) => ({
+          text: typeof t === 'string' ? t : t.text || '',
+          done: typeof t === 'object' && t.done !== undefined ? t.done : undefined
+        }));
+      });
+    }
+  } catch (e) {
+    let currentLvl = null;
+    const lines = textData.split('\n');
+
+    lines.forEach((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+
+      const lvlMatch = trimmed.match(/^(?:\[?\s*(?:nivel|nível|lvl)\s*(\d+)\s*\]?|(\d+)\s*:)/i);
+      if (lvlMatch) {
+        currentLvl = parseInt(lvlMatch[1] || lvlMatch[2], 10);
+        if (currentLvl > maxLvlFound) maxLvlFound = currentLvl;
+        if (!parsedTasks[currentLvl]) parsedTasks[currentLvl] = [];
+        return;
+      }
+
+      if (currentLvl) {
+        if (trimmed.toLowerCase().startsWith('meta:') || trimmed.toLowerCase().startsWith('desc:')) {
+          parsedDescriptions[currentLvl] = trimmed.replace(/^(meta|desc|descrição):\s*/i, '');
+        } else if (trimmed.startsWith('-') || trimmed.startsWith('*') || trimmed.startsWith('>')) {
+          const taskText = trimmed.replace(/^[-*>]\s*/, '');
+          if (!parsedTasks[currentLvl]) parsedTasks[currentLvl] = [];
+          parsedTasks[currentLvl].push({
+            text: taskText,
+            done: undefined
+          });
+        }
+      }
+    });
+  }
+
+  Object.keys(parsedDescriptions).forEach((lvl) => {
+    newDescriptions[lvl] = parsedDescriptions[lvl];
+  });
+
+  Object.keys(parsedTasks).forEach((lvl) => {
+    const existingList = editingSkill.levelTasks?.[lvl] || [];
+    const incomingList = parsedTasks[lvl];
+
+    const mergedList = incomingList.map((incTask, idx) => {
+      const exactMatch = existingList.find(
+        (ex) => ex.text && ex.text.trim().toLowerCase() === incTask.text.trim().toLowerCase()
+      );
+      const indexMatch = existingList[idx];
+
+      let isDone = false;
+      let id = `task_${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${idx}`;
+
+      if (incTask.done !== undefined) {
+        isDone = Boolean(incTask.done);
+      } else if (exactMatch) {
+        isDone = Boolean(exactMatch.done);
+        id = exactMatch.id || id;
+      } else if (indexMatch) {
+        isDone = Boolean(indexMatch.done);
+        id = indexMatch.id || id;
+      }
+
+      return {
+        id,
+        text: incTask.text,
+        done: isDone
+      };
+    });
+
+    newTasks[lvl] = mergedList;
+  });
+
+  const updatedSkill = {
+    ...editingSkill,
+    maxLevel: maxLvlFound,
+    levelDescriptions: newDescriptions,
+    levelTasks: newTasks
+  };
+
+  setEditingSkill(updatedSkill);
+  updateSkill(updatedSkill.id, updatedSkill);
+  if (playSound) playSound('train');
+};
+
+const handleSaveWrittenData = () => {
+  processAndApplySkillData(writtenDataText);
+  setIsWriteDataOpen(false);
+};
+const handleExportSkillData = () => {
+  if (!editingSkill) return;
+  const textContent = generateTextFromSkill(editingSkill);
+  const fileName = `${(editingSkill.title || editingSkill.name || 'habilidade').replace(/\s+/g, '_')}_dados.txt`;
+  const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  if (playSound) playSound('click');
+};
   const handleSaveMiniEdit = (idx, oldText) => {
   const trimmed = tempMiniText.trim();
   if (trimmed && trimmed !== oldText.trim()) {
@@ -4689,30 +4858,132 @@ editingSkill.miniMissions.map((mm, idx) => {
           <form className="modal-window full-screen-edit" onSubmit={handleSaveEdit} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header-row">
               <h2>Editar Habilidade: {editingSkill.title || editingSkill.name}</h2>
-              <div className="header-action-row-right">
-                <button
-                  type="button"
-                  className="delete-btn"
-                  onClick={() => {
-                    playSound('delete');
-                    deleteSkill(editingSkill.id);
-                    setEditingSkill(null);
-                  }}
-                >
-                  Excluir Habilidade
-                </button>
-                <button
-                  type="button"
-                  className="close-modal-x-btn"
-                  onClick={() => {
-                    playSound('click');
-                    setEditingSkill(null);
-                  }}
-                  title="Fechar"
-                >
-                  ✕
-                </button>
-              </div>
+<div className="header-action-row-right">
+  <div style={{ position: 'relative', display: 'inline-block' }}>
+    <button
+      type="button"
+      className="cancel-button"
+      style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setShowImportOptions(!showImportOptions);
+      }}
+    >
+      Importar Dados ▾
+    </button>
+
+    {showImportOptions && (
+      <>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: 99998,
+            background: 'transparent'
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowImportOptions(false);
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: '100%',
+            marginTop: '0.4rem',
+            background: '#1e293b',
+            border: '1px solid var(--theme-border, #334155)',
+            borderRadius: '8px',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+            zIndex: 99999,
+            display: 'flex',
+            flexDirection: 'column',
+            minWidth: '170px',
+            overflow: 'hidden'
+          }}
+        >
+          <button
+            type="button"
+            className="context-menu-item"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowImportOptions(false);
+              importDataFileRef.current?.click();
+            }}
+          >
+            📁 Importar Arquivos
+          </button>
+
+          <button
+            type="button"
+            className="context-menu-item"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowImportOptions(false);
+              handleExportSkillData();
+            }}
+          >
+            📤 Exportar Arquivos
+          </button>
+
+          <button
+            type="button"
+            className="context-menu-item"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowImportOptions(false);
+              setWrittenDataText(generateTextFromSkill(editingSkill));
+              setIsWriteDataOpen(true);
+            }}
+          >
+            ✏️ Escrever Dados
+          </button>
+        </div>
+      </>
+    )}
+
+    <input
+      type="file"
+      ref={importDataFileRef}
+      onChange={handleFileImport}
+      accept=".json,.txt"
+      style={{ display: 'none' }}
+    />
+  </div>
+
+  <button
+    type="button"
+    className="delete-btn"
+    onClick={() => {
+      playSound('delete');
+      deleteSkill(editingSkill.id);
+      setEditingSkill(null);
+    }}
+  >
+    Excluir Habilidade
+  </button>
+
+  <button
+    type="button"
+    className="close-modal-x-btn"
+    onClick={() => {
+      playSound('click');
+      setEditingSkill(null);
+    }}
+    title="Fechar"
+  >
+    ✕
+  </button>
+</div>
             </div>
 
             <div className="horizontal-info-bar">
@@ -5170,7 +5441,6 @@ editingSkill.miniMissions.map((mm, idx) => {
       onClick={(e) => e.stopPropagation()}
       style={{ maxWidth: '480px', width: '92vw' }}
     >
-      {/* Cabeçalho do Modal com estilo do Tema */}
       <div className="modal-header-row">
         <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--theme-accent, #38bdf8)' }}>
           Info/Descritivo - Nível {levelInfoModal.levelNumber}
@@ -5184,7 +5454,6 @@ editingSkill.miniMissions.map((mm, idx) => {
         </button>
       </div>
 
-      {/* Corpo com Caixa de Texto separada em levelInfos */}
       <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
         <textarea
           className="info-textarea"
@@ -5216,7 +5485,6 @@ editingSkill.miniMissions.map((mm, idx) => {
         />
       </div>
 
-      {/* Ações do Modal */}
       <div className="modal-actions-bar">
         <button
           type="button"
@@ -5229,6 +5497,76 @@ editingSkill.miniMissions.map((mm, idx) => {
       </div>
     </div>
   </div>
-)}    </div>
+)}
+
+{isWriteDataOpen && (
+  <div
+    className="modal-backdrop high-z-backdrop"
+    onClick={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsWriteDataOpen(false);
+    }}
+  >
+    <div
+      className="modal-window high-z-window"
+      onClick={(e) => e.stopPropagation()}
+      style={{ maxWidth: '520px', width: '92vw' }}
+    >
+      <div className="modal-header-row">
+        <h3>✍️ Escrever / Colar Dados</h3>
+        <button
+          type="button"
+          className="close-popup-btn"
+          onClick={() => setIsWriteDataOpen(false)}
+        >
+          ✕
+        </button>
+      </div>
+
+      <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '0.5rem 0' }}>
+        Cole ou digite os dados no campo abaixo:
+      </p>
+
+      <textarea
+        rows={8}
+        value={writtenDataText}
+        onChange={(e) => setWrittenDataText(e.target.value)}
+        placeholder="Cole aqui o conteúdo JSON ou texto..."
+        style={{
+          width: '100%',
+          background: 'rgba(0, 0, 0, 0.4)',
+          border: '1px solid var(--theme-border, rgba(255, 255, 255, 0.15))',
+          borderRadius: '8px',
+          padding: '0.75rem',
+          color: '#f8fafc',
+          fontSize: '0.88rem',
+          resize: 'vertical',
+          outline: 'none',
+          boxSizing: 'border-box'
+        }}
+      />
+
+      <div className="modal-actions-bar" style={{ marginTop: '1rem' }}>
+        <button
+          type="button"
+          className="cancel-button"
+          onClick={() => setIsWriteDataOpen(false)}
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          className="confirm-button"
+          onClick={handleSaveWrittenData}
+        >
+          Salvar Dados
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+    </div>
   );
 }
