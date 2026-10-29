@@ -166,7 +166,7 @@ const DEFAULT_PROFILE_DATA = {
       miniMissions: ['Praticar React por 20 minutos', 'Revisar componentes']
     }
   ],
-  diamonds: 5,
+  diamonds: 1,
   dailyMissions: [],
   dailyMissionsQuota: 5,
   prioritizedMissions: [],
