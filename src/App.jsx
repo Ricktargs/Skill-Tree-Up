@@ -5546,25 +5546,25 @@ editingSkill.miniMissions.map((mm, idx) => {
         Cole ou digite os dados no campo abaixo:
       </p>
 
-      <textarea
-        rows={8}
-        value={writtenDataText}
-        onChange={(e) => setWrittenDataText(e.target.value)}
-        placeholder="Cole aqui o conteúdo JSON ou texto..."
-        style={{
-          width: '100%',
-          background: 'rgba(0, 0, 0, 0.4)',
-          border: '1px solid var(--theme-border, rgba(255, 255, 255, 0.15))',
-          borderRadius: '8px',
-          padding: '0.75rem',
-          color: '#f8fafc',
-          fontSize: '0.88rem',
-          resize: 'vertical',
-          outline: 'none',
-          boxSizing: 'border-box'
-        }}
-      />
-
+<textarea
+  rows={10}
+  value={writtenDataText}
+  onChange={(e) => setWrittenDataText(e.target.value)}
+  placeholder={`[Nível 1]\nMeta: Digite a meta principal aqui\nInfo: Explicação detalhada do nível (opcional)\n- Primeira subtarefa\n- Segunda subtarefa\n\n[Nível 2]\nMeta: Próxima meta do nível 2...`}
+  style={{
+    width: '100%',
+    background: 'rgba(0, 0, 0, 0.4)',
+    border: '1px solid var(--theme-border, rgba(255, 255, 255, 0.15))',
+    borderRadius: '8px',
+    padding: '0.75rem',
+    color: '#f8fafc',
+    fontSize: '0.88rem',
+    resize: 'vertical',
+    outline: 'none',
+    boxSizing: 'border-box',
+    lineHeight: '1.4'
+  }}
+/>
       <div className="modal-actions-bar" style={{ marginTop: '1rem' }}>
         <button
           type="button"
