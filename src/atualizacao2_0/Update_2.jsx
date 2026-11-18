@@ -1,8 +1,65 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { tx } from '../i18n/index.jsx';
+import EmojiPicker from 'emoji-picker-react';
 import './Update_2.css';
-import { playWebAudioAlarm, usePomodoro } from './Update_2.js';
+import { usePomodoro, useDraggable, ALARM_SOUNDS, DEFAULT_TIMER_EMOJI } from './Update_2.js';
 
 export { usePomodoro };
+
+const SOUND_OPTIONS = ALARM_SOUNDS;
+
+// Sugestões rápidas de emoji para os timers (o "…" abre o seletor completo)
+const QUICK_EMOJIS = ['⏰', '📚', '💻', '💪', '🧘', '☕', '✍️', '🎮', '🍅', '🎯'];
+
+const DIAL_RADIUS = 45;
+const DIAL_CIRCUMFERENCE = 2 * Math.PI * DIAL_RADIUS;
+
+function formatSeconds(total) {
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const mm = String(m).padStart(2, '0');
+  const ss = String(s).padStart(2, '0');
+  return h > 0 ? `${String(h).padStart(2, '0')}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+const presetTotal = (p) => (p.hours || 0) * 3600 + (p.minutes || 0) * 60 + (p.seconds || 0);
+const progressOf = (remaining, total) => (total > 0 ? Math.min(1, Math.max(0, remaining / total)) : 0);
+const toSeconds = (h, m, s) =>
+  Math.max(0, parseInt(h, 10) || 0) * 3600 +
+  Math.max(0, parseInt(m, 10) || 0) * 60 +
+  Math.min(59, Math.max(0, parseInt(s, 10) || 0));
+
+// Campos h / m / s reutilizados em todo o Pomodoro
+function HmsInputs({ h, m, s, onH, onM, onS, compact = false }) {
+  return (
+    <div className={`pomo-hms ${compact ? 'compact' : ''}`}>
+      <input className="pomo-input num" type="number" min="0" max="99" value={h} onChange={(e) => onH(e.target.value)} aria-label={tx("Horas")} />
+      <span>h</span>
+      <input className="pomo-input num" type="number" min="0" max="59" value={m} onChange={(e) => onM(e.target.value)} aria-label={tx("Minutos")} />
+      <span>m</span>
+      <input className="pomo-input num" type="number" min="0" max="59" value={s} onChange={(e) => onS(e.target.value)} aria-label={tx("Segundos")} />
+      <span>s</span>
+    </div>
+  );
+}
+
+// Anel de progresso (grande no Pomodoro principal, pequeno nos cards)
+function ProgressRing({ progress, className = '' }) {
+  return (
+    <svg className={className} viewBox="0 0 100 100" aria-hidden="true">
+      <circle className="pomo-dial-track" cx="50" cy="50" r={DIAL_RADIUS} />
+      <circle
+        className="pomo-dial-progress"
+        cx="50"
+        cy="50"
+        r={DIAL_RADIUS}
+        strokeDasharray={DIAL_CIRCUMFERENCE}
+        strokeDashoffset={DIAL_CIRCUMFERENCE * (1 - progress)}
+      />
+    </svg>
+  );
+}
 
 // 1. BOTÃO DO POMODORO NA TELA PRINCIPAL
 export function PomodoroIconButton({ pomodoro, playSound }) {
@@ -11,312 +68,479 @@ export function PomodoroIconButton({ pomodoro, playSound }) {
   return (
     <button
       type="button"
-      className="pomodoro-app-icon-btn"
+      className="top-icon-button"
       onClick={() => {
         if (playSound) playSound('click');
         toggleModal();
       }}
       onContextMenu={handleButtonContextMenu}
-      title="Clique com botão esquerdo para abrir / Clique com botão direito para 'Adicionar Pomodoro'"
-      style={{
-        width: '70px',
-        height: '70px',
-        borderRadius: '18px',
-        background: '#131927',
-        border: '1.5px solid #d97706',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-        transition: 'transform 0.15s ease, border-color 0.15s ease',
-        outline: 'none',
-        position: 'relative'
-      }}
+      title={tx("Pomodoro (R) — clique direito para criar um timer")}
     >
-      <span style={{ fontSize: '2rem' }}>⏱️</span>
+      ⏱️
     </button>
   );
 }
 
 // 2. MENU DE CONTEXTO (CLIQUE DIREITO)
-export function PomodoroContextMenu({ contextMenu, closeContextMenu, addExtraPomodoro }) {
+export function PomodoroContextMenu({ contextMenu, closeContextMenu, onAdd }) {
   useEffect(() => {
+    if (!contextMenu.visible) return undefined;
     const handleClickOutside = () => closeContextMenu();
+    const handleKey = (e) => e.key === 'Escape' && closeContextMenu();
     window.addEventListener('click', handleClickOutside);
-    return () => window.removeEventListener('click', handleClickOutside);
-  }, [closeContextMenu]);
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      window.removeEventListener('click', handleClickOutside);
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [contextMenu.visible, closeContextMenu]);
 
   if (!contextMenu.visible) return null;
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        top: `${contextMenu.y}px`,
-        left: `${contextMenu.x}px`,
-        zIndex: 9999,
-        background: '#0f172a',
-        border: '1px solid #334155',
-        borderRadius: '8px',
-        boxShadow: '0 10px 25px rgba(0,0,0,0.6)',
-        padding: '4px 0',
-        minWidth: '160px'
-      }}
+      className="pomo-context-menu"
+      style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
       onClick={(e) => e.stopPropagation()}
     >
-      <button
-        type="button"
-        style={{
-          width: '100%',
-          textAlign: 'left',
-          background: 'none',
-          border: 'none',
-          color: '#f8fafc',
-          padding: '8px 14px',
-          fontSize: '0.85rem',
-          fontWeight: '600',
-          cursor: 'pointer',
-          transition: 'background 0.2s ease'
-        }}
-        onMouseEnter={(e) => (e.target.style.background = 'rgba(56, 189, 248, 0.15)')}
-        onMouseLeave={(e) => (e.target.style.background = 'none')}
-        onClick={() => {
-          addExtraPomodoro();
-        }}
-      >
-        Adicionar Pomodoro
+      <button type="button" onClick={onAdd}>
+        {tx("＋ Novo timer")}
       </button>
     </div>
   );
 }
 
-// 3. WIDGET DE POMODORO SUSPENSO ADICIONAL (Customizável no Ecrã)
-export function ExtraPomodoroWidget({ timer, removeExtraPomodoro, updateExtraPomodoro }) {
-  const { id, title, hours, minutes, seconds, totalSeconds, isActive, isAlarmRinging, soundOption, position } = timer;
+// 3. FORMULÁRIO DE TIMER (criar ou editar)
+function TimerForm({ title, initial, presets, defaultSound, testSound, click, onSubmit, onCancel, mode = 'create' }) {
+  const init = initial || {};
+  const [name, setName] = useState(init.title || '');
+  const [h, setH] = useState(String(init.hours ?? 0));
+  const [m, setM] = useState(String(init.minutes ?? 25));
+  const [s, setS] = useState(String(init.seconds ?? 0));
+  const [sound, setSound] = useState(init.soundOption || defaultSound);
+  const [presetId, setPresetId] = useState(null);
+  const [onScreen, setOnScreen] = useState(false);
+  const [emoji, setEmoji] = useState(init.emoji || DEFAULT_TIMER_EMOJI);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(title);
-  const [editH, setEditH] = useState(String(hours));
-  const [editM, setEditM] = useState(String(minutes));
-  const [editS, setEditS] = useState(String(seconds));
+  const secs = toSeconds(h, m, s);
+  const presetName = presets.find((p) => p.id === presetId)?.name;
 
-  const isDraggingRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
-  const timerIntervalRef = useRef(null);
-  const alarmIntervalRef = useRef(null);
-
-  const handleMouseDown = (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
-    isDraggingRef.current = true;
-    dragStartRef.current = {
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
-    };
+  const pickPreset = (preset) => {
+    click();
+    setPresetId(preset.id);
+    setH(String(preset.hours || 0));
+    setM(String(preset.minutes || 0));
+    setS(String(preset.seconds || 0));
   };
 
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isDraggingRef.current) return;
-      updateExtraPomodoro(id, {
-        position: {
-          x: e.clientX - dragStartRef.current.x,
-          y: e.clientY - dragStartRef.current.y
-        }
-      });
-    };
-
-    const handleMouseUp = () => {
-      isDraggingRef.current = false;
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [id, position, updateExtraPomodoro]);
-
-  useEffect(() => {
-    if (!isActive) {
-      clearInterval(timerIntervalRef.current);
-      return;
-    }
-
-    timerIntervalRef.current = setInterval(() => {
-      if (totalSeconds <= 1) {
-        clearInterval(timerIntervalRef.current);
-        updateExtraPomodoro(id, { isActive: false, isAlarmRinging: true, totalSeconds: 0 });
-      } else {
-        updateExtraPomodoro(id, { totalSeconds: totalSeconds - 1 });
-      }
-    }, 1000);
-
-    return () => clearInterval(timerIntervalRef.current);
-  }, [isActive, totalSeconds, id, updateExtraPomodoro]);
-
-  useEffect(() => {
-    if (isAlarmRinging) {
-      playWebAudioAlarm(soundOption);
-      alarmIntervalRef.current = setInterval(() => {
-        playWebAudioAlarm(soundOption);
-      }, 1000);
-    } else {
-      clearInterval(alarmIntervalRef.current);
-    }
-    return () => clearInterval(alarmIntervalRef.current);
-  }, [isAlarmRinging, soundOption]);
-
-  const handleSaveEdit = () => {
-    const h = Math.max(0, parseInt(editH, 10) || 0);
-    const m = Math.max(0, parseInt(editM, 10) || 0);
-    const s = Math.min(59, Math.max(0, parseInt(editS, 10) || 0));
-    const total = h * 3600 + m * 60 + s;
-
-    updateExtraPomodoro(id, {
-      title: editTitle || 'Pomodoro',
-      hours: h,
-      minutes: m,
-      seconds: s,
-      totalSeconds: total,
-      initialTotalSeconds: total
-    });
-    setIsEditing(false);
+  const typed = (setter) => (v) => {
+    setter(v);
+    setPresetId(null);
   };
 
-  const stopAlarm = () => {
-    updateExtraPomodoro(id, { isAlarmRinging: false, totalSeconds: timer.initialTotalSeconds || 1500 });
-  };
-
-  const currH = Math.floor(totalSeconds / 3600);
-  const currM = Math.floor((totalSeconds % 3600) / 60);
-  const currS = totalSeconds % 60;
-
-  const formattedDisplay = () => {
-    const mStr = String(currM).padStart(2, '0');
-    const sStr = String(currS).padStart(2, '0');
-    if (currH > 0) {
-      return `${String(currH).padStart(2, '0')}:${mStr}:${sStr}`;
-    }
-    return `${mStr}:${sStr}`;
+  const submit = (start) => {
+    if (secs <= 0) return;
+    onSubmit({ title: name || presetName, emoji, seconds: secs, sound, start, onScreen });
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        zIndex: 500,
-        background: '#0e1626',
-        border: isAlarmRinging ? '2px solid #ef4444' : isActive ? '2px solid #34d399' : '2px solid #38bdf8',
-        borderRadius: '14px',
-        padding: '8px 12px',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '6px',
-        minWidth: '180px',
-        color: '#fff',
-        userSelect: 'none',
-        cursor: 'grab'
-      }}
-      onMouseDown={handleMouseDown}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-        <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#38bdf8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          ⏱️ {title}
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <button
-            type="button"
-            onClick={() => setIsEditing((prev) => !prev)}
-            title="Editar tempo e nome"
-            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem' }}
-          >
-            ✏️
-          </button>
-          <button
-            type="button"
-            onClick={() => removeExtraPomodoro(id)}
-            title="Remover Pomodoro Suspenso"
-            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold' }}
-          >
-            ✕
-          </button>
-        </div>
+    <div className="pomo-manage">
+      <span className="pomo-manage-title">{title}</span>
+      <div className="pomo-name-row">
+        <button
+          type="button"
+          className="pomo-emoji-btn"
+          onClick={() => {
+            click();
+            setIsPickerOpen(true);
+          }}
+          title={tx("Escolher emoji")}
+        >
+          {emoji}
+        </button>
+        <input
+          className="pomo-input name"
+          type="text"
+          placeholder={presetName || tx("Nome (ex: Leitura)")}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && submit(false)}
+          autoFocus
+        />
       </div>
 
-      {isEditing ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'rgba(0,0,0,0.4)', padding: '6px', borderRadius: '8px' }}>
-          <input
-            type="text"
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            placeholder="Nome do Timer"
-            style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '4px', color: '#fff', fontSize: '0.75rem', padding: '2px 4px' }}
-          />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'center' }}>
-            <input type="number" value={editH} onChange={(e) => setEditH(e.target.value)} min="0" style={{ width: '28px', fontSize: '0.7rem', textAlign: 'center' }} />
-            <span style={{ fontSize: '0.65rem' }}>h</span>
-            <input type="number" value={editM} onChange={(e) => setEditM(e.target.value)} min="0" max="59" style={{ width: '28px', fontSize: '0.7rem', textAlign: 'center' }} />
-            <span style={{ fontSize: '0.65rem' }}>m</span>
-            <input type="number" value={editS} onChange={(e) => setEditS(e.target.value)} min="0" max="59" style={{ width: '28px', fontSize: '0.7rem', textAlign: 'center' }} />
-            <span style={{ fontSize: '0.65rem' }}>s</span>
-            <button type="button" onClick={handleSaveEdit} style={{ background: 'none', border: 'none', color: '#34d399', cursor: 'pointer', fontWeight: 'bold' }}>✓</button>
+      <div className="pomo-emoji-row">
+        {QUICK_EMOJIS.map((em) => (
+          <button
+            key={em}
+            type="button"
+            className={`pomo-emoji-quick ${emoji === em ? 'active' : ''}`}
+            onClick={() => {
+              click();
+              setEmoji(em);
+            }}
+          >
+            {em}
+          </button>
+        ))}
+        <button
+          type="button"
+          className="pomo-emoji-quick more"
+          onClick={() => {
+            click();
+            setIsPickerOpen(true);
+          }}
+          title={tx("Mais emojis")}
+        >
+          …
+        </button>
+      </div>
+
+      {isPickerOpen && (
+        <div
+          className="pomo-emoji-overlay"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsPickerOpen(false);
+          }}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <EmojiPicker
+              onEmojiClick={(emojiData) => {
+                click();
+                setEmoji(emojiData.emoji);
+                setIsPickerOpen(false);
+              }}
+              theme="dark"
+              searchPlaceHolder={tx("Buscar emoji...")}
+            />
           </div>
         </div>
-      ) : (
-        <div style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: '1.2rem', fontWeight: '800', color: isAlarmRinging ? '#ef4444' : '#fff' }}>
-          {isAlarmRinging ? '🚨 ESGOTADO!' : formattedDisplay()}
-        </div>
       )}
 
-      {isAlarmRinging && (
-        <button
-          type="button"
-          onClick={stopAlarm}
-          style={{ background: '#ef4444', border: 'none', borderRadius: '6px', color: '#fff', padding: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
-        >
-          🔔 Desligar
-        </button>
-      )}
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '4px' }}>
-        {!isActive ? (
+      <div className="pomo-chips">
+        {presets.map((preset) => (
           <button
+            key={preset.id}
             type="button"
-            onClick={() => {
-              if (isAlarmRinging) stopAlarm();
-              updateExtraPomodoro(id, { isActive: true });
-            }}
-            style={{ background: 'none', border: 'none', color: '#34d399', cursor: 'pointer', fontSize: '0.9rem' }}
+            className={`pomo-chip ${presetId === preset.id ? 'active' : ''}`}
+            onClick={() => pickPreset(preset)}
           >
-            ▶
+            {tx(preset.name)}
+            <small>{formatSeconds(presetTotal(preset))}</small>
           </button>
+        ))}
+      </div>
+
+      <div className="pomo-manage-row" style={{ justifyContent: 'space-between' }}>
+        <HmsInputs h={h} m={m} s={s} onH={typed(setH)} onM={typed(setM)} onS={typed(setS)} />
+        <select
+          className="pomodoro-select-input"
+          value={sound}
+          onChange={(e) => {
+            setSound(e.target.value);
+            testSound(e.target.value);
+          }}
+          title={tx("Som do alarme deste timer")}
+        >
+          {SOUND_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>🔊 {tx(opt.label)}</option>
+          ))}
+        </select>
+      </div>
+
+      {mode === 'create' && (
+        <label className="pomo-switch">
+          <input type="checkbox" checked={onScreen} onChange={(e) => setOnScreen(e.target.checked)} />
+          <span className="pomo-switch-track" />
+          <span>{tx("📌 Mostrar janela na tela inicial")}</span>
+        </label>
+      )}
+
+      <div className="pomo-manage-row">
+        {mode === 'create' ? (
+          <>
+            <button type="button" className="pomo-small-btn grow" disabled={secs <= 0} onClick={() => submit(true)}>
+              {tx("▶ Criar e iniciar")}
+            </button>
+            <button type="button" className="pomo-ghost-btn" disabled={secs <= 0} onClick={() => submit(false)}>
+              {tx("Criar")}
+            </button>
+          </>
         ) : (
-          <button
-            type="button"
-            onClick={() => updateExtraPomodoro(id, { isActive: false })}
-            style={{ background: 'none', border: 'none', color: '#facc15', cursor: 'pointer', fontSize: '0.9rem' }}
-          >
-            ⏸
+          <button type="button" className="pomo-small-btn grow" disabled={secs <= 0} onClick={() => submit(false)}>
+            {tx("Salvar")}
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => updateExtraPomodoro(id, { isActive: false, isAlarmRinging: false, totalSeconds: timer.initialTotalSeconds || 1500 })}
-          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.9rem' }}
-        >
-          ⏹
+        <button type="button" className="pomo-ghost-btn" onClick={onCancel}>
+          {tx("Cancelar")}
         </button>
       </div>
     </div>
   );
 }
 
-// 4. MODAL PRINCIPAL DO POMODORO
+// 4. CARD DE UM TIMER EXTRA (um Pomodoro independente)
+function TimerCard({ timer, pomodoro, click }) {
+  const { extraRemaining, startExtra, pauseExtra, resetExtra, editExtra, removeExtraPomodoro, setExtraOnScreen, modePresets, soundOption, testSound } = pomodoro;
+  const [isEditing, setIsEditing] = useState(false);
+
+  const isActive = timer.endAt != null;
+  const ringing = timer.isAlarmRinging;
+  const total = timer.initialTotalSeconds || 1500;
+  const remaining = extraRemaining(timer);
+  const state = ringing ? 'ringing' : isActive ? 'running' : 'paused';
+
+  if (isEditing) {
+    return (
+      <TimerForm
+        mode="edit"
+        title={tx('Editar “{name}”', { name: timer.title })}
+        initial={timer}
+        presets={modePresets}
+        defaultSound={soundOption}
+        testSound={testSound}
+        click={click}
+        onSubmit={(values) => {
+          click();
+          editExtra(timer.id, values);
+          setIsEditing(false);
+        }}
+        onCancel={() => setIsEditing(false)}
+      />
+    );
+  }
+
+  return (
+    <div className={`pomo-card ${state}`}>
+      <div className="pomo-card-ring">
+        <ProgressRing progress={ringing ? 1 : progressOf(remaining, total)} />
+        <span className="pomo-card-ring-icon">{ringing ? '🔔' : timer.emoji || DEFAULT_TIMER_EMOJI}</span>
+      </div>
+
+      <div className="pomo-card-info">
+        <span className="pomo-card-name" title={timer.title}>{timer.title}</span>
+        <span className="pomo-card-time">{ringing ? tx("Acabou!") : formatSeconds(remaining)}</span>
+        <span className="pomo-card-meta">
+          {formatSeconds(total)} · {tx(SOUND_OPTIONS.find((o) => o.value === (timer.soundOption || 'clock'))?.label)}
+        </span>
+      </div>
+
+      <div className="pomo-card-actions">
+        <div className="pomo-card-controls">
+          {ringing ? (
+            <button
+              type="button"
+              className="pomo-mini-btn play alarm"
+              title={tx("Desligar alarme")}
+              onClick={() => {
+                click();
+                resetExtra(timer.id);
+              }}
+            >
+              🔕
+            </button>
+          ) : isActive ? (
+            <button
+              type="button"
+              className="pomo-mini-btn"
+              title={tx("Pausar")}
+              onClick={() => {
+                click();
+                pauseExtra(timer.id);
+              }}
+            >
+              ⏸
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="pomo-mini-btn play"
+              title={tx("Iniciar")}
+              onClick={() => {
+                click('train');
+                startExtra(timer.id);
+              }}
+            >
+              ▶
+            </button>
+          )}
+          <button
+            type="button"
+            className="pomo-mini-btn"
+            title={tx("Reiniciar")}
+            onClick={() => {
+              click('delete');
+              resetExtra(timer.id);
+            }}
+          >
+            ↺
+          </button>
+        </div>
+        <div className="pomo-card-controls subtle">
+          <button
+            type="button"
+            className={`pomo-mini-btn ghost pin ${timer.onScreen ? 'is-on' : ''}`}
+            title={timer.onScreen ? tx("Tirar a janela da tela inicial") : tx("Mostrar janela na tela inicial")}
+            onClick={() => {
+              click();
+              setExtraOnScreen(timer.id, !timer.onScreen);
+            }}
+          >
+            📌
+          </button>
+          <button type="button" className="pomo-mini-btn ghost" title={tx("Editar nome, tempo e som")} onClick={() => setIsEditing(true)}>
+            ✏️
+          </button>
+          <button
+            type="button"
+            className="pomo-mini-btn ghost danger"
+            title={tx("Excluir timer")}
+            onClick={() => {
+              click('delete');
+              removeExtraPomodoro(timer.id);
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 4b. JANELA FLUTUANTE DE UM TIMER EXTRA (só aparece se você ativar o 📌,
+//     ou enquanto o alarme dele estiver tocando)
+function ExtraFloat({ timer, pomodoro, click }) {
+  const { extraRemaining, startExtra, pauseExtra, resetExtra, setExtraOnScreen, updateExtraPomodoro, openTimersTab } = pomodoro;
+  const position = timer.position || { x: 16, y: 16 };
+  const { elRef, onPointerDown, movedRef } = useDraggable(position, (pos) => updateExtraPomodoro(timer.id, { position: pos }));
+
+  const isActive = timer.endAt != null;
+  const ringing = timer.isAlarmRinging;
+  const total = timer.initialTotalSeconds || 1500;
+  const remaining = extraRemaining(timer);
+  const state = ringing ? 'ringing' : isActive ? 'running' : 'paused';
+
+  return (
+    <div
+      ref={elRef}
+      className={`pomo-float ${state}`}
+      style={{ left: `${position.x}px`, top: `${position.y}px`, zIndex: 101 }}
+      onPointerDown={onPointerDown}
+      onClick={() => {
+        if (movedRef.current) return;
+        click();
+        openTimersTab();
+      }}
+      title={tx("Clique para abrir · arraste para mover")}
+    >
+      <div className="pomo-float-head">
+        <span className="pomo-float-title">{ringing ? '🔔' : timer.emoji || DEFAULT_TIMER_EMOJI} {timer.title}</span>
+        {timer.onScreen && (
+          <button
+            type="button"
+            className="pomo-mini-btn ghost danger"
+            title={tx("Tirar da tela (o timer continua)")}
+            onClick={(e) => {
+              e.stopPropagation();
+              click();
+              setExtraOnScreen(timer.id, false);
+            }}
+          >
+            ✕
+          </button>
+        )}
+      </div>
+      <div className="pomo-float-body">
+        <span className="pomo-float-time">{ringing ? tx("Acabou!") : formatSeconds(remaining)}</span>
+        <div className="pomo-float-controls" onClick={(e) => e.stopPropagation()}>
+          {ringing ? (
+            <button type="button" className="pomo-mini-btn play alarm" title={tx("Desligar alarme")} onClick={() => { click(); resetExtra(timer.id); }}>
+              🔕
+            </button>
+          ) : isActive ? (
+            <button type="button" className="pomo-mini-btn" title={tx("Pausar")} onClick={() => { click(); pauseExtra(timer.id); }}>
+              ⏸
+            </button>
+          ) : (
+            <button type="button" className="pomo-mini-btn play" title={tx("Iniciar")} onClick={() => { click('train'); startExtra(timer.id); }}>
+              ▶
+            </button>
+          )}
+          {!ringing && (
+            <button type="button" className="pomo-mini-btn" title={tx("Reiniciar")} onClick={() => { click('delete'); resetExtra(timer.id); }}>
+              ↺
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="pomo-float-bar" style={{ width: `${(ringing ? 1 : progressOf(remaining, total)) * 100}%` }} />
+    </div>
+  );
+}
+
+// 5. ABA "TIMERS"
+function TimersTab({ pomodoro, click }) {
+  const { extraTimers, addExtraPomodoro, isAddPanelOpen, setIsAddPanelOpen, modePresets, soundOption, testSound } = pomodoro;
+  const runningCount = extraTimers.filter((t) => t.endAt != null).length;
+
+  return (
+    <div className="pomo-timers">
+      {isAddPanelOpen ? (
+        <TimerForm
+          title={tx("Novo timer")}
+          presets={modePresets}
+          defaultSound={soundOption}
+          testSound={testSound}
+          click={click}
+          onSubmit={(values) => {
+            click(values.start ? 'train' : 'click');
+            addExtraPomodoro(values);
+            setIsAddPanelOpen(false);
+          }}
+          onCancel={() => setIsAddPanelOpen(false)}
+        />
+      ) : (
+        <button
+          type="button"
+          className="pomo-add-timer"
+          onClick={() => {
+            click();
+            setIsAddPanelOpen(true);
+          }}
+        >
+          {tx("＋ Novo timer")}
+        </button>
+      )}
+
+      {extraTimers.length === 0 ? (
+        !isAddPanelOpen && (
+          <div className="pomo-empty">
+            <span className="pomo-empty-icon">🗂️</span>
+            <p>{tx("Nenhum timer ainda.")}</p>
+            <small>{tx("Cada timer tem nome, tempo e som próprios, e roda sozinho: iniciar um não mexe nos outros.")}</small>
+          </div>
+        )
+      ) : (
+        <>
+          <div className="pomo-timers-summary">
+            {extraTimers.length} {extraTimers.length === 1 ? 'timer' : 'timers'}
+            {runningCount > 0 && <> · <strong>{runningCount} rodando</strong></>}
+          </div>
+          <div className="pomo-card-list">
+            {extraTimers.map((timer) => (
+              <TimerCard key={timer.id} timer={timer} pomodoro={pomodoro} click={click} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// 6. MODAL PRINCIPAL DO POMODORO
 export function PomodoroModal({ pomodoro, playSound }) {
   const {
     isOpen,
@@ -328,8 +552,6 @@ export function PomodoroModal({ pomodoro, playSound }) {
     updateModePreset,
     addPreset,
     removePreset,
-    pinOnScreen,
-    setPinOnScreen,
     soundOption,
     setSoundOption,
     testSound,
@@ -342,8 +564,13 @@ export function PomodoroModal({ pomodoro, playSound }) {
     minutes,
     seconds,
     hours,
+    targetTotalSeconds,
     updateCustomTime,
-    addExtraPomodoro
+    extraTimers,
+    ringingExtras,
+    setIsAddPanelOpen,
+    modalTab,
+    setModalTab
   } = pomodoro;
 
   const [isEditingTime, setIsEditingTime] = useState(false);
@@ -361,11 +588,14 @@ export function PomodoroModal({ pomodoro, playSound }) {
   const [newPresetM, setNewPresetM] = useState('20');
   const [newPresetS, setNewPresetS] = useState('0');
 
+  const click = (type = 'click') => {
+    if (playSound) playSound(type);
+  };
+
   const startEditing = () => {
-    if (playSound) playSound('click');
+    click();
     pauseTimer();
-    const totalMins = hours * 60 + minutes;
-    setInputMin(String(totalMins));
+    setInputMin(String(hours * 60 + minutes));
     setInputSec(String(seconds));
     setIsEditingTime(true);
   };
@@ -379,7 +609,7 @@ export function PomodoroModal({ pomodoro, playSound }) {
   };
 
   const startPresetEdit = (preset) => {
-    if (playSound) playSound('click');
+    click();
     setEditingPresetId(preset.id);
     setPresetInputH(String(preset.hours || 0));
     setPresetInputM(String(preset.minutes || 0));
@@ -387,13 +617,13 @@ export function PomodoroModal({ pomodoro, playSound }) {
   };
 
   const handleSavePreset = (id) => {
-    if (playSound) playSound('click');
+    click();
     updateModePreset(id, presetInputH, presetInputM, presetInputS);
     setEditingPresetId(null);
   };
 
   const handleCreateNewPreset = () => {
-    if (playSound) playSound('click');
+    click();
     addPreset(newPresetName, newPresetH, newPresetM, newPresetS);
     setNewPresetName('');
     setNewPresetH('0');
@@ -401,581 +631,328 @@ export function PomodoroModal({ pomodoro, playSound }) {
     setNewPresetS('0');
   };
 
+  const closeModal = () => {
+    click();
+    if (isEditingTime) handleSaveTime();
+    if (isAlarmRinging) stopAlarm();
+    setEditingPresetId(null);
+    setIsManagingPresets(false);
+    setIsAddPanelOpen(false);
+    setIsOpen(false);
+  };
+
+  const switchTab = (tab) => {
+    if (tab === modalTab) return;
+    click();
+    if (isEditingTime) handleSaveTime();
+    setIsManagingPresets(false);
+    setEditingPresetId(null);
+    setIsAddPanelOpen(false);
+    setModalTab(tab);
+  };
+
   if (!isOpen) return null;
 
+  const remaining = hours * 3600 + minutes * 60 + seconds;
+  const progress = isAlarmRinging ? 1 : progressOf(remaining, targetTotalSeconds);
+  const dialState = isAlarmRinging ? 'ringing' : isActive ? 'running' : 'paused';
+  const timeLabel = formatTime();
+  const runningExtras = extraTimers.filter((t) => t.endAt != null).length;
+
   return (
-    <div
-      className="modal-backdrop high-z-backdrop"
-      onClick={() => {
-        if (playSound) playSound('click');
-        if (isEditingTime) handleSaveTime();
-        if (isAlarmRinging) stopAlarm();
-        setEditingPresetId(null);
-        setIsManagingPresets(false);
-        setIsOpen(false);
-      }}
-    >
-      <div
-        className="modal-window pomodoro-modal-window high-z-window"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Cabeçalho com Lápis, Botão + (Sem cor) e Fechar */}
-        <div className="modal-header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h3>⏱ Pomodoro</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            {/* Ícone de Lápis */}
-            <button
-              className="close-popup-btn"
-              onClick={() => {
-                if (playSound) playSound('click');
-                setIsManagingPresets((prev) => {
-                  if (prev) setEditingPresetId(null);
-                  return !prev;
-                });
-              }}
-              title={isManagingPresets ? 'Concluir edição' : 'Gerenciar e criar novos botões de pré-definição'}
-              style={{
-                fontSize: '0.95rem',
-                padding: '0.2rem 0.4rem',
-                color: isManagingPresets ? '#38bdf8' : '#94a3b8',
-                background: isManagingPresets ? 'rgba(56, 189, 248, 0.15)' : 'none',
-                borderRadius: '6px'
-              }}
-            >
-              ✏️
-            </button>
-
-            {/* Ícone de + (sem cor) ao lado do lápis para abrir novos Pomodoros suspensos */}
-            <button
-              className="close-popup-btn"
-              onClick={() => {
-                if (playSound) playSound('click');
-                addExtraPomodoro();
-              }}
-              title="Adicionar novo Pomodoro suspenso no ecrã"
-              style={{
-                fontSize: '1.2rem',
-                fontWeight: 'bold',
-                padding: '0.2rem 0.4rem',
-                color: '#94a3b8',
-                background: 'none',
-                borderRadius: '6px',
-                border: 'none',
-                cursor: 'pointer',
-                lineHeight: 1
-              }}
-            >
-              +
-            </button>
-
-            {/* Ícone de Fechar (X) */}
-            <button
-              className="close-popup-btn"
-              onClick={() => {
-                if (playSound) playSound('click');
-                if (isEditingTime) handleSaveTime();
-                if (isAlarmRinging) stopAlarm();
-                setEditingPresetId(null);
-                setIsManagingPresets(false);
-                setIsOpen(false);
-              }}
-            >
+    <div className="modal-backdrop high-z-backdrop" onClick={closeModal}>
+      <div className="modal-window pomodoro-modal-window high-z-window" onClick={(e) => e.stopPropagation()}>
+        {/* Cabeçalho */}
+        <div className="pomo-header">
+          <h3>{tx("⏱️ Pomodoro")}</h3>
+          <div className="pomo-header-actions">
+            {modalTab === 'main' && (
+              <button
+                type="button"
+                className={`pomo-icon-btn ${isManagingPresets ? 'is-on' : ''}`}
+                onClick={() => {
+                  click();
+                  setIsManagingPresets((prev) => !prev);
+                  setEditingPresetId(null);
+                }}
+                title={isManagingPresets ? tx("Concluir edição") : tx("Editar e criar botões de tempo")}
+              >
+                ✏️
+              </button>
+            )}
+            <button type="button" className="pomo-icon-btn close" onClick={closeModal} title={tx("Fechar")}>
               ✕
             </button>
           </div>
         </div>
 
-        {/* Painel de criar novo botão de pré-definição (Ativado pelo Lápis do Cabeçalho) */}
-        {isManagingPresets && (
-          <div
-            style={{
-              background: 'rgba(0, 0, 0, 0.35)',
-              border: '1px dashed var(--theme-accent, #38bdf8)',
-              borderRadius: '10px',
-              padding: '0.6rem 0.8rem',
-              marginTop: '0.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.4rem',
-              textAlign: 'left'
-            }}
+        {/* Abas */}
+        <div className="pomo-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={modalTab === 'main'}
+            className={`pomo-tab ${modalTab === 'main' ? 'active' : ''}`}
+            onClick={() => switchTab('main')}
           >
-            <span style={{ fontSize: '0.78rem', fontWeight: 'bold', color: '#38bdf8' }}>
-              ➕ Criar Novo Botão de Pré-definição
-            </span>
-            <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <input
-                type="text"
-                placeholder="Nome (ex: Foco)"
-                value={newPresetName}
-                onChange={(e) => setNewPresetName(e.target.value)}
-                style={{
-                  flex: '1 1 110px',
-                  minWidth: '90px',
-                  background: 'rgba(15, 23, 42, 0.8)',
-                  border: '1px solid #334155',
-                  borderRadius: '6px',
-                  color: '#fff',
-                  padding: '0.3rem 0.4rem',
-                  fontSize: '0.78rem',
-                  outline: 'none'
-                }}
-              />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={newPresetH}
-                  onChange={(e) => setNewPresetH(e.target.value)}
-                  min="0"
-                  max="99"
-                  style={{
-                    width: '36px',
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '1px solid #334155',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    padding: '0.3rem 0.2rem',
-                    fontSize: '0.78rem',
-                    textAlign: 'center',
-                    outline: 'none'
-                  }}
-                />
-                <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>h</span>
+            {tx("Principal")}
+            {isActive && <span className="pomo-tab-dot" />}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={modalTab === 'timers'}
+            className={`pomo-tab ${modalTab === 'timers' ? 'active' : ''}`}
+            onClick={() => switchTab('timers')}
+          >
+            {tx("Timers")}
+            {extraTimers.length > 0 && (
+              <span className={`pomo-tab-badge ${ringingExtras.length > 0 ? 'ringing' : runningExtras > 0 ? 'running' : ''}`}>
+                {extraTimers.length}
+              </span>
+            )}
+          </button>
+        </div>
 
-                <input
-                  type="number"
-                  placeholder="20"
-                  value={newPresetM}
-                  onChange={(e) => setNewPresetM(e.target.value)}
-                  min="0"
-                  max="59"
-                  style={{
-                    width: '36px',
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '1px solid #334155',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    padding: '0.3rem 0.2rem',
-                    fontSize: '0.78rem',
-                    textAlign: 'center',
-                    outline: 'none'
-                  }}
-                />
-                <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>m</span>
-
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={newPresetS}
-                  onChange={(e) => setNewPresetS(e.target.value)}
-                  min="0"
-                  max="59"
-                  style={{
-                    width: '36px',
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '1px solid #334155',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    padding: '0.3rem 0.2rem',
-                    fontSize: '0.78rem',
-                    textAlign: 'center',
-                    outline: 'none'
-                  }}
-                />
-                <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>s</span>
-              </div>
-              <button
-                type="button"
-                className="confirm-button"
-                onClick={handleCreateNewPreset}
-                style={{
-                  padding: '0.3rem 0.6rem',
-                  fontSize: '0.78rem',
-                  fontWeight: 'bold',
-                  borderRadius: '6px'
-                }}
-              >
-                + Criar
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Lista de Botões de Pré-definição */}
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '0.5rem',
-            justifyContent: 'center',
-            marginTop: '0.6rem'
-          }}
-        >
-          {modePresets.map((preset) => {
-            const isSelected = mode === preset.id;
-            return (
-              <div
-                key={preset.id}
-                style={{
-                  flex: '1 1 28%',
-                  minWidth: '95px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.2rem',
-                  position: 'relative'
-                }}
-              >
-                {/* X para apagar pré-definição */}
-                {isManagingPresets && modePresets.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (playSound) playSound('delete');
-                      removePreset(preset.id);
-                    }}
-                    title="Remover este botão"
-                    style={{
-                      position: 'absolute',
-                      top: '-6px',
-                      right: '-4px',
-                      background: '#ef4444',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '18px',
-                      height: '18px',
-                      fontSize: '0.65rem',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      zIndex: 2,
-                      boxShadow: '0 2px 5px rgba(0,0,0,0.4)'
-                    }}
-                  >
-                    ✕
+        {modalTab === 'timers' ? (
+          <TimersTab pomodoro={pomodoro} click={click} />
+        ) : (
+          <>
+            {/* Criar novo botão de tempo */}
+            {isManagingPresets && (
+              <div className="pomo-manage">
+                <span className="pomo-manage-title">{tx("Novo botão de tempo")}</span>
+                <div className="pomo-manage-row">
+                  <input
+                    className="pomo-input name"
+                    type="text"
+                    placeholder={tx("Nome (ex: Foco)")}
+                    value={newPresetName}
+                    onChange={(e) => setNewPresetName(e.target.value)}
+                  />
+                  <HmsInputs h={newPresetH} m={newPresetM} s={newPresetS} onH={setNewPresetH} onM={setNewPresetM} onS={setNewPresetS} />
+                  <button type="button" className="pomo-small-btn" onClick={handleCreateNewPreset}>
+                    {tx("Criar")}
                   </button>
-                )}
+                </div>
+              </div>
+            )}
 
-                <button
-                  type="button"
-                  className={`pomodoro-mode-btn ${isSelected ? 'active' : ''}`}
-                  style={{ width: '100%' }}
-                  onClick={() => {
-                    if (playSound) playSound('click');
-                    setIsEditingTime(false);
-                    changeMode(preset.id);
-                  }}
-                >
-                  {preset.name}
-                </button>
-
-                {/* Ícone de lápis / Edição abaixo dos botões */}
-                {isManagingPresets && (
-                  editingPresetId === preset.id ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.15rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                      <input
-                        type="number"
-                        value={presetInputH}
-                        onChange={(e) => setPresetInputH(e.target.value)}
-                        min="0"
-                        max="99"
-                        style={{
-                          width: '30px',
-                          fontSize: '0.7rem',
-                          textAlign: 'center',
-                          background: 'rgba(0,0,0,0.5)',
-                          border: '1px solid var(--theme-accent, #38bdf8)',
-                          borderRadius: '4px',
-                          color: '#fff',
-                          outline: 'none',
-                          padding: '1px'
-                        }}
-                      />
-                      <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>h</span>
-
-                      <input
-                        type="number"
-                        value={presetInputM}
-                        onChange={(e) => setPresetInputM(e.target.value)}
-                        min="0"
-                        max="59"
-                        style={{
-                          width: '30px',
-                          fontSize: '0.7rem',
-                          textAlign: 'center',
-                          background: 'rgba(0,0,0,0.5)',
-                          border: '1px solid var(--theme-accent, #38bdf8)',
-                          borderRadius: '4px',
-                          color: '#fff',
-                          outline: 'none',
-                          padding: '1px'
-                        }}
-                      />
-                      <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>m</span>
-
-                      <input
-                        type="number"
-                        value={presetInputS}
-                        onChange={(e) => setPresetInputS(e.target.value)}
-                        min="0"
-                        max="59"
-                        style={{
-                          width: '30px',
-                          fontSize: '0.7rem',
-                          textAlign: 'center',
-                          background: 'rgba(0,0,0,0.5)',
-                          border: '1px solid var(--theme-accent, #38bdf8)',
-                          borderRadius: '4px',
-                          color: '#fff',
-                          outline: 'none',
-                          padding: '1px'
-                        }}
-                      />
-                      <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>s</span>
-
-                      <button
-                        type="button"
-                        onClick={() => handleSavePreset(preset.id)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#34d399',
-                          cursor: 'pointer',
-                          fontSize: '0.85rem',
-                          fontWeight: 'bold',
-                          padding: '0 2px'
-                        }}
-                      >
-                        ✓
-                      </button>
-                    </div>
-                  ) : (
+            {/* Abas de modo */}
+            <div className="pomo-modes">
+              {modePresets.map((preset) => (
+                <div key={preset.id} className="pomo-mode">
+                  {isManagingPresets && modePresets.length > 1 && (
                     <button
                       type="button"
+                      className="pomo-mode-remove"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        click('delete');
+                        removePreset(preset.id);
+                      }}
+                      title={tx("Remover este botão")}
+                    >
+                      ✕
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    className={`pomodoro-mode-btn ${mode === preset.id ? 'active' : ''}`}
+                    onClick={() => {
+                      click();
+                      setIsEditingTime(false);
+                      changeMode(preset.id);
+                    }}
+                    title={formatSeconds(presetTotal(preset))}
+                  >
+                    {tx(preset.name)}
+                  </button>
+
+                  {isManagingPresets && (
+                    <button
+                      type="button"
+                      className={`pomo-mode-edit ${editingPresetId === preset.id ? 'is-on' : ''}`}
                       onClick={() => startPresetEdit(preset)}
-                      title="Editar tempo deste botão"
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#94a3b8',
-                        fontSize: '0.75rem',
-                        cursor: 'pointer',
-                        padding: '1px 4px',
-                        opacity: 0.75
+                      title={tx("Editar tempo deste botão")}
+                    >
+                      ✏️ {formatSeconds(presetTotal(preset))}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Edição do tempo de um botão existente */}
+            {isManagingPresets && editingPresetId && (
+              <div className="pomo-manage">
+                <span className="pomo-manage-title">
+                  {tx('Editar “{name}”', { name: tx(modePresets.find((p) => p.id === editingPresetId)?.name) })}
+                </span>
+                <div className="pomo-manage-row">
+                  <HmsInputs
+                    h={presetInputH}
+                    m={presetInputM}
+                    s={presetInputS}
+                    onH={setPresetInputH}
+                    onM={setPresetInputM}
+                    onS={setPresetInputS}
+                  />
+                  <button type="button" className="pomo-small-btn" onClick={() => handleSavePreset(editingPresetId)}>
+                    {tx("Salvar")}
+                  </button>
+                  <button type="button" className="pomo-mode-edit" onClick={() => setEditingPresetId(null)}>
+                    {tx("Cancelar")}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Anel do timer */}
+            <div className={`pomo-dial ${dialState}`}>
+              <ProgressRing progress={progress} />
+
+              <div className="pomo-dial-center">
+                {isEditingTime ? (
+                  <>
+                    <div className="timer-edit-row">
+                      <input
+                        type="number"
+                        className="timer-edit-input"
+                        value={inputMin}
+                        onChange={(e) => setInputMin(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSaveTime()}
+                        autoFocus
+                        min="0"
+                        max="999"
+                        aria-label={tx("Minutos")}
+                      />
+                      <span className="timer-colon">:</span>
+                      <input
+                        type="number"
+                        className="timer-edit-input"
+                        value={inputSec}
+                        onChange={(e) => setInputSec(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSaveTime()}
+                        min="0"
+                        max="59"
+                        aria-label={tx("Segundos")}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="pomo-small-btn"
+                      onClick={() => {
+                        click();
+                        handleSaveTime();
                       }}
                     >
-                      ✏️
+                      {tx("✓ Salvar")}
                     </button>
-                  )
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className={`timer-text editable ${isAlarmRinging ? 'ringing' : ''} ${timeLabel.length > 5 ? 'long' : ''}`}
+                      onClick={startEditing}
+                      title={tx("Clique para editar o tempo")}
+                    >
+                      {isAlarmRinging ? tx("Acabou!") : timeLabel}
+                    </button>
+                    <span className={`timer-status-tag ${dialState}`}>
+                      <span className="dot" />
+                      {isAlarmRinging ? tx("Tempo esgotado") : isActive ? tx("Em andamento") : tx("Pausado")}
+                    </span>
+                  </>
                 )}
               </div>
-            );
-          })}
-        </div>
+            </div>
 
-        {/* Display do Tempo */}
-        <div className="pomodoro-timer-display">
-          {isEditingTime ? (
-            <div className="timer-edit-row">
-              <input
-                type="number"
-                className="timer-edit-input"
-                value={inputMin}
-                onChange={(e) => setInputMin(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveTime()}
-                autoFocus
-                min="0"
-                max="999"
-              />
-              <span className="timer-colon">:</span>
-              <input
-                type="number"
-                className="timer-edit-input"
-                value={inputSec}
-                onChange={(e) => setInputSec(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveTime()}
-                min="0"
-                max="59"
-              />
+            {/* Controles */}
+            <div className="pomodoro-controls-row">
+              {isAlarmRinging ? (
+                <button
+                  type="button"
+                  className="pomo-primary alarm"
+                  onClick={() => {
+                    click();
+                    stopAlarm();
+                  }}
+                >
+                  {tx("🔕 Desligar alarme")}
+                </button>
+              ) : isActive ? (
+                <button
+                  type="button"
+                  className="pomo-primary pause"
+                  onClick={() => {
+                    click();
+                    pauseTimer();
+                  }}
+                >
+                  {tx("⏸ Pausar")}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="pomo-primary"
+                  onClick={() => {
+                    click('train');
+                    if (isEditingTime) handleSaveTime();
+                    startTimer();
+                  }}
+                >
+                  {tx("▶ Iniciar")}
+                </button>
+              )}
+
               <button
                 type="button"
-                className="timer-save-btn"
+                className="pomo-secondary"
                 onClick={() => {
-                  if (playSound) playSound('click');
-                  handleSaveTime();
+                  click('delete');
+                  setIsEditingTime(false);
+                  resetTimer();
                 }}
-                title="Salvar tempo"
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#34d399',
-                  fontSize: '1.8rem',
-                  cursor: 'pointer',
-                  marginLeft: '0.4rem',
-                  lineHeight: 1
-                }}
+                title={tx("Reiniciar")}
               >
-                ✓
+                ↺
               </button>
             </div>
-          ) : (
-            <span
-              className="timer-text editable"
-              onClick={startEditing}
-              title="Clique para editar o tempo"
-            >
-              {isAlarmRinging ? 'Pomodoro!' : formatTime()}
-            </span>
-          )}
 
-          <span className="timer-status-tag" style={{ color: isAlarmRinging ? '#f87171' : undefined }}>
-            {isAlarmRinging
-              ? '🚨 TEMPO ESGOTADO!'
-              : isActive
-              ? '● EM ANDAMENTO'
-              : isEditingTime
-              ? 'Digite o tempo e clique em ✓ ou ENTER'
-              : 'PAUSADO (Clique no número para editar)'}
-          </span>
-        </div>
-
-        {isAlarmRinging && (
-          <div style={{ marginBottom: '1rem' }}>
-            <button
-              type="button"
-              className="confirm-button"
-              style={{
-                width: '100%',
-                padding: '0.9rem',
-                fontSize: '1.1rem',
-                fontWeight: 'bold',
-                backgroundColor: '#dc2626',
-                color: '#ffffff',
-                boxShadow: '0 0 15px rgba(220, 38, 38, 0.6)'
-              }}
-              onClick={() => {
-                if (playSound) playSound('click');
-                stopAlarm();
-              }}
-            >
-              🔔 Desligar Alarme
-            </button>
-          </div>
+            {/* Som do alarme */}
+            <div className="pomo-footer">
+              <span>{tx("🔊 Alarme")}</span>
+              <select
+                className="pomodoro-select-input"
+                value={soundOption}
+                onChange={(e) => {
+                  setSoundOption(e.target.value);
+                  testSound(e.target.value);
+                }}
+              >
+                {SOUND_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{tx(opt.label)}</option>
+                ))}
+              </select>
+              <button type="button" className="pomo-icon-btn" onClick={() => testSound(soundOption)} title={tx("Testar som")}>
+                ▶
+              </button>
+            </div>
+          </>
         )}
-
-        <div className="pomodoro-controls-row">
-          {!isActive ? (
-            <button
-              type="button"
-              className="confirm-button pomodoro-action-btn"
-              onClick={() => {
-                if (playSound) playSound('train');
-                if (isEditingTime) handleSaveTime();
-                startTimer();
-              }}
-            >
-              ▶ Iniciar
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="cancel-button pomodoro-action-btn pause"
-              onClick={() => {
-                if (playSound) playSound('click');
-                pauseTimer();
-              }}
-            >
-              ⏸ Pausar
-            </button>
-          )}
-
-          <button
-            type="button"
-            className="cancel-button pomodoro-action-btn"
-            onClick={() => {
-              if (playSound) playSound('delete');
-              setIsEditingTime(false);
-              resetTimer();
-            }}
-          >
-            Resetar
-          </button>
-        </div>
-
-        {/* Som do Alarme */}
-        <div className="pomodoro-sound-option">
-          <label className="pomodoro-sound-label">
-            <span>🔊 Som do Alarme:</span>
-            <select
-              className="pomodoro-select-input"
-              value={soundOption}
-              onChange={(e) => {
-                const newSound = e.target.value;
-                setSoundOption(newSound);
-                testSound(newSound);
-              }}
-            >
-              <option value="clock">Timer</option>
-              <option value="digital">Bip Grave (Triplo)</option>
-              <option value="bell">Sino Resonante</option>
-              <option value="arcade">Arcade 8-Bit</option>
-            </select>
-          </label>
-          <button
-            type="button"
-            className="sound-test-btn"
-            onClick={() => testSound(soundOption)}
-            title="Testar som do alarme"
-          >
-            🔊 Testar
-          </button>
-        </div>
-
-        <div className="pomodoro-pin-option">
-          <label className="pomodoro-checkbox-label">
-            <input
-              type="checkbox"
-              checked={pinOnScreen}
-              onChange={(e) => {
-                if (playSound) playSound('click');
-                setPinOnScreen(e.target.checked);
-              }}
-            />
-            <span>Manter mini-widget visível no ecrã inicial</span>
-          </label>
-        </div>
-
-        <div className="modal-actions-bar">
-          <button
-            className="confirm-button"
-            onClick={() => {
-              if (playSound) playSound('click');
-              if (isEditingTime) handleSaveTime();
-              if (isAlarmRinging) stopAlarm();
-              setEditingPresetId(null);
-              setIsManagingPresets(false);
-              setIsOpen(false);
-            }}
-          >
-            Concluído
-          </button>
-        </div>
       </div>
     </div>
   );
 }
 
-// 5. MINI-WIDGET FLUTUANTE + GERENCIADOR
+// 7. MINI-WIDGET FLUTUANTE
 export function PomodoroWidget({ pomodoro, playSound }) {
   const {
-    pinOnScreen,
     isOpen,
-    toggleModal,
+    setIsOpen,
     formatTime,
     isActive,
     startTimer,
@@ -983,175 +960,148 @@ export function PomodoroWidget({ pomodoro, playSound }) {
     resetTimer,
     isAlarmRinging,
     stopAlarm,
+    mode,
+    modePresets,
+    hours,
+    minutes,
+    seconds,
+    targetTotalSeconds,
     handleButtonContextMenu,
     contextMenu,
     closeContextMenu,
-    addExtraPomodoro,
+    setModalTab,
     extraTimers,
-    removeExtraPomodoro,
-    updateExtraPomodoro
+    widgetVisible,
+    setWidgetVisible,
+    widgetPosition: position,
+    setWidgetPosition
   } = pomodoro;
 
-  const [position, setPosition] = useState({ x: 24, y: 24 });
-  const isDraggingRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
-  const hasMovedRef = useRef(false);
+  const { elRef, onPointerDown, movedRef } = useDraggable(position, setWidgetPosition);
 
-  const handleMouseDown = (e) => {
-    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
-    isDraggingRef.current = true;
-    hasMovedRef.current = false;
-    dragStartRef.current = {
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
-    };
+  const click = (type = 'click') => {
+    if (playSound) playSound(type);
   };
 
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isDraggingRef.current) return;
-      hasMovedRef.current = true;
-      setPosition({
-        x: e.clientX - dragStartRef.current.x,
-        y: e.clientY - dragStartRef.current.y
-      });
-    };
-
-    const handleMouseUp = () => {
-      isDraggingRef.current = false;
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, []);
+  const modeName = tx(modePresets.find((p) => p.id === mode)?.name || 'Personalizado');
+  const remaining = hours * 3600 + minutes * 60 + seconds;
+  const progress = isAlarmRinging ? 1 : progressOf(remaining, targetTotalSeconds);
+  // Timers extras rodando que não têm janela própria na tela
+  const hiddenRunningExtras = extraTimers.filter((t) => t.endAt != null && !t.onScreen).length;
+  const stateClass = isAlarmRinging ? 'ringing' : isActive ? 'running' : 'paused';
+  // Só aparece depois de iniciar um Pomodoro (ou, se foi fechado no ✕, enquanto o alarme toca)
+  const showMain = (widgetVisible || isAlarmRinging) && !isOpen;
+  const floatingExtras = isOpen ? [] : extraTimers.filter((t) => t.onScreen || t.isAlarmRinging);
 
   return (
     <>
-      {pinOnScreen && !isOpen && (
+      {showMain && (
         <div
-          className={`pomodoro-floating-widget ${isAlarmRinging ? 'ringing' : isActive ? 'running' : 'paused'}`}
-          style={{
-            left: `${position.x}px`,
-            top: `${position.y}px`,
-            bottom: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '4px',
-            padding: '6px 14px',
-            background: '#0e1626',
-            border: isAlarmRinging ? '2px solid #f87171' : isActive ? '2px solid #34d399' : '2px solid #38bdf8',
-            borderRadius: '16px',
-            boxShadow: '0 8px 20px rgba(0,0,0,0.6)',
-            position: 'fixed',
-            zIndex: 100,
-            userSelect: 'none',
-            cursor: 'grab'
-          }}
-          onMouseDown={handleMouseDown}
+          ref={elRef}
+          className={`pomo-float ${stateClass}`}
+          style={{ left: `${position.x}px`, top: `${position.y}px`, zIndex: 100 }}
+          onPointerDown={onPointerDown}
           onContextMenu={handleButtonContextMenu}
-          title="Clique com botão direito para 'Adicionar Pomodoro'"
+          onClick={() => {
+            // Um clique (sem arrastar) abre o Pomodoro na aba certa
+            if (movedRef.current) return;
+            click();
+            if (isAlarmRinging) stopAlarm();
+            setModalTab('main');
+            setIsOpen(true);
+          }}
+          title={tx("Clique para abrir · arraste para mover · botão direito para criar um timer")}
         >
-          <div
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-            onClick={() => {
-              if (!hasMovedRef.current) {
-                if (playSound) playSound('click');
-                if (isAlarmRinging) stopAlarm();
-                toggleModal();
-              }
-            }}
-          >
-            <span style={{ fontSize: '1.1rem' }}>{isAlarmRinging ? '🔔' : '⏱️'}</span>
-            <span
-              style={{
-                fontFamily: 'system-ui, monospace',
-                fontSize: isAlarmRinging ? '1rem' : '1.15rem',
-                fontWeight: '800',
-                color: isAlarmRinging ? '#f87171' : '#f8fafc'
-              }}
-            >
-              {isAlarmRinging ? 'Pomodoro!' : formatTime()}
-            </span>
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '16px',
-              width: '100%',
-              borderTop: '1px solid rgba(255, 255, 255, 0.15)',
-              paddingTop: '4px',
-              marginTop: '2px'
-            }}
-          >
-            {!isActive ? (
-              <button
-                type="button"
-                title="Iniciar"
-                style={{ background: 'none', border: 'none', color: '#34d399', fontSize: '0.95rem', cursor: 'pointer', padding: 0 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (playSound) playSound('train');
-                  startTimer();
-                }}
-              >
-                ▶
-              </button>
-            ) : (
-              <button
-                type="button"
-                title="Pausar"
-                style={{ background: 'none', border: 'none', color: '#facc15', fontSize: '0.95rem', cursor: 'pointer', padding: 0 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (playSound) playSound('click');
-                  pauseTimer();
-                }}
-              >
-                ⏸
-              </button>
+          <div className="pomo-float-head">
+            <span className="pomo-float-title">⏱️ {modeName}</span>
+            {hiddenRunningExtras > 0 && (
+              <span className="pomo-float-badge" title={tx('{n} timer(s) rodando sem janela na tela', { n: hiddenRunningExtras })}>
+                +{hiddenRunningExtras}
+              </span>
             )}
-
             <button
               type="button"
-              title="Resetar"
-              style={{ background: 'none', border: 'none', color: '#f87171', fontSize: '0.95rem', cursor: 'pointer', padding: 0 }}
+              className="pomo-mini-btn ghost danger"
+              title={tx("Tirar da tela (abra o Pomodoro para mostrar de novo)")}
               onClick={(e) => {
                 e.stopPropagation();
-                if (playSound) playSound('delete');
-                resetTimer();
+                click();
+                setWidgetVisible(false);
               }}
             >
-              ⏹
+              ✕
             </button>
           </div>
+          <div className="pomo-float-body">
+            <span className="pomo-float-time">{isAlarmRinging ? tx("🔔 Acabou!") : formatTime()}</span>
+            <div className="pomo-float-controls" onClick={(e) => e.stopPropagation()}>
+              {isAlarmRinging ? (
+                <button
+                  type="button"
+                  className="pomo-mini-btn play alarm"
+                  title={tx("Desligar alarme")}
+                  onClick={() => {
+                    click();
+                    stopAlarm();
+                  }}
+                >
+                  🔕
+                </button>
+              ) : isActive ? (
+                <button
+                  type="button"
+                  className="pomo-mini-btn"
+                  title={tx("Pausar")}
+                  onClick={() => {
+                    click();
+                    pauseTimer();
+                  }}
+                >
+                  ⏸
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="pomo-mini-btn play"
+                  title={tx("Iniciar")}
+                  onClick={() => {
+                    click('train');
+                    startTimer();
+                  }}
+                >
+                  ▶
+                </button>
+              )}
+              {!isAlarmRinging && (
+                <button
+                  type="button"
+                  className="pomo-mini-btn"
+                  title={tx("Reiniciar")}
+                  onClick={() => {
+                    click('delete');
+                    resetTimer();
+                  }}
+                >
+                  ↺
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="pomo-float-bar" style={{ width: `${progress * 100}%` }} />
         </div>
       )}
+
+      {/* Janelas dos timers extras que você ativou com 📌 */}
+      {floatingExtras.map((timer) => (
+        <ExtraFloat key={timer.id} timer={timer} pomodoro={pomodoro} click={click} />
+      ))}
 
       {/* Menu do Botão Direito */}
       <PomodoroContextMenu
         contextMenu={contextMenu}
         closeContextMenu={closeContextMenu}
-        addExtraPomodoro={addExtraPomodoro}
+        onAdd={() => openTimersTab({ create: true })}
       />
-
-      {/* Lista de Pomodoros Suspensos Extras */}
-      {extraTimers.map((timer) => (
-        <ExtraPomodoroWidget
-          key={timer.id}
-          timer={timer}
-          removeExtraPomodoro={removeExtraPomodoro}
-          updateExtraPomodoro={updateExtraPomodoro}
-        />
-      ))}
     </>
   );
 }

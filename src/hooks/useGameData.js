@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useUndoRestore } from '../atualizacao2_0/GlobalUndo.js';
 
 export const PRESET_DECKS = [
   {
@@ -80,6 +81,49 @@ export const calculateTotalXpFromSkills = (skillsList) => {
     // Retorna a soma de XP de todos os módulos combinados
     return total + (skillLevelsSum * 10);
   }, 0);
+};
+
+// Dia do jogo: horário LOCAL, virando às 04:00 (antes cada parte usava um fuso/hora
+// diferente e as missões chegavam a ser sorteadas duas vezes por dia)
+export const GAME_DAY_START_HOUR = 4;
+export const getGameDayKey = (date = new Date()) => {
+  const d = new Date(date);
+  d.setHours(d.getHours() - GAME_DAY_START_HOUR);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const logId = () => `dl_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+
+// Registro de diamantes: cada ganho/ajuste com data, hora e origem.
+// source: 'mission' | 'bonus' | 'manual'
+const makeLogEntry = (amount, source, extra = {}) => ({
+  id: logId(),
+  at: new Date().toISOString(),
+  amount,
+  source,
+  ...extra
+});
+
+// Missões concluídas antes do registro existir entram sem data
+const backfillDiamondLog = (log, dailyMissions) => {
+  const list = Array.isArray(log) ? log : [];
+  const logged = new Set(list.filter((e) => e.missionId).map((e) => e.missionId));
+  const missing = (dailyMissions || [])
+    .filter((m) => m.completed && !logged.has(m.id))
+    .map((m) => ({
+      id: logId(),
+      at: m.completedAt || null,
+      amount: m.rewardDiamonds || 1,
+      source: 'mission',
+      missionId: m.id,
+      skillId: m.skillId,
+      skillName: m.skillName,
+      text: m.text
+    }));
+  return missing.length ? [...missing, ...list] : list;
 };
 
 export const generateDailyMissionsFromSkills = (skillsList, quota = 5, prioritizedKeys = []) => {
@@ -167,6 +211,7 @@ const DEFAULT_PROFILE_DATA = {
     }
   ],
   diamonds: 1,
+  diamondLog: [],
   dailyMissions: [],
   dailyMissionsQuota: 5,
   prioritizedMissions: [],
@@ -213,6 +258,7 @@ export function useGameData() {
           folders: Array.isArray(parsed.folders) ? parsed.folders : ['Geral'],
           skills: parsed.skills || [],
           diamonds: Number(parsed.diamonds) || 0,
+          diamondLog: backfillDiamondLog(parsed.diamondLog, parsed.dailyMissions),
           dailyMissions: parsed.dailyMissions || [],
           dailyMissionsQuota: Number(parsed.dailyMissionsQuota) || 5,
           prioritizedMissions: Array.isArray(parsed.prioritizedMissions) ? parsed.prioritizedMissions : [],
@@ -242,6 +288,7 @@ export function useGameData() {
   const [folders, setFolders] = useState(initialData.folders);
   const [skills, setSkills] = useState(initialData.skills);
   const [diamonds, setDiamonds] = useState(initialData.diamonds);
+  const [diamondLog, setDiamondLog] = useState(initialData.diamondLog || []);
   const [dailyMissions, setDailyMissions] = useState(initialData.dailyMissions);
   const [dailyMissionsQuota, setDailyMissionsQuota] = useState(() => initialData.dailyMissionsQuota || 5);
   const [prioritizedMissions, setPrioritizedMissions] = useState(() => initialData.prioritizedMissions || []);
@@ -322,8 +369,10 @@ export function useGameData() {
 
   // SINCRONIZAÇÃO PRESERVANDO AS MISSÕES EXISTENTES E SEUS DIAMANTES
   useEffect(() => {
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const isNewDay = lastMissionsDate !== todayStr;
+    const todayStr = getGameDayKey();
+    // Comparação de texto AAAA-MM-DD: datas salvas no formato antigo (UTC, às vezes
+    // "um dia à frente") não disparam um sorteio extra
+    const isNewDay = !lastMissionsDate || lastMissionsDate < todayStr;
 
     if (isNewDay) {
       const fresh = generateDailyMissionsFromSkills(skills, dailyMissionsQuota, prioritizedMissions);
@@ -394,6 +443,7 @@ export function useGameData() {
       folders,
       skills,
       diamonds,
+      diamondLog,
       dailyMissions,
       dailyMissionsQuota,
       prioritizedMissions,
@@ -419,6 +469,7 @@ export function useGameData() {
     folders,
     skills,
     diamonds,
+    diamondLog,
     dailyMissions,
     dailyMissionsQuota,
     prioritizedMissions,
@@ -445,13 +496,13 @@ export function useGameData() {
     if (newHidden) setHiddenSkillIds(newHidden);
   };
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const currentRefreshesUsedToday = lastRefreshesDate === todayStr ? dailyRefreshesCount : 0;
+  const todayStr = getGameDayKey();
+  const currentRefreshesUsedToday = lastRefreshesDate >= todayStr ? dailyRefreshesCount : 0;
   const dailyRefreshesLeft = Math.max(0, 2 - currentRefreshesUsedToday);
 
   const refreshDailyMissions = () => {
-    const currentTodayStr = new Date().toISOString().slice(0, 10);
-    let usedCount = lastRefreshesDate === currentTodayStr ? dailyRefreshesCount : 0;
+    const currentTodayStr = getGameDayKey();
+    let usedCount = lastRefreshesDate >= currentTodayStr ? dailyRefreshesCount : 0;
 
     if (usedCount >= 2) {
       return { success: false, reason: 'limit_reached' };
@@ -496,7 +547,7 @@ export function useGameData() {
 
   const resetDailyMissionsHack = () => {
     const freshMissions = generateDailyMissionsFromSkills(skills, dailyMissionsQuota, prioritizedMissions);
-    const currentTodayStr = new Date().toISOString().slice(0, 10);
+    const currentTodayStr = getGameDayKey();
     setDailyMissions(freshMissions);
     setLastMissionsDate(currentTodayStr);
     setDailyBonusClaimed(false);
@@ -508,7 +559,7 @@ export function useGameData() {
 
   const resetRefreshesCountHack = () => {
     setDailyRefreshesCount(0);
-    setLastRefreshesDate(new Date().toISOString().slice(0, 10));
+    setLastRefreshesDate(getGameDayKey());
   };
 
   const switchProfile = (targetProfileId) => {
@@ -525,6 +576,7 @@ export function useGameData() {
     setFolders(targetData.folders || ['Geral']);
     setSkills(targetData.skills);
     setDiamonds(targetData.diamonds || 0);
+    setDiamondLog(targetData.diamondLog || []);
     setDailyMissions(targetData.dailyMissions || []);
     setDailyMissionsQuota(targetData.dailyMissionsQuota || 5);
     setPrioritizedMissions(targetData.prioritizedMissions || []);
@@ -557,6 +609,7 @@ export function useGameData() {
       folders: ['Geral'],
       skills: [],
       diamonds: 0,
+      diamondLog: [],
       dailyMissions: [],
       dailyMissionsQuota: 5,
       prioritizedMissions: [],
@@ -685,25 +738,64 @@ export function useGameData() {
   };
 
   const completeMission = (missionId) => {
-    setDailyMissions((prev) => {
-      const target = prev.find((m) => m.id === missionId);
-      if (!target || target.completed) return prev;
+    const target = (dailyMissions || []).find((m) => m.id === missionId);
+    if (!target || target.completed) return;
 
-      const rewardAmount = target.rewardDiamonds || 1;
-      setDiamonds((d) => d + rewardAmount);
+    const nowIso = new Date().toISOString();
+    const rewardAmount = target.rewardDiamonds || 1;
+    const updated = dailyMissions.map((m) =>
+      m.id === missionId ? { ...m, completed: true, completedAt: nowIso } : m
+    );
+    const entries = [
+      makeLogEntry(rewardAmount, 'mission', {
+        at: nowIso,
+        missionId: target.id,
+        skillId: target.skillId,
+        skillName: target.skillName,
+        text: target.text
+      })
+    ];
 
-      const updated = prev.map((m) =>
-        m.id === missionId ? { ...m, completed: true } : m
-      );
+    let total = rewardAmount;
+    if (updated.every((m) => m.completed) && !dailyBonusClaimed) {
+      total += 1;
+      entries.push(makeLogEntry(1, 'bonus', { at: nowIso, missionsCount: updated.length }));
+      setDailyBonusClaimed(true);
+    }
 
-      const allDone = updated.every((m) => m.completed);
-      if (allDone && !dailyBonusClaimed) {
-        setDiamonds((d) => d + 1);
-        setDailyBonusClaimed(true);
-      }
+    // Mais recente primeiro (bônus acima da missão que o liberou).
+    // Cópia invertida fora do updater: reverse() dentro dele rodaria 2x no StrictMode.
+    const newestFirst = [...entries].reverse();
+    setDailyMissions(updated);
+    setDiamonds((d) => d + total);
+    setDiamondLog((prev) => [...newestFirst, ...prev]);
+  };
 
-      return updated;
-    });
+  // Ajustes manuais (painel de testes): também ficam registrados
+  const adjustDiamonds = (delta, label = 'Ajuste manual') => {
+    const amount = Math.round(Number(delta) || 0);
+    if (!amount) return;
+    const applied = amount < 0 ? -Math.min(diamonds, -amount) : amount;
+    if (!applied) return;
+    setDiamonds((d) => Math.max(0, d + applied));
+    setDiamondLog((prev) => [makeLogEntry(applied, 'manual', { label }), ...prev]);
+  };
+
+  // Gasta diamantes (ex.: upgrades do personagem). Devolve false se não houver saldo.
+  const spendDiamonds = (amount, label) => {
+    const cost = Math.round(Number(amount) || 0);
+    if (cost <= 0 || cost > diamonds) return false;
+    setDiamonds((d) => Math.max(0, d - cost));
+    setDiamondLog((prev) => [makeLogEntry(-cost, 'upgrade', { label }), ...prev]);
+    return true;
+  };
+
+  const setDiamondsTo = (value, label = 'Saldo definido manualmente') => {
+    const target = Math.max(0, Math.round(Number(value) || 0));
+    const delta = target - diamonds;
+    if (!delta) return;
+    setDiamonds(target);
+    setDiamondLog((prev) => [makeLogEntry(delta, 'manual', { label }), ...prev]);
   };
 
   const addMiniMissionToSkill = (skillId, missionText) => {
@@ -922,6 +1014,7 @@ const trainSkill = (skillId) => {
       folders,
       skills,
       diamonds,
+      diamondLog,
       dailyMissions,
       dailyMissionsQuota,
       prioritizedMissions,
@@ -984,6 +1077,7 @@ const trainSkill = (skillId) => {
         setFolders(activeData.folders || ['Geral']);
         setSkills(activeData.skills || []);
         setDiamonds(activeData.diamonds || 0);
+        setDiamondLog(backfillDiamondLog(activeData.diamondLog, activeData.dailyMissions));
         setDailyMissions(activeData.dailyMissions || []);
         setDailyMissionsQuota(activeData.dailyMissionsQuota || 5);
         setPrioritizedMissions(activeData.prioritizedMissions || []);
@@ -1018,6 +1112,45 @@ const trainSkill = (skillId) => {
     setHiddenSkillIds(last.hiddenSkillIds);
     setHistory((prev) => prev.slice(0, prev.length - 1));
   };
+
+  // Ctrl+Z/Ctrl+Y global: recarrega perfis e dados do perfil a partir do armazenamento
+  useUndoRestore(
+    (k) => k === 'rpg_profiles_list' || k === 'rpg_active_profile_id' || k.startsWith('rpg_profile_data_'),
+    () => {
+      try {
+        const list = JSON.parse(localStorage.getItem('rpg_profiles_list') || 'null');
+        if (Array.isArray(list) && list.length > 0) setProfiles(list);
+        const savedId = localStorage.getItem('rpg_active_profile_id');
+        const targetId = savedId && (!Array.isArray(list) || list.some((p) => p.id === savedId)) ? savedId : activeProfileId;
+        const d = loadDataForProfile(targetId);
+        setActiveProfileId(targetId);
+        setNickname(d.nickname || 'Herói');
+        setAvatar(d.avatar || '🛡️');
+        setCurrentTheme(d.currentTheme || 'cyberpunk');
+        setBoxColorType(d.boxColorType || 'default');
+        setLinkSkillsByCategory(d.linkSkillsByCategory !== undefined ? !!d.linkSkillsByCategory : true);
+        setExtraXp(d.extraXp || 0);
+        setXpHistory(d.xpHistory || []);
+        setFolders(d.folders || ['Geral']);
+        setSkills(d.skills || []);
+        setDiamonds(d.diamonds || 0);
+        setDiamondLog(backfillDiamondLog(d.diamondLog, d.dailyMissions));
+        setDailyMissions(d.dailyMissions || []);
+        setDailyMissionsQuota(d.dailyMissionsQuota || 5);
+        setPrioritizedMissions(d.prioritizedMissions || []);
+        setLastMissionsDate(d.lastMissionsDate || '');
+        setDailyBonusClaimed(!!d.dailyBonusClaimed);
+        setDailyRefreshesCount(d.dailyRefreshesCount || 0);
+        setLastRefreshesDate(d.lastRefreshesDate || '');
+        setCustomColorDeck(d.customColorDeck || []);
+        setActiveDeckId(d.activeDeckId || 'deck_neon');
+        setHiddenSkillIds(d.hiddenSkillIds || []);
+        setPendingTransfers(d.pendingTransfers || []);
+      } catch (e) {
+        console.error('Erro ao desfazer:', e);
+      }
+    }
+  );
 
   const redo = () => {
     if (future.length === 0) return;
@@ -1086,6 +1219,10 @@ const trainSkill = (skillId) => {
     redo,
     diamonds,
     setDiamonds,
+    diamondLog,
+    adjustDiamonds,
+    spendDiamonds,
+    setDiamondsTo,
     dailyMissions,
     dailyBonusClaimed,
     dailyRefreshesLeft,

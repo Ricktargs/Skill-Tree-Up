@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { tx } from './i18n/index.jsx';
 
 export function EditMissionsModal({
   isOpen,
@@ -43,7 +44,7 @@ const [levelDescriptions, setLevelDescriptions] = useState({}); // Guarda o text
         style={{ maxWidth: '680px', width: '92vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
       >
         <div className="modal-header-row">
-          <h3>Editor de Missões Diárias</h3>
+          <h3>{tx("Editor de Missões Diárias")}</h3>
           <button className="close-popup-btn" onClick={onClose}>✕</button>
         </div>
 
@@ -61,9 +62,9 @@ const [levelDescriptions, setLevelDescriptions] = useState({}); // Guarda o text
           }}
         >
           <div>
-            <strong style={{ fontSize: '0.9rem', color: '#f8fafc' }}>Quantidade de Missões por Dia:</strong>
+            <strong style={{ fontSize: '0.9rem', color: '#f8fafc' }}>{tx("Quantidade de Missões por Dia:")}</strong>
             <p style={{ fontSize: '0.78rem', color: '#94a3b8', margin: 0 }}>
-              Defina quantas missões serão geradas diariamente.
+              {tx("Defina quantas missões serão geradas diariamente.")}
             </p>
           </div>
 
@@ -97,7 +98,7 @@ const [levelDescriptions, setLevelDescriptions] = useState({}); // Guarda o text
         </div>
 
         <span className="card-section-label" style={{ marginBottom: '0.5rem', color: 'var(--theme-accent, #38bdf8)', fontWeight: 'bold' }}>
-          TODAS AS MINI MISSÕES CADASTRADAS:
+          {tx("TODAS AS MINI MISSÕES CADASTRADAS:")}
         </span>
 
         {/* LISTA DE MINI MISSÕES */}
@@ -155,7 +156,7 @@ const [levelDescriptions, setLevelDescriptions] = useState({}); // Guarda o text
                     ) : (
                       <span
                         onClick={() => handleStartEdit(skill.id, idx, text)}
-                        title="Clique para editar o nome desta mini missão"
+                        title={tx("Clique para editar o nome desta mini missão")}
                         style={{
                           fontSize: '0.88rem',
                           color: '#f8fafc',
@@ -185,9 +186,9 @@ const [levelDescriptions, setLevelDescriptions] = useState({}); // Guarda o text
                       if (playSound) playSound('click');
                       togglePrioritizeMission(skill.id, text);
                     }}
-                    title={isPrioritized ? 'Esta missão aparecerá obrigatoriamente todos os dias' : 'Clique para priorizar'}
+                    title={isPrioritized ? tx("Esta missão aparecerá obrigatoriamente todos os dias") : tx("Clique para priorizar")}
                   >
-                    {isPrioritized ? 'Priorizada ✓' : 'Priorizar missão diária'}
+                    {isPrioritized ? tx("Priorizada ✓") : tx("Priorizar missão diária")}
                   </button>
                 </div>
               );
@@ -201,7 +202,7 @@ const [levelDescriptions, setLevelDescriptions] = useState({}); // Guarda o text
             style={{ width: '100%', background: 'var(--theme-accent, #38bdf8)', color: '#000', fontWeight: 'bold' }}
             onClick={onClose}
           >
-            Concluído
+            {tx("Concluído")}
           </button>
         </div>
       </div>
