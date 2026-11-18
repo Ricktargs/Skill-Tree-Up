@@ -10,6 +10,7 @@ import { sfx } from "../lib/sound";
 import { canopyCircles } from "../lib/canopy";
 import { TreeDefs, Ground, ForestRoots, ForestTrunks } from "./TreeArt";
 import { refuseExtraTrees, useGrowthPermissions } from "../lib/growthPermissions";
+import { BranchHandles, BranchLanterns, BranchTools, MainTreeWrap, SanctuaryBack, SanctuaryBackdrop, selectBranch, SanctuaryFront, SanctuaryHero, SanctuaryPanel, WorldGround, sanctuaryWorld, seasonOf, shownLayout, useSanctuary } from "./Sanctuary.jsx";
 
 const HOLD_MS = 1500;
 const DRAG_THRESHOLD = 6;
@@ -79,7 +80,22 @@ export default function TreeCanvas({ activeIds, onNodeClick, onOpenBranch }) {
     return map;
   }, [records, tree, foldersMap]);
   const [growth] = useGrowthPermissions();
-  const base = useMemo(() => createLayout(tree, { info, growth }), [tree, info, growth]);
+  // Santuário (protótipo): o mundo do personagem, sem as informações dos galhos
+  const sanc = useSanctuary();
+  // só o que muda o desenho; posições e o lápis ficam dentro do Santuário (arrastar não redesenha a árvore)
+  const sanctuary = useMemo(() => (sanc.on ? { lanterns: sanc.lanterns } : null), [sanc.on, sanc.lanterns]);
+  // a ilha e tudo o que está nela (árvores, lagos, acampamentos...)
+  const shown = shownLayout(sanc);
+  const world = useMemo(() => (sanc.on ? sanctuaryWorld(shown) : null), [sanc.on, shown]);
+  const season = seasonOf(sanc.season);
+  // câmera segue o herói quando ele chega perto da borda da tela
+  const panBy = useCallback((dx, dy) => {
+    const ctm = svgRef.current?.getScreenCTM();
+    if (!ctm) return;
+    setView((v) => ({ ...v, x: v.x + dx / ctm.a, y: v.y + dy / ctm.d }));
+  }, []);
+  const sancOn = Boolean(sanc.on);
+  const base = useMemo(() => createLayout(tree, { info, growth, sanctuary: sancOn }), [tree, info, growth, sancOn]);
   const placed = useMemo(() => applyOffsets(base, tree, offsets, drag), [base, tree, offsets, drag]);
   const noteCounts = useMemo(() => {
     const map = new Map();
@@ -187,6 +203,10 @@ export default function TreeCanvas({ activeIds, onNodeClick, onOpenBranch }) {
     setShakingId(id);
     setTimeout(() => setShakingId((s) => (s === id ? null : s)), 400);
     sfx.play("branch");
+    if (sancOn) {
+      selectBranch(id);
+      return;
+    }
     onNodeClick(id, shiftKey);
   };
 
@@ -248,7 +268,10 @@ export default function TreeCanvas({ activeIds, onNodeClick, onOpenBranch }) {
       clearHold();
     }
     const local = toTreeLocal(e.clientX, e.clientY);
-    if (local && p.startLocal) setDrag({ id: p.id, dx: local.x - p.startLocal.x, dy: local.y - p.startLocal.y });
+    // no Santuário a árvore pode estar maior/menor ou virada: converte o arrasto
+    const fx = world ? (world.main.flip ? -1 : 1) / (world.main.size || 1) : 1;
+    const fy = world ? 1 / (world.main.size || 1) : 1;
+    if (local && p.startLocal) setDrag({ id: p.id, dx: (local.x - p.startLocal.x) * fx, dy: (local.y - p.startLocal.y) * fy });
   };
 
   const handlePointerUp = () => {
@@ -306,7 +329,7 @@ export default function TreeCanvas({ activeIds, onNodeClick, onOpenBranch }) {
   return (
     <div
       ref={workspaceRef}
-      className={`workspace ${panning ? "dragging" : ""} ${swapSourceId ? "swap-mode" : ""}`}
+      className={`workspace ${panning ? "dragging" : ""} ${swapSourceId ? "swap-mode" : ""} ${sanctuary ? `is-sanctuary season-${season}` : ""} ${sanctuary && sanc.editing ? "is-editing" : ""}`}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -328,7 +351,8 @@ export default function TreeCanvas({ activeIds, onNodeClick, onOpenBranch }) {
           <Clouds />
 
           <g transform={`translate(${view.x} ${view.y}) scale(${view.zoom})`}>
-            <g transform={base.transform} ref={treeGroupRef}>
+            {world && <SanctuaryBackdrop world={world} view={view} baseTransform={base.transform} />}
+            <g transform={base.transform} ref={treeGroupRef} className="sanc-world">
               <TreeScene
                 tree={tree}
                 placed={placed}
@@ -342,11 +366,22 @@ export default function TreeCanvas({ activeIds, onNodeClick, onOpenBranch }) {
                 shakingId={shakingId}
                 dragId={drag?.id}
                 handlers={handlers}
+                sanctuary={sanctuary}
+                world={world}
+                season={season}
+                branchMode={Boolean(sanc.branchMode && !sanc.editing)}
+                branchSel={sanc.branch}
               />
             </g>
           </g>
         </svg>
       </div>
+
+      {sanctuary && (
+        <SanctuaryHero key={shown.kind} groupRef={treeGroupRef} containerRef={workspaceRef} world={world} onPan={panBy} />
+      )}
+      <SanctuaryPanel prefs={sanc} />
+      {sanctuary && <BranchTools />}
 
       <div className={`zoom-badge ${badgeVisible ? "visible" : ""}`}>{Math.round(view.zoom * 100)}%</div>
     </div>
@@ -388,6 +423,11 @@ const TreeScene = memo(function TreeScene({
   shakingId,
   dragId,
   handlers,
+  sanctuary,
+  world,
+  season,
+  branchMode,
+  branchSel,
 }) {
   const hoveredPath = hoveredId ? getAncestorIds(tree, hoveredId) || [] : [];
   const hoveredNode = hoveredId ? findBranch(tree, hoveredId) : null;
@@ -427,11 +467,14 @@ const TreeScene = memo(function TreeScene({
     onDragLeave: handlers.dragLeave,
     onDrop: (e) => handlers.drop(id, e),
   });
-  const trunkEvents = nodeEvents(ROOT_ID);
+  // No Santuário os galhos não abrem painéis: é só cenário
+  const trunkEvents = sanctuary ? {} : nodeEvents(ROOT_ID);
 
   return (
     <>
-      <Ground />
+      {sanctuary ? <WorldGround world={world} /> : <Ground />}
+      {sanctuary && <SanctuaryBack world={world} season={season} />}
+      <MainTreeWrap world={sanctuary ? world : null}>
       <ForestRoots trees={trees} />
 
       {placed.links.map((link) => {
@@ -518,7 +561,13 @@ const TreeScene = memo(function TreeScene({
           })}
       </g>
 
-      <ForestTrunks trees={trees} selected={activeIds.has(ROOT_ID)} dimmed={Boolean(hoveredId && hoveredId !== ROOT_ID)} events={trunkEvents} onSideTreeMenu={() => refuseExtraTrees()} />
+      <ForestTrunks trees={trees} selected={activeIds.has(ROOT_ID)} dimmed={Boolean(hoveredId && hoveredId !== ROOT_ID)} events={trunkEvents} onSideTreeMenu={sanctuary ? undefined : () => refuseExtraTrees()} />
+      {sanctuary && <BranchLanterns nodes={placed.nodes} dims={dims} show={sanctuary.lanterns} />}
+      {sanctuary && branchMode && <BranchHandles nodes={placed.nodes} dims={dims} events={nodeEvents} selected={branchSel} />}
+      </MainTreeWrap>
+      {sanctuary && <SanctuaryFront world={world} season={season} />}
+      {!sanctuary && (
+      <>
       <g className={`tree-node root-node ${activeIds.has(ROOT_ID) ? "selected" : ""} ${shakingId === ROOT_ID ? "shaking" : ""}`} style={{ opacity: nodeOpacity(ROOT_ID) }} {...nodeEvents(ROOT_ID)}>
         <circle className="main-circle" cx={ROOT_POS.x} cy={ROOT_POS.y} r={rootDims.rx} />
         <text className="main-text" x={ROOT_POS.x} y={ROOT_POS.y + 6} textAnchor="middle">
@@ -565,6 +614,8 @@ const TreeScene = memo(function TreeScene({
             </g>
           );
         })}
+      </>
+      )}
     </>
   );
 });

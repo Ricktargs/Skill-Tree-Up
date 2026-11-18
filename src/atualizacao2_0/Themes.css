@@ -517,11 +517,13 @@
 }
 
 /* ---------- Temas do Nanquim ---------- */
+/* Nanquim: a grade ocupa o mesmo espaço que no Gameficado (uma rolagem só) */
 .th-nq {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
-  overflow-y: auto;
+  overflow: hidden;
   min-height: 0;
 }
 
@@ -562,15 +564,35 @@
   line-height: 1.25;
 }
 
+/* Cor da tinta do Clássico: opção que abre e fecha embaixo da grade */
 .th-ink {
-  padding: 0.8rem;
+  flex: none;
+  padding: 0.55rem 0.8rem;
   border-radius: 14px;
   border: 1px solid var(--theme-border, #334155);
   background: rgba(0, 0, 0, 0.12);
 }
-
-.th-ink-head strong { display: block; font-size: 0.85rem; }
-.th-ink-head small { display: block; font-size: 0.72rem; opacity: 0.7; margin-bottom: 0.55rem; }
+.th-ink[open] .th-ink-dots {
+  max-height: 128px;
+  overflow-y: auto;
+  padding: 4px 2px 2px;
+  margin-top: 0.5rem;
+}
+.th-ink-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.6rem;
+  cursor: pointer;
+  list-style: none;
+}
+.th-ink-head::-webkit-details-marker { display: none; }
+.th-ink-head::after { content: '▾'; margin-left: auto; opacity: 0.6; transition: transform 0.15s ease; }
+.th-ink[open] .th-ink-head::after { transform: rotate(180deg); }
+.th-ink-swatch { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.55); flex: none; }
+.th-ink-head strong { font-size: 0.85rem; }
+.th-ink-head small { order: 3; flex-basis: 100%; font-size: 0.72rem; opacity: 0.7; }
+.th-ink-head::after { order: 2; }
 
 .th-ink-dots {
   display: flex;
@@ -599,3 +621,28 @@
 @media (max-width: 600px) {
   .th-family { grid-template-columns: 1fr; }
 }
+
+/* ---------- Cartões simples: só a cor, o nome e a descrição ---------- */
+.th-card.th-simple {
+  position: relative;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  text-align: left;
+  min-height: 64px;
+}
+.th-simple .th-swatch {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+.th-simple .th-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.th-simple .th-name { font-size: 0.9rem; font-weight: 800; }
+.th-simple .th-desc { font-size: 0.72rem; opacity: 0.7; line-height: 1.25; }
+.th-simple .th-check,
+.th-simple .th-edit-badge,
+.th-simple .th-fav-badge { position: absolute; top: 6px; right: 8px; }

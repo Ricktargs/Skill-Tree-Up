@@ -70,7 +70,7 @@ const make = (id, name, desc, paperHue, paperSat, accentHue, accentSat = 52) => 
 const CLASSICO = {
   id: 'classico',
   name: 'Clássico',
-  desc: 'O papel da Árvore, com a tinta na cor do seu tema',
+  desc: 'O papel do Santuário, com a tinta na cor do seu tema',
   follow: true,
   light: {
     bg: '#ece4d1',

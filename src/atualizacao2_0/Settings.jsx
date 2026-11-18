@@ -67,7 +67,7 @@ export function SettingsModal({
         <div className="st-header">
           <div>
             <h3>⚙️ {tx('Configurações')}</h3>
-            <p>{tx('Vale para Neurônios, Árvore e Habilidades')}</p>
+            <p>{tx('Vale para Neurônios, Santuário e Habilidades')}</p>
           </div>
           <button type="button" className="st-close" onClick={close} title={tx('Fechar (Esc)')}>
             ✕
@@ -179,7 +179,7 @@ export function SettingsModal({
           {/* Opções do modo aberto */}
           {mode === 'arvore' && (
             <section className="st-section">
-              <h4>🌳 {tx('Árvore')}</h4>
+              <h4>🏕️ {tx('Santuário')}</h4>
               {arvore ? (
                 <>
                   {growth && (
@@ -338,7 +338,7 @@ export function SettingsModal({
           <section className="st-section">
             <h4>💾 {tx('Dados e backup')}</h4>
             <p className="st-note">
-              {tx('Um backup só para os três modos: Neurônios, Árvore e Habilidades de todos os perfis, com tarefas, flashcards, Pomodoro e aparência.')}
+              {tx('Um backup só para os três modos: Neurônios, Santuário e Habilidades de todos os perfis, com tarefas, flashcards, Pomodoro e aparência.')}
             </p>
             <div className="st-actions two">
               <button type="button" className="st-btn primary" onClick={onExport}>
@@ -373,7 +373,7 @@ const SHARED_GROUPS = [
   {
     title: 'Em todos os modos',
     items: [
-      { keys: ['Alt', '1'], alt: ['Alt', '3'], text: 'Troca entre Neurônios, Árvore e Habilidades.' },
+      { keys: ['Alt', '1'], alt: ['Alt', '3'], text: 'Troca entre Neurônios, Santuário e Habilidades.' },
       { keys: ['P'], text: 'Perfis.' },
       { keys: ['M'], text: 'Missões diárias e diamantes.' },
       { keys: ['C'], text: 'Temas (Nanquim e Gameficado).' },
@@ -388,21 +388,34 @@ const SHARED_GROUPS = [
 
 const ARVORE_GROUPS = [
   {
-    title: 'Árvore',
+    title: 'Santuário',
     items: [
-      { keys: ['Clique'], text: 'Num galho: abre o painel dele.' },
-      { keys: ['Shift', 'Clique'], text: 'Abre mais um painel sem fechar os outros.' },
-      { keys: ['Arrastar'], text: 'Um galho: reposiciona (os subgalhos vão junto).' },
-      { keys: ['Segurar'], text: 'Um galho por 1,5s: modo de troca de posição.' },
-      { keys: ['Arrastar'], text: 'Uma nota até um galho: move a nota.' },
+      { keys: ['W', 'A', 'S', 'D'], text: 'Anda com o personagem.' },
+      { keys: ['Espaço'], text: 'Pula.' },
+      { keys: ['Arrastar'], text: 'O fundo: move a vista.' },
       { keys: ['Roda do mouse'], text: 'Zoom.' },
-      { keys: ['Espaço', 'Espaço'], text: 'Centraliza a visão.' },
-      { keys: ['Ctrl', 'Z'], alt: ['Ctrl', 'Y'], text: 'Desfaz / refaz na árvore ou no editor da nota.' },
-      { keys: ['Ctrl', 'M'], text: 'Aleatoriza os galhos do tronco.' },
-      { keys: ['Botão direito'], text: 'No tronco de uma árvore ao lado: juntar tudo numa árvore só.' },
-      { keys: ['Ctrl', 'Clique no ×'], text: 'Fecha todas as janelas.' },
-      { keys: ['Ctrl', 'S'], text: 'No editor: salva a nota.' },
-      { keys: ['[palavra]'], text: 'Nas notas: cria cipós (conexões) entre galhos.' }
+      { keys: ['Clique'], text: 'Numa árvore: mostra a bolinha 🎲 para aleatorizar.' }
+    ]
+  },
+  {
+    title: 'Galhos (clique na árvore principal)',
+    items: [
+      { keys: ['Clique'], text: 'Numa bolinha: seleciona o galho.' },
+      { keys: ['Arrastar'], text: 'Uma bolinha: move o galho.' },
+      { keys: ['Segurar'], text: 'Uma bolinha por 1,5s: troca de lugar com outro galho.' },
+      { keys: ['Delete'], text: 'Remove o galho selecionado.' },
+      { keys: ['Ctrl', 'M'], text: 'Aleatoriza os galhos.' },
+      { keys: ['Ctrl', 'Z'], alt: ['Ctrl', 'Y'], text: 'Desfaz / refaz.' },
+      { keys: ['Esc'], text: 'Solta a seleção / sai do modo galhos.' }
+    ]
+  },
+  {
+    title: 'Layout (lápis ligado)',
+    items: [
+      { keys: ['Arrastar'], text: 'Move qualquer decoração pelo terreno.' },
+      { keys: ['+'], alt: ['−'], text: 'Aumenta / diminui o selecionado.' },
+      { keys: ['Delete'], text: 'Remove o selecionado.' },
+      { keys: ['Esc'], text: 'Solta a seleção / desliga o lápis.' }
     ]
   }
 ];
@@ -510,7 +523,7 @@ const Keys = ({ keys }) => (
 
 const TABS = [
   { id: 'neuronios', name: 'Neurônios', groups: NEURONIOS_GROUPS },
-  { id: 'arvore', name: 'Árvore', groups: ARVORE_GROUPS },
+  { id: 'arvore', name: 'Santuário', groups: ARVORE_GROUPS },
   { id: 'skills', name: 'Habilidades', groups: COMMAND_GROUPS },
   { id: 'shared', name: 'Ferramentas', groups: SHARED_GROUPS }
 ];

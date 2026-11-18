@@ -1084,4 +1084,12 @@ export default {
   "Quando a Árvore ficar grande demais, os galhos mais novos crescem numa árvore ao lado, ligada pelas raízes.\n\nDá para desligar quando quiser: os galhos voltam para a árvore principal.": "ツリーが大きくなりすぎたら、新しい枝は根でつながった隣の木に伸びます。\n\nいつでもオフにでき、枝はメインの木に戻ります。",
   "Pode crescer": "育ててOK",
   "Só a mesma árvore": "同じ木だけ",
+  "Santuário": "聖域",
+  "Vale para Neurônios, Santuário e Habilidades": "ニューロン・聖域・スキルに共通",
+  "Um backup só para os três modos: Neurônios, Santuário e Habilidades de todos os perfis, com tarefas, flashcards, Pomodoro e aparência.": "3つのモード（ニューロン・聖域・スキル）を全プロフィール分まとめてバックアップ。タスク、フラッシュカード、ポモドーロ、見た目も含みます。",
+  "Vale para Neurônios, Santuário e Habilidades. O modo noturno (🌙) escurece o papel de qualquer tema.": "ニューロン・聖域・スキルに共通。夜モード（🌙）はどのテーマの紙も暗くします。",
+  "Escolha qualquer cor dos temas — o papel continua o do Santuário.": "テーマの色を自由に選べます（紙は聖域のまま）。",
+  "Excluir a pasta \"{name}\"?": "フォルダ「{name}」を削除しますか？",
+  "As {n} habilidade(s) dela voltam para a pasta Geral. Nenhuma habilidade é apagada.": "中の {n} 個のスキルは「一般」フォルダに戻ります。スキルは削除されません。",
+  "A pasta está vazia.": "フォルダは空です。",
 };

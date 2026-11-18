@@ -1,5 +1,5 @@
 // =========================================================
-// MODO ATIVO DO PROGRAMA: Neurônios · Árvore · Habilidades
+// MODO ATIVO DO PROGRAMA: Neurônios · Santuário · Habilidades
 // Fora do React para que os atalhos de cada projeto possam
 // perguntar rapidamente "estou no meu modo?".
 // =========================================================
@@ -7,7 +7,7 @@ import { useSyncExternalStore } from 'react';
 
 export const MODES = [
   { id: 'neuronios', name: 'Neurônios', title: 'Neurônios' },
-  { id: 'arvore', name: 'Árvore', title: 'Árvore' },
+  { id: 'arvore', name: 'Santuário', title: 'Santuário' }, // o id continua 'arvore' (dados salvos)
   { id: 'skills', name: 'Habilidades', title: 'Habilidades' }
 ];
 

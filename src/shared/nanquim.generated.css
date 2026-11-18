@@ -2592,12 +2592,18 @@ html[data-ui-theme='nanquim'] .th-ink {
     border: 1px solid var(--theme-border, var(--nq-line-strong));
     background: rgb(var(--nq-shade-rgb) / 0.022)
 }
+html[data-ui-theme='nanquim'] .th-ink-swatch {
+    border: 2px solid rgb(var(--nq-shade-rgb) / 0.22)
+}
 html[data-ui-theme='nanquim'] .th-ink-dot {
     border: 2px solid rgb(var(--nq-shade-rgb) / 0.22);
     box-shadow: 0 1px 3px rgb(var(--nq-shade-rgb) / 0.088)
 }
 html[data-ui-theme='nanquim'] .th-ink-dot.active {
     outline: 2px solid var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .th-simple .th-swatch {
+    box-shadow: 0 1px 4px rgb(var(--nq-shade-rgb) / 0.105)
 }
 
 /* ===== src/atualizacao2_0/Update_2.css ===== */

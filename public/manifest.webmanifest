@@ -1,6 +1,6 @@
 {
-  "name": "Skill Tree RPG",
-  "short_name": "Skill Tree",
+  "name": "ORBE-G · Organização, Rotina, Base, Evolução e Gamificação",
+  "short_name": "ORBE-G",
   "description": "Evolua suas habilidades como num RPG.",
   "start_url": "./",
   "scope": "./",
@@ -9,6 +9,10 @@
   "background_color": "#0b0f1a",
   "theme_color": "#0b0f1a",
   "icons": [
-    { "src": "favicon.ico", "sizes": "48x48 32x32 16x16", "type": "image/x-icon" }
+    {
+      "src": "favicon.ico",
+      "sizes": "48x48 32x32 16x16",
+      "type": "image/x-icon"
+    }
   ]
 }

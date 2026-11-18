@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { sfx } from '../arvore/lib/sound.js';
 
 // =========================================================
 // MAPA DE NEURÔNIOS — grafo com forças (estilo Obsidian)
@@ -8,6 +9,13 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 // =========================================================
 
 const LINK_DISTANCE = 95;
+
+// Número estável por neurônio (ritmo da flutuação)
+const floatSeed = (id) => {
+  let h = 0;
+  for (let i = 0; i < id.length; i += 1) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return Math.abs(h);
+};
 const REPULSION = 2600;
 const SPRING = 0.035;
 const CENTER = 0.006;
@@ -340,6 +348,7 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
     if (!d) return;
     if (d.box) {
       setBox(null);
+      if (selectedRef.current.size) sfx.play('tick');
       return;
     }
     // Clique simples no fundo limpa a seleção
@@ -352,7 +361,10 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
         if (q) q.fixed = false;
       });
       if (!d.moved) onOpen(d.id, e.ctrlKey || e.metaKey || e.shiftKey);
-      else reheat(0.2);
+      else {
+        sfx.play('drop');
+        reheat(0.2);
+      }
     }
   };
 
@@ -416,14 +428,17 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
                 onPointerEnter={() => setHover(n.id)}
                 onPointerLeave={() => setHover((h) => (h === n.id ? null : h))}
               >
-                {isActive && <circle className="nr-halo" r={r + 7} />}
-                {selected.has(n.id) && <circle className="nr-select-ring" r={r + 5} />}
-                <circle className="nr-dot" r={r} style={{ '--nr-c': n.color }} />
-                {label && (
-                  <text className="nr-label" y={r + 13} textAnchor="middle" style={{ fontSize: `${Math.max(9, 11.5 / Math.sqrt(view.k))}px` }}>
-                    {n.label.length > 34 ? `${n.label.slice(0, 32)}…` : n.label}
-                  </text>
-                )}
+                {/* flutua um pouquinho, cada um no seu ritmo */}
+                <g className="nr-float" style={{ animationDuration: `${5 + (floatSeed(n.id) % 40) / 10}s`, animationDelay: `${-(floatSeed(n.id) % 50) / 10}s` }}>
+                  {isActive && <circle className="nr-halo" r={r + 7} />}
+                  {selected.has(n.id) && <circle className="nr-select-ring" r={r + 5} />}
+                  <circle className="nr-dot" r={r} style={{ '--nr-c': n.color }} />
+                  {label && (
+                    <text className="nr-label" y={r + 13} textAnchor="middle" style={{ fontSize: `${Math.max(9, 11.5 / Math.sqrt(view.k))}px` }}>
+                      {n.label.length > 34 ? `${n.label.slice(0, 32)}…` : n.label}
+                    </text>
+                  )}
+                </g>
               </g>
             );
           })}
@@ -436,31 +451,6 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
         </div>
       )}
 
-      <div className="nr-graph-tools">
-        <button type="button" className="round-button" onClick={() => setView((v) => ({ ...v, k: Math.min(3.5, v.k * 1.25) }))} title="Aproximar">
-          +
-        </button>
-        <button type="button" className="round-button" onClick={() => setView((v) => ({ ...v, k: Math.max(0.2, v.k / 1.25) }))} title="Afastar">
-          −
-        </button>
-        <button type="button" className="round-button" onClick={fit} title="Enquadrar tudo">
-          ⤢
-        </button>
-        <button
-          type="button"
-          className="round-button"
-          onClick={() => {
-            sim.current.forEach((p) => {
-              p.x += (Math.random() - 0.5) * 80;
-              p.y += (Math.random() - 0.5) * 80;
-            });
-            reheat(1);
-          }}
-          title="Reorganizar o mapa"
-        >
-          ↻
-        </button>
-      </div>
     </div>
   );
 }

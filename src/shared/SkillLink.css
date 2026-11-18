@@ -1,4 +1,4 @@
-/* Ligação com uma habilidade (Neurônios e galhos da Árvore) */
+/* Ligação com uma habilidade (Neurônios e galhos) */
 .skill-link-chip,
 .skill-link-add {
   display: inline-flex;
@@ -36,7 +36,8 @@
 }
 .skill-link-open:disabled { cursor: default; }
 .skill-link-open:not(:disabled):hover { text-decoration: underline; }
-.skill-link-open i {
+.skill-link-open i,
+.skill-link-option i {
   width: 9px;
   height: 9px;
   border-radius: 50%;
@@ -55,20 +56,74 @@
 }
 .skill-link-remove:hover { opacity: 1; }
 
+/* "+ habilidade" e a lista */
+.skill-link-pick { position: relative; display: inline-flex; }
 .skill-link-add {
-  position: relative;
-  padding: 0 10px;
+  padding: 0 11px;
   border: 1px dashed currentColor;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
   opacity: 0.65;
   cursor: pointer;
 }
-.skill-link-add:hover { opacity: 1; }
-/* O select fica invisível por cima: abre a lista nativa ao clicar */
-.skill-link-add select {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-  width: 100%;
+.skill-link-add:hover,
+.skill-link-add[aria-expanded='true'] { opacity: 1; }
+
+.skill-link-menu {
+  z-index: 100000;
+  width: 250px;
+  padding: 8px;
+  border-radius: 14px;
+  background: var(--surface, #fbf8f0);
+  border: 1px solid var(--line-strong, rgba(0, 0, 0, 0.18));
+  box-shadow: var(--window-shadow, 0 12px 28px rgba(0, 0, 0, 0.22));
+  color: var(--text, inherit);
+  animation: skill-link-in 0.14s ease-out;
 }
-.skill-link-add select:disabled { cursor: not-allowed; }
+@keyframes skill-link-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+.skill-link-menu-head {
+  padding: 2px 6px 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+.skill-link-search {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 6px;
+  padding: 6px 9px;
+  border-radius: 9px;
+  border: 1px solid var(--line-strong, rgba(0, 0, 0, 0.18));
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+}
+.skill-link-options { display: flex; flex-direction: column; gap: 2px; max-height: 240px; overflow-y: auto; }
+.skill-link-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.skill-link-option:hover { background: color-mix(in srgb, var(--skill) 16%, transparent); }
+.skill-link-option i { width: 12px; height: 12px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--skill) 25%, transparent); }
+.skill-link-option-text { display: flex; flex-direction: column; min-width: 0; }
+.skill-link-option-text b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.skill-link-option-text small { font-size: 11px; opacity: 0.6; }
+.skill-link-empty { padding: 8px; font-size: 12px; opacity: 0.7; }

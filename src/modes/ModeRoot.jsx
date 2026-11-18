@@ -20,7 +20,7 @@ export default function ModeRoot() {
   // Título da aba conforme o projeto aberto
   useEffect(() => {
     const m = MODES.find((x) => x.id === mode);
-    if (m) document.title = m.title;
+    if (m) document.title = `${m.title} · ORBE-G`;
   }, [mode]);
 
   // Alt+1 / Alt+2 / Alt+3 trocam de modo (Neurônios, Árvore, Habilidades)

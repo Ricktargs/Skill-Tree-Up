@@ -89,6 +89,10 @@ export function createLayout(tree, ctx = {}) {
     { x: t.x + t.baseHalf * 3, y: t.baseY },
     ...t.geo.limbs.map((l) => ({ x: l.curve[3][0], y: l.curve[3][1] })),
   ]);
+  // Santuário: o enquadramento inclui o acampamento (esquerda) e o lago (direita)
+  if (ctx.sanctuary && trees[0]) {
+    extents.push({ x: trees[0].x - 560, y: trees[0].baseY + 60 }, { x: trees[0].x + 920, y: trees[0].baseY + 60 });
+  }
   return { nodes, links, dims, trees, needs: forest.needs, transform: fitTransform([...nodes, ...extents.map((p) => ({ ...p, branch: {} }))]) };
 }
 

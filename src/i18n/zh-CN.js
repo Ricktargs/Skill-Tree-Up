@@ -1085,4 +1085,12 @@ export default {
   "Quando a Árvore ficar grande demais, os galhos mais novos crescem numa árvore ao lado, ligada pelas raízes.\n\nDá para desligar quando quiser: os galhos voltam para a árvore principal.": "当树太大时，最新的树枝会长在旁边一棵由树根相连的树上。\n\n可随时关闭：树枝会回到主树上。",
   "Pode crescer": "可以生长",
   "Só a mesma árvore": "只要同一棵树",
+  "Santuário": "圣所",
+  "Vale para Neurônios, Santuário e Habilidades": "适用于神经元、圣所和技能",
+  "Um backup só para os três modos: Neurônios, Santuário e Habilidades de todos os perfis, com tarefas, flashcards, Pomodoro e aparência.": "三个模式共用一个备份：所有个人资料的神经元、圣所和技能，包括任务、闪卡、番茄钟和外观。",
+  "Vale para Neurônios, Santuário e Habilidades. O modo noturno (🌙) escurece o papel de qualquer tema.": "适用于神经元、圣所和技能。夜间模式（🌙）会让任何主题的纸张变暗。",
+  "Escolha qualquer cor dos temas — o papel continua o do Santuário.": "可选择任意主题颜色——纸张保持“圣所”的样式。",
+  "Excluir a pasta \"{name}\"?": "删除文件夹“{name}”？",
+  "As {n} habilidade(s) dela voltam para a pasta Geral. Nenhuma habilidade é apagada.": "其中的 {n} 项技能会回到“通用”文件夹，不会删除任何技能。",
+  "A pasta está vazia.": "文件夹是空的。",
 };

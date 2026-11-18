@@ -149,3 +149,11 @@ html[data-ui-theme='nanquim'][data-ui-dark='true'] #root .app-screen.shell-only 
     height: 38px !important;
   }
 }
+
+/* Com uma janela aberta, a barra de modos some (não corta o fim da janela) */
+body:has(.modal-backdrop) .mode-switcher,
+body:has(.ui-dialog-backdrop) .mode-switcher {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 12px);
+}

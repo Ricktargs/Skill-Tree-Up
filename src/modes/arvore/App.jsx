@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { TEXT_FEATURES } from "./lib/standby";
 import { useUiTheme } from "../../shared/uiTheme.js";
 import { registerModeActions } from "../../shared/modeBridge.js";
 import "./App.css";
@@ -128,6 +129,7 @@ function AppShell() {
   }, []);
 
   const handleNodeClick = (id, shiftKey) => {
+    if (!TEXT_FEATURES) return; // notas e pastas em espera
     if (shiftKey) {
       if (primary?.id === id) return bringToFront("primary");
       setExtras((list) => (list.includes(id) ? list : [...list, id]));
@@ -215,7 +217,8 @@ function AppShell() {
           <div className="top-left" />
 
           <div className="top-center">
-            <h1>ÁRVORE</h1>
+            <h1>SANTUÁRIO</h1>
+            {TEXT_FEATURES && (
             <div className="row center">
               <button
                 type="button"
@@ -232,6 +235,7 @@ function AppShell() {
               </button>
               <button type="button" className="icon-button" onClick={() => setModal("quick")} title="Nova nota rápida (no Tronco)">📝</button>
             </div>
+            )}
           </div>
 
           <div className="top-right" />
@@ -246,6 +250,8 @@ function AppShell() {
         <TreeCanvas activeIds={activeIds} onNodeClick={handleNodeClick} onOpenBranch={openLinkedBranch} />
 
         {/* ---------------- janelas ---------------- */}
+{TEXT_FEATURES && (
+          <>
         {primary && branchExists(primary.id) && (
           <BranchPanel
             key="primary"
@@ -318,9 +324,11 @@ function AppShell() {
             onCloseAll={closeAll}
           />
         )}
+          </>
+        )}
 
         {/* ---------------- modais ---------------- */}
-        {modal === "quick" && <QuickNoteModal onClose={() => setModal(null)} />}
+        {TEXT_FEATURES && modal === "quick" && <QuickNoteModal onClose={() => setModal(null)} />}
         {modal === "settings" && (
           <SettingsModal
             onClose={() => setModal(null)}

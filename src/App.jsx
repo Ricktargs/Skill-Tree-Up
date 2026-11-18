@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { registerModeActions } from './shared/modeBridge.js';
-import { isSkillsMode, setMode, useMode } from './modes/modeState.js';
+import { isSkillsMode, useMode } from './modes/modeState.js';
 import { useUiTheme, toggleDark } from './shared/uiTheme.js';
 import { tx } from './i18n/index.jsx';
 import { useGameData, PRESET_DECKS, getXpNeededForLevel, getGameDayKey } from './hooks/useGameData';
@@ -254,7 +254,7 @@ export default function App() {
         open: (id) => {
           const skill = (skillsRef.current || []).find((s) => s.id === id);
           if (!skill) return;
-          setMode('skills');
+          // abre só a janela da habilidade, sem trocar de modo
           setEditingSkill({ ...skill });
         }
       }),

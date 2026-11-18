@@ -1,7 +1,8 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ask } from '../../shared/Dialog.jsx';
 import SkillLink from '../../shared/SkillLink.jsx';
-import { cleanHtml, escapeHtml, linksIn, normalizeTag, pagelinkHtml, plainText, tagColor, wikilinkHtml } from './store.js';
+import { sfx } from '../arvore/lib/sound.js';
+import { cleanHtml, escapeHtml, linksIn, normalizeTag, pagelinkHtml, pagesIn, plainText, tagColor, wikilinkHtml } from './store.js';
 
 // =========================================================
 // EDITOR DO NEURÔNIO (fica ao lado do mapa)
@@ -142,8 +143,13 @@ function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClosePage,
         changed = true;
         return;
       }
-      if (pages[pid]) a.textContent = pages[pid].title || 'Página sem título';
-      a.classList.toggle('broken', !pages[pid]);
+      if (!pages[pid]) {
+        // página excluída: a marca sai do texto
+        a.remove();
+        changed = true;
+        return;
+      }
+      a.textContent = pages[pid].title || 'Página sem título';
     });
     return changed;
   };
@@ -155,6 +161,24 @@ function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClosePage,
     if (el && syncPagelinks(el)) save();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagesKey]);
+
+  // Página aberta: o cursor vai direto para o texto dela
+  useEffect(() => {
+    if (!page) return undefined;
+    const t = setTimeout(() => {
+      const el = editorRef.current;
+      if (!el) return;
+      el.focus();
+      const r = document.createRange();
+      r.selectNodeContents(el);
+      r.collapse(false);
+      const s = window.getSelection();
+      s.removeAllRanges();
+      s.addRange(r);
+    }, 40);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // "Editado há X" se atualiza sozinho
   useEffect(() => {
@@ -312,6 +336,7 @@ function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClosePage,
       document.execCommand('insertHTML', false, `${pagelinkHtml(pg)}&nbsp;`);
       setSuggest(null);
       save();
+      sfx.play('folder');
       setOpenPage(pg.id);
       return;
     }
@@ -329,6 +354,7 @@ function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClosePage,
     }
     if (!linked) linked = store.addNote({ title: query || 'Novo neurônio', tags: [] });
     document.execCommand('insertHTML', false, `${wikilinkHtml(linked)}&nbsp;`);
+    sfx.play('branch');
     setSuggest(null);
     save();
   };
@@ -466,7 +492,10 @@ function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClosePage,
     const pl = e.target.closest('a.pagelink');
     if (pl) {
       e.preventDefault();
-      if (pages[pl.dataset.page]) setOpenPage(pl.dataset.page);
+      if (pages[pl.dataset.page]) {
+        sfx.play('open');
+        setOpenPage(pl.dataset.page);
+      }
       return;
     }
     const wl = e.target.closest('a.wikilink');
@@ -513,15 +542,36 @@ function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClosePage,
     const t = normalizeTag(raw);
     if (!t || (note.tags || []).includes(t)) return setTagDraft('');
     store.updateNote(note.id, { tags: [...(note.tags || []), t] });
+    sfx.play('tick');
     setTagDraft('');
     return undefined;
   };
-  const removeTag = (t) => store.updateNote(note.id, { tags: (note.tags || []).filter((x) => x !== t) });
+  const removeTag = (t) => {
+    sfx.play('tick');
+    store.updateNote(note.id, { tags: (note.tags || []).filter((x) => x !== t) });
+  };
 
   // ---------- Rodapé ----------
   const text = plainText(doc.content);
   const words = text ? text.split(/\s+/).length : 0;
   const pageList = Object.values(pages);
+  // Excluir uma página (as páginas dentro dela vão junto)
+  const removePage = async (pg) => {
+    const inner = pagesIn(pg.content).filter((pid) => pages[pid]).length;
+    const ok = await ask({
+      icon: '📄',
+      title: `Excluir a página “${pg.title || 'Página sem título'}”?`,
+      message: inner ? `As ${inner} página(s) dentro dela também saem.` : 'O texto dela será apagado.',
+      yes: 'Excluir',
+      no: 'Cancelar',
+      danger: true
+    });
+    if (!ok) return;
+    if (page && page.id === pg.id && onClosePage) onClosePage();
+    if (openPage === pg.id) setOpenPage(null);
+    store.deletePage(note.id, pg.id);
+    sfx.play('delete');
+  };
   const outgoing = linksIn(note.content).filter((id) => store.byId.has(id));
   const incoming = [...(store.backlinks.get(note.id) || [])];
   const tagSuggestions = store.tags.map((t) => t.tag).filter((t) => !(note.tags || []).includes(t));
@@ -533,9 +583,14 @@ function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClosePage,
           <span>
             📄 Página dentro de “{note.title || 'Sem título'}”
           </span>
-          <button type="button" className="nr-page-close" onClick={onClosePage} title="Fechar página (Esc)" aria-label="Fechar página">
-            ×
-          </button>
+          <span className="nr-page-actions">
+            <button type="button" className="nr-page-delete" onClick={() => removePage(page)} title="Excluir esta página">
+              🗑 Excluir
+            </button>
+            <button type="button" className="nr-page-close" onClick={onClosePage} title="Fechar página (Esc)" aria-label="Fechar página">
+              ×
+            </button>
+          </span>
         </div>
       )}
       <div className="nr-note-head">
@@ -611,7 +666,13 @@ function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClosePage,
           ))}
         </datalist>
         {/* Ligação com uma habilidade, ao lado das tags */}
-        <SkillLink value={note.skillId || null} onChange={(skillId) => store.updateNote(note.id, { skillId: skillId || null })} />
+        <SkillLink
+          value={note.skillId || null}
+          onChange={(skillId) => {
+            sfx.play(skillId ? 'branch' : 'tick');
+            store.updateNote(note.id, { skillId: skillId || null });
+          }}
+        />
       </div>
       )}
 
@@ -681,13 +742,6 @@ function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClosePage,
           </button>
           <button type="button" className="tool" onClick={() => exec('removeFormat')} title="Limpar formatação">
             ⌫
-          </button>
-          <span className="push-right" />
-          <button type="button" className="tool" onClick={() => exec('undo')} title="Desfazer (Ctrl+Z)">
-            ↶
-          </button>
-          <button type="button" className="tool" onClick={() => exec('redo')} title="Refazer (Ctrl+Y)">
-            ↷
           </button>
         </div>
 
@@ -777,9 +831,21 @@ function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClosePage,
           <div className="nr-links">
             <span className="nr-links-title">Páginas ({pageList.length})</span>
             {pageList.map((p) => (
-              <button key={p.id} type="button" className="nr-link-chip is-page" onClick={() => setOpenPage(p.id)}>
-                📄 {p.title || 'Página sem título'}
-              </button>
+              <span key={p.id} className="nr-link-chip is-page nr-page-chip">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sfx.play('open');
+                    setOpenPage(p.id);
+                  }}
+                  title="Abrir a página"
+                >
+                  📄 {p.title || 'Página sem título'}
+                </button>
+                <button type="button" className="nr-page-chip-x" onClick={() => removePage(p)} title="Excluir a página" aria-label="Excluir a página">
+                  ×
+                </button>
+              </span>
             ))}
           </div>
         )}
@@ -823,6 +889,7 @@ function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClosePage,
             page={pages[openPage]}
             depth={depth + 1}
             onClosePage={() => {
+              sfx.play('close');
               setOpenPage(null);
               setTimeout(() => editorRef.current?.focus(), 0);
             }}

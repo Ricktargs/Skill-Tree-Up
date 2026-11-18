@@ -8,7 +8,7 @@ import { useSyncExternalStore } from 'react';
 import { NANQUIM_THEMES, nanquimVars, getNanquimTheme } from './nanquimThemes.js';
 
 export const VISUAL_THEMES = [
-  { id: 'nanquim', name: 'Nanquim', desc: 'Papel, tinta e aquarela (igual à Árvore)' },
+  { id: 'nanquim', name: 'Nanquim', desc: 'Papel, tinta e aquarela (igual ao Santuário)' },
   { id: 'gamificado', name: 'Gameficado', desc: 'O visual de jogo original das Habilidades' }
 ];
 

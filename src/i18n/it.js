@@ -1036,4 +1036,12 @@ export default {
   "Quando a Árvore ficar grande demais, os galhos mais novos crescem numa árvore ao lado, ligada pelas raízes.\n\nDá para desligar quando quiser: os galhos voltam para a árvore principal.": "Quando l'Albero diventa troppo grande, i rami più nuovi crescono su un albero accanto, collegato dalle radici.\n\nPuoi disattivarlo quando vuoi: i rami tornano all'albero principale.",
   "Pode crescer": "Lascia crescere",
   "Só a mesma árvore": "Solo lo stesso albero",
+  "Santuário": "Santuario",
+  "Vale para Neurônios, Santuário e Habilidades": "Vale per Neuroni, Santuario e Abilità",
+  "Um backup só para os três modos: Neurônios, Santuário e Habilidades de todos os perfis, com tarefas, flashcards, Pomodoro e aparência.": "Un solo backup per le tre modalità: Neuroni, Santuario e Abilità di tutti i profili, con attività, flashcard, Pomodoro e aspetto.",
+  "Vale para Neurônios, Santuário e Habilidades. O modo noturno (🌙) escurece o papel de qualquer tema.": "Vale per Neuroni, Santuario e Abilità. La modalità notte (🌙) scurisce la carta di qualsiasi tema.",
+  "Escolha qualquer cor dos temas — o papel continua o do Santuário.": "Scegli qualsiasi colore dei temi: la carta resta quella del Santuario.",
+  "Excluir a pasta \"{name}\"?": "Eliminare la cartella \"{name}\"?",
+  "As {n} habilidade(s) dela voltam para a pasta Geral. Nenhuma habilidade é apagada.": "Le sue {n} abilità tornano nella cartella Generale. Nessuna abilità viene eliminata.",
+  "A pasta está vazia.": "La cartella è vuota.",
 };

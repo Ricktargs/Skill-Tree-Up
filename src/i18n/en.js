@@ -1045,4 +1045,12 @@ export default {
   "Quando a Árvore ficar grande demais, os galhos mais novos crescem numa árvore ao lado, ligada pelas raízes.\n\nDá para desligar quando quiser: os galhos voltam para a árvore principal.": "When the Tree gets too big, the newest branches grow on a tree beside it, linked by the roots.\n\nYou can turn it off anytime: the branches go back to the main tree.",
   "Pode crescer": "Let it grow",
   "Só a mesma árvore": "Just the same tree",
+  "Santuário": "Sanctuary",
+  "Vale para Neurônios, Santuário e Habilidades": "Applies to Neurons, Sanctuary and Skills",
+  "Um backup só para os três modos: Neurônios, Santuário e Habilidades de todos os perfis, com tarefas, flashcards, Pomodoro e aparência.": "One backup for all three modes: Neurons, Sanctuary and Skills for every profile, with tasks, flashcards, Pomodoro and appearance.",
+  "Vale para Neurônios, Santuário e Habilidades. O modo noturno (🌙) escurece o papel de qualquer tema.": "Applies to Neurons, Sanctuary and Skills. Night mode (🌙) darkens the paper of any theme.",
+  "Escolha qualquer cor dos temas — o papel continua o do Santuário.": "Pick any theme color — the paper stays the Sanctuary one.",
+  "Excluir a pasta \"{name}\"?": "Delete the folder \"{name}\"?",
+  "As {n} habilidade(s) dela voltam para a pasta Geral. Nenhuma habilidade é apagada.": "Its {n} skill(s) go back to the General folder. No skill is deleted.",
+  "A pasta está vazia.": "The folder is empty.",
 };

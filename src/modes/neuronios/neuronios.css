@@ -80,7 +80,6 @@
   min-height: 0;
   display: flex;
   position: relative;
-  padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
 }
 
 .nr-graph {
@@ -209,7 +208,8 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  margin: 0 16px 0 0;
+  /* só o editor deixa espaço embaixo (barra de modos); o mapa vai até a borda */
+  margin: 0 16px calc(64px + env(safe-area-inset-bottom, 0px)) 0;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-lg);
   background: var(--surface) var(--grain);
@@ -624,12 +624,9 @@
 
 /* Espaço para a coluna de ferramentas do programa (Perfil, Pomodoro…) */
 .nr-filters { padding-left: 92px; }
-.nr-root .nr-split { padding-left: 76px; }
-.nr-graph-tools { left: 6px; }
 
 @media (max-width: 760px) {
   .nr-filters { padding-left: 76px; }
-  .nr-root .nr-split { padding-left: 64px; }
 }
 
 /* Seleção (Shift + arrastar) */
@@ -741,3 +738,35 @@
 .nr-link-chip.is-page { box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 30%, transparent); }
 .nr-suggest .nr-suggest-page { width: 14px; text-align: center; font-size: 12px; }
 .nr-suggest small { opacity: 0.6; }
+
+/* Neurônios flutuando de leve */
+.nr-float { animation: nr-float 6s ease-in-out infinite; }
+.nr-node:hover .nr-float,
+.nr-node.selected .nr-float { animation-play-state: paused; }
+@keyframes nr-float {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(1.5px, -2.5px); }
+  50% { transform: translate(-1px, -3.5px); }
+  75% { transform: translate(-2px, -1px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nr-float { animation: none; }
+}
+
+/* Excluir páginas (+Pag) */
+.nr-page-actions { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.nr-page-delete {
+  border: 1px solid color-mix(in srgb, var(--danger, #c0392b) 55%, transparent);
+  background: color-mix(in srgb, var(--danger, #c0392b) 10%, transparent);
+  color: var(--danger, #c0392b);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.nr-page-delete:hover { background: color-mix(in srgb, var(--danger, #c0392b) 22%, transparent); }
+.nr-page-chip { display: inline-flex; align-items: center; padding: 0; gap: 0; }
+.nr-page-chip > button { border: 0; background: none; color: inherit; font: inherit; cursor: pointer; padding: 3px 4px 3px 10px; }
+.nr-page-chip > .nr-page-chip-x { padding: 3px 9px 3px 4px; opacity: 0.55; font-size: 14px; line-height: 1; }
+.nr-page-chip > .nr-page-chip-x:hover { opacity: 1; color: var(--danger, #c0392b); }

@@ -5,22 +5,16 @@ import { THEME_CATEGORIES, makeTheme, findCategoryOf, getThemeById } from './The
 import { useUiTheme, setVisual, setNanquimTheme } from '../shared/uiTheme.js';
 import { NANQUIM_THEMES } from '../shared/nanquimThemes.js';
 
-// Prévia de um tema do Nanquim: papel, janela, tinta e uma "copa" de aquarela
+// Tema do Nanquim: só a cor, o nome e a descrição
 function NanquimCard({ theme, palette, accent, active, onClick }) {
   return (
-    <button type="button" className={`th-card th-nq-card ${active ? 'active' : ''}`} onClick={onClick}>
-      <div className="th-preview" style={{ background: palette.bg }}>
-        <div className="th-preview-window" style={{ background: palette.paper, borderColor: `rgb(${palette.shade} / 0.3)` }}>
-          <span className="th-preview-bar" style={{ background: accent }} />
-          <span className="th-preview-line" style={{ background: palette.ink, opacity: 0.55 }} />
-          <span className="th-preview-line short" style={{ background: palette.muted, opacity: 0.6 }} />
-        </div>
-        <span className="th-nq-blob" style={{ background: palette.foliage, borderColor: palette.foliageEdge }} />
-        <span className="th-nq-ground" style={{ background: `linear-gradient(180deg, ${palette.groundMid}, ${palette.groundDeep})` }} />
-        {active && <span className="th-check">✓</span>}
-      </div>
-      <span className="th-name">{tx(theme.name)}</span>
-      <small className="th-nq-desc">{tx(theme.desc)}</small>
+    <button type="button" className={`th-card th-simple ${active ? 'active' : ''}`} onClick={onClick}>
+      <span className="th-swatch" style={{ background: accent, borderColor: palette.paper }} />
+      <span className="th-text">
+        <span className="th-name">{tx(theme.name)}</span>
+        <small className="th-desc">{tx(theme.desc)}</small>
+      </span>
+      {active && <span className="th-check">✓</span>}
     </button>
   );
 }
@@ -30,25 +24,26 @@ const VISIBLE_CATEGORIES = 3;
 
 const EMPTY_DRAFT = { id: null, name: '', color: '#f472b6', base: '#2a0a1f' };
 
+// Tema do Gameficado: só a cor, o nome e a descrição (a família de cores)
 function ThemeCard({ theme, active, editing, favorite, onClick, onContextMenu, label }) {
+  const catId = theme.custom ? 'custom' : findCategoryOf(theme.id);
+  const cat = THEME_CATEGORIES.find((c) => c.id === catId);
+  const desc = theme.custom || catId === 'custom' ? tx('Tema criado por você') : cat ? tx(cat.name) : '';
   return (
     <button
       type="button"
-      className={`th-card ${active ? 'active' : ''} ${editing ? 'editing' : ''}`}
+      className={`th-card th-simple ${active ? 'active' : ''} ${editing ? 'editing' : ''}`}
       onClick={onClick}
       onContextMenu={onContextMenu}
     >
-      <div className="th-preview" style={{ background: theme.bg }}>
-        <div className="th-preview-window" style={{ background: theme.modalBg, borderColor: theme.border }}>
-          <span className="th-preview-bar" style={{ background: theme.color }} />
-          <span className="th-preview-line" style={{ background: theme.border }} />
-        </div>
-        <span className="th-preview-dot" style={{ background: theme.color, color: theme.color }} />
-        {active && <span className="th-check">✓</span>}
-        {editing && <span className="th-edit-badge">✏️</span>}
-        {favorite && !editing && <span className="th-fav-badge" title={tx('Favorito')}>★</span>}
-      </div>
-      <span className="th-name">{label}</span>
+      <span className="th-swatch" style={{ background: theme.color, borderColor: theme.modalBg || '#0b0f1a' }} />
+      <span className="th-text">
+        <span className="th-name">{label}</span>
+        {desc && <small className="th-desc">{desc}</small>}
+      </span>
+      {active && <span className="th-check">✓</span>}
+      {editing && <span className="th-edit-badge">✏️</span>}
+      {favorite && !editing && <span className="th-fav-badge" title={tx('Favorito')}>★</span>}
     </button>
   );
 }
@@ -231,7 +226,7 @@ export function ThemeModal({
         {family === 'nanquim' && (
           <div className="th-nq">
             <p className="th-nq-note">
-              {tx('Vale para Neurônios, Árvore e Habilidades. O modo noturno (🌙) escurece o papel de qualquer tema.')}
+              {tx('Vale para Neurônios, Santuário e Habilidades. O modo noturno (🌙) escurece o papel de qualquer tema.')}
             </p>
             <div className="th-grid th-nq-grid">
               {NANQUIM_THEMES.map((t) => {
@@ -254,11 +249,12 @@ export function ThemeModal({
             </div>
 
             {ui.visual === 'nanquim' && ui.nq === 'classico' && (
-              <div className="th-ink">
-                <div className="th-ink-head">
-                  <strong>{tx('Cor da tinta do Clássico')}</strong>
-                  <small>{tx('Escolha qualquer cor dos temas — o papel continua o da Árvore.')}</small>
-                </div>
+              <details className="th-ink">
+                <summary className="th-ink-head">
+                  <span className="th-ink-swatch" style={{ background: getThemeById(currentTheme, customThemes).color }} />
+                  <strong>🎨 {tx('Cor da tinta do Clássico')}</strong>
+                  <small>{tx('Escolha qualquer cor dos temas — o papel continua o do Santuário.')}</small>
+                </summary>
                 <div className="th-ink-dots">
                   {[...THEME_CATEGORIES.flatMap((c) => c.themes), ...customThemes].map((t) => (
                     <button
@@ -274,7 +270,7 @@ export function ThemeModal({
                     />
                   ))}
                 </div>
-              </div>
+              </details>
             )}
           </div>
         )}

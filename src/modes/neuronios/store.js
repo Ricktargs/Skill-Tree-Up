@@ -216,6 +216,34 @@ export function useNeuronios() {
     }));
   }, []);
 
+  /** Exclui uma página (e as páginas que estão dentro dela) e tira as marcas +Pag do texto. */
+  const deletePage = useCallback((noteId, pageId) => {
+    const owner = notesRef.current.find((n) => n.id === noteId);
+    if (!owner || !owner.pages || !owner.pages[pageId]) return;
+    const gone = new Set([pageId]);
+    const walk = (html) =>
+      pagesIn(html).forEach((pid) => {
+        if (gone.has(pid) || !owner.pages[pid]) return;
+        gone.add(pid);
+        walk(owner.pages[pid].content);
+      });
+    walk(owner.pages[pageId].content);
+    const strip = (html) =>
+      [...gone].reduce((h, pid) => h.replace(new RegExp(`<a\\b[^>]*data-page="${pid}"[^>]*>[\\s\\S]*?</a>(&nbsp;)?`, 'g'), ''), html || '');
+    const now = new Date().toISOString();
+    setData((d) => ({
+      ...d,
+      notes: d.notes.map((n) => {
+        if (n.id !== noteId) return n;
+        const pages = {};
+        Object.values(n.pages || {}).forEach((p) => {
+          if (!gone.has(p.id)) pages[p.id] = { ...p, content: strip(p.content) };
+        });
+        return { ...n, content: strip(n.content), pages, updatedAt: now };
+      })
+    }));
+  }, []);
+
   /**
    * Ligar uma página com [[ ]]: ela vira um neurônio de verdade (aparece no
    * mapa). Leva junto as páginas que estão dentro dela, e as marcas +Pag que
@@ -335,6 +363,7 @@ export function useNeuronios() {
     addPage,
     updatePage,
     promotePage,
+    deletePage,
     restoreNote,
     restoreNotes,
     setView

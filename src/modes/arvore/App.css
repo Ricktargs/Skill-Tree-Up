@@ -423,3 +423,417 @@ button:disabled {
 
 /* Ligação do galho com uma habilidade */
 .panel-skill { margin: 2px 0 6px; }
+
+/* =========================================================
+   SANTUÁRIO (protótipo): o mundo do personagem
+   Tudo no traço da Árvore: tinta (--ink), papel e aquarela.
+========================================================= */
+.workspace.is-sanctuary {
+  --sanc-water: color-mix(in srgb, var(--foliage) 55%, var(--paper, #f2ead8));
+  --sanc-tent: color-mix(in srgb, #b98a4e 70%, var(--paper, #f2ead8));
+  --sanc-flame: #d9793a;
+  --sanc-flame-core: #f2c46b;
+  --sanc-lantern: #f2c46b;
+  --sanc-firefly: #fff2a0;
+  --season-tint: transparent;
+  --season-mix: 0%;
+}
+.dark-mode .workspace.is-sanctuary,
+[data-ui-dark="true"] .workspace.is-sanctuary {
+  --sanc-water: color-mix(in srgb, var(--foliage) 70%, #0b1620);
+  --sanc-tent: #7a5a34;
+}
+
+/* Estações: a copa continua no estilo da Árvore, só levemente tingida */
+.workspace.season-primavera { --season-tint: #e7a3bd; --season-mix: 22%; }
+.workspace.season-verao { --season-tint: #8fbf6a; --season-mix: 12%; }
+.workspace.season-outono { --season-tint: #d9813b; --season-mix: 28%; }
+.workspace.season-inverno { --season-tint: #e6edf2; --season-mix: 30%; }
+.workspace.is-sanctuary .blob.is-main circle { fill: color-mix(in srgb, var(--foliage), var(--season-tint) var(--season-mix)); }
+.workspace.is-sanctuary .blob.is-sub circle { fill: color-mix(in srgb, var(--foliage-2), var(--season-tint) var(--season-mix)); }
+.workspace.is-sanctuary .leaf { fill: color-mix(in srgb, var(--foliage), var(--season-tint) var(--season-mix)); }
+.workspace.is-sanctuary .blob { cursor: default; }
+
+/* Lago: borda de tinta, água em aquarela, traços claros como os do chão */
+.sanc-water { fill: var(--sanc-water); }
+.sanc-water-line {
+  fill: none;
+  stroke: var(--ground-line);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 26 8 10 6;
+  opacity: 0.75;
+  animation: sanc-water 6s ease-in-out infinite;
+}
+@keyframes sanc-water { 0%, 100% { stroke-dashoffset: 0; } 50% { stroke-dashoffset: 24; } }
+.sanc-lake.frozen .sanc-water { fill: color-mix(in srgb, #e6edf2 80%, var(--foliage)); }
+.sanc-lake.frozen .sanc-water-line { animation: none; stroke: #ffffff; opacity: 0.6; }
+.sanc-reed path { fill: none; stroke: var(--ink); stroke-width: 1.7; stroke-linecap: round; }
+
+/* Barraca e fogueira em tinta */
+.sanc-tent { fill: var(--sanc-tent); }
+.sanc-tent-line { fill: none; stroke: var(--ink); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.sanc-hatch { fill: none; stroke: var(--ink); stroke-width: 1; stroke-linecap: round; opacity: 0.45; }
+.sanc-grain-line { stroke: var(--ground-line); stroke-width: 1; opacity: 0.5; }
+.sanc-fire-warm { fill: var(--sanc-flame); opacity: 0; }
+.dark-mode .sanc-fire-warm, [data-ui-dark="true"] .sanc-fire-warm { opacity: 0.18; }
+.sanc-flame-g { transform-box: fill-box; transform-origin: 50% 100%; animation: sanc-flicker 1.1s ease-in-out infinite alternate; }
+.sanc-flame.outer { fill: var(--sanc-flame); }
+.sanc-flame.inner { fill: var(--sanc-flame-core); }
+.sanc-flame-line { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-linejoin: round; }
+@keyframes sanc-flicker { from { transform: scale(1, 1) skewX(-2deg); } to { transform: scale(0.95, 1.07) skewX(3deg); } }
+.sanc-smoke {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  opacity: 0;
+  animation: sanc-smoke 4.4s ease-out infinite;
+}
+.dark-mode .sanc-smoke, [data-ui-dark="true"] .sanc-smoke { stroke: var(--ground-line); }
+@keyframes sanc-smoke {
+  0% { opacity: 0; transform: translateY(6px); }
+  30% { opacity: 0.35; }
+  100% { opacity: 0; transform: translateY(-26px); }
+}
+
+/* Neve no chão (inverno) */
+.sanc-snow-cover { fill: none; stroke: #f4f8fb; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; opacity: 0.9; }
+
+/* Lanternas nos galhos */
+.sanc-lantern-sway { animation: sanc-sway 4.5s ease-in-out infinite; transform-origin: 0 0; }
+@keyframes sanc-sway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+.sanc-lantern-string { stroke: var(--ink); stroke-width: 1; }
+.sanc-lantern-body { fill: var(--sanc-lantern); stroke: var(--ink); stroke-width: 1.4; }
+.sanc-lantern-cap { fill: var(--ink); }
+.sanc-lantern-glow { fill: var(--sanc-lantern); opacity: 0; }
+.dark-mode .sanc-lantern-glow, [data-ui-dark="true"] .sanc-lantern-glow { opacity: 0.25; }
+
+/* Vagalumes */
+.sanc-firefly {
+  fill: var(--sanc-firefly);
+  filter: drop-shadow(0 0 3px #fff3a0);
+  animation-name: sanc-drift, sanc-blink;
+  animation-timing-function: ease-in-out, ease-in-out;
+  animation-iteration-count: infinite, infinite;
+  animation-direction: alternate, alternate;
+  opacity: 0.5;
+}
+.dark-mode .sanc-firefly, [data-ui-dark="true"] .sanc-firefly { opacity: 1; }
+@keyframes sanc-drift { from { transform: translate(0, 0); } to { transform: translate(var(--dx), var(--dy)); } }
+@keyframes sanc-blink { 0%, 40% { fill-opacity: 0.15; } 100% { fill-opacity: 1; } }
+
+/* Folhas (no formato das folhas da Árvore) e neve caindo */
+.sanc-fall { animation: sanc-fall linear infinite; }
+.sanc-fall.snow { fill: #ffffff; opacity: 0.9; }
+@keyframes sanc-fall {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  50% { transform: translate(var(--sway), calc(var(--fall) * 0.5)) rotate(160deg); }
+  90% { opacity: 1; }
+  100% { transform: translate(calc(var(--sway) * -0.4), var(--fall)) rotate(320deg); opacity: 0; }
+}
+
+/* Herói morando no cenário (HTML por cima do desenho) */
+.sanc-hero { position: absolute; z-index: 3; width: 0; height: 0; pointer-events: none; }
+.sanc-hero .vx-model {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  transform: translate(-50%, calc(var(--sanc-hero-size, 0.4) * -62px)) scale(var(--sanc-hero-size, 0.4));
+  transform-origin: 50% 100%;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.sanc-hero .vx-rot { transition: transform 0.18s ease-out; }
+.sanc-hero.walking .vx-scene { animation: sanc-walk 0.36s ease-in-out infinite alternate; }
+@keyframes sanc-walk { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+
+/* Painel Decorar */
+.sanc-panel { position: absolute; right: 18px; bottom: 84px; z-index: 6; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.sanc-toggle-btn {
+  border: 1px solid var(--line-strong, rgba(0, 0, 0, 0.2));
+  background: var(--surface, #fbf8f0);
+  color: var(--text, inherit);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: var(--window-shadow, 0 6px 18px rgba(0, 0, 0, 0.15));
+}
+.sanc-panel-body {
+  width: 270px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface, #fbf8f0);
+  border: 1px solid var(--line-strong, rgba(0, 0, 0, 0.2));
+  box-shadow: var(--window-shadow, 0 6px 18px rgba(0, 0, 0, 0.15));
+  color: var(--text, inherit);
+}
+.sanc-panel-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.sanc-panel-sub { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.7; margin: 10px 0 6px; }
+.sanc-panel-hint { margin-top: 12px; font-size: 12px; opacity: 0.8; }
+.sanc-panel-hint kbd { font-size: 11px; padding: 1px 5px; }
+.sanc-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sanc-chip {
+  border: 1px dashed var(--line-strong, rgba(0, 0, 0, 0.25));
+  background: transparent;
+  color: inherit;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.sanc-chip.on { border-style: solid; background: var(--wash-strong, rgba(0, 0, 0, 0.06)); opacity: 1; font-weight: 700; }
+.sanc-back-btn { margin-top: 10px; width: 100%; border: 0; background: none; color: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; opacity: 0.75; }
+@media (prefers-reduced-motion: reduce) {
+  .sanc-firefly, .sanc-fall, .sanc-flame-g, .sanc-lantern-sway, .sanc-water-line, .sanc-smoke, .sanc-hero.walking .vx-scene { animation: none; }
+}
+
+/* Lago afundado: terra escavada, barranco e água */
+.sanc-carve { fill: var(--bg); }
+.sanc-bank { fill: none; stroke: var(--ground-top); stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; }
+.sanc-water-edge { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
+.sanc-water-top { stroke: var(--ground-line); stroke-width: 1.6; stroke-linecap: round; opacity: 0.85; }
+.sanc-lake.frozen .sanc-water-top { stroke: #ffffff; }
+
+/* Tronco para sentar */
+.sanc-seat { stroke: var(--ink); stroke-width: 11; stroke-linecap: round; }
+
+/* Lápis: decorações arrastáveis pelo terreno */
+.workspace.is-editing .sanc-drag.editable { cursor: grab; }
+.workspace.is-editing .sanc-drag.editable:active { cursor: grabbing; }
+.workspace.is-editing .sanc-drag.editable:hover { filter: drop-shadow(0 0 6px var(--sanc-lantern)) drop-shadow(0 0 2px var(--sanc-lantern)); }
+.workspace.is-editing .sanc-drag.editable { animation: sanc-editable 1.6s ease-in-out infinite; }
+@keyframes sanc-editable { 0%, 100% { opacity: 1; } 50% { opacity: 0.82; } }
+.sanc-hero.is-editing { opacity: 0.45; }
+.sanc-hero.is-editing .vx-model { pointer-events: none; }
+.sanc-pencil {
+  margin-top: 12px;
+  width: 100%;
+  border: 1px solid var(--line-strong, rgba(0, 0, 0, 0.25));
+  background: transparent;
+  color: inherit;
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sanc-pencil.on { background: var(--sanc-lantern); color: #2a1d08; border-color: transparent; }
+.sanc-edit-hint {
+  pointer-events: none;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--sanc-lantern);
+  color: #2a1d08;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: var(--window-shadow, 0 6px 18px rgba(0, 0, 0, 0.15));
+}
+
+/* ---------- Ilha e mar ---------- */
+.sanc-sea-deep { fill: color-mix(in srgb, var(--foliage) 45%, #0b1620); }
+.sanc-sea { fill: color-mix(in srgb, var(--foliage) 55%, var(--bg)); opacity: 0.62; }
+.dark-mode .sanc-sea, [data-ui-dark="true"] .sanc-sea { fill: color-mix(in srgb, var(--foliage) 60%, #0b1620); opacity: 0.7; }
+.sanc-sea-line { stroke: var(--ground-line); stroke-width: 1.8; opacity: 0.8; }
+.sanc-wave {
+  fill: none;
+  stroke: var(--ground-line);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  animation: sanc-wave 9s ease-in-out infinite;
+}
+@keyframes sanc-wave { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(22px); } }
+
+/* Lanterna de poste */
+.sanc-post-pole { stroke: var(--ink); stroke-linecap: round; }
+
+/* Vagalumes: área para agarrar só aparece com o lápis */
+.sanc-swarm-handle { fill: transparent; stroke: none; pointer-events: none; }
+.workspace.is-editing .sanc-swarm-handle { pointer-events: all; stroke: var(--sanc-lantern); stroke-width: 1.2; stroke-dasharray: 4 5; opacity: 0.6; }
+
+/* Selecionado com o lápis */
+.workspace.is-editing .sanc-drag.selected { filter: drop-shadow(0 0 5px var(--sanc-lantern)) drop-shadow(0 0 1px var(--sanc-lantern)); animation: none; }
+
+/* Painel: adicionar, tamanho, remover */
+.sanc-panel-body { max-height: calc(100vh - 230px); overflow-y: auto; }
+.sanc-chip.add { opacity: 1; border-style: solid; }
+.sanc-chip.add:hover { background: var(--wash-strong, rgba(0, 0, 0, 0.06)); }
+.sanc-selected {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px dashed var(--line-strong, rgba(0, 0, 0, 0.25));
+}
+.sanc-selected-name { font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+.sanc-size { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; font-size: 12px; }
+.sanc-size input { width: 100%; accent-color: var(--sanc-lantern); }
+.sanc-remove {
+  margin-top: 8px;
+  border: 1px solid var(--line-strong, rgba(0, 0, 0, 0.25));
+  background: transparent;
+  color: inherit;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.sanc-remove:hover { background: rgba(200, 60, 60, 0.15); }
+.sanc-panel-hint.small { margin-top: 8px; font-size: 11px; }
+
+/* ---------- Layouts (Terra · Ilha voadora · Ilha com mar) ---------- */
+.sanc-hang { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; opacity: 0.85; }
+.sanc-land-handle { fill: transparent; stroke: none; pointer-events: none; }
+.workspace.is-editing .sanc-land-handle { pointer-events: all; stroke: var(--sanc-lantern); stroke-width: 1.4; stroke-dasharray: 6 5; fill: color-mix(in srgb, var(--sanc-lantern) 10%, transparent); }
+
+.sanc-layouts { width: 290px; }
+.sanc-slots { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.sanc-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 14px;
+  border: 2px solid var(--line-strong, rgba(0, 0, 0, 0.2));
+  background: var(--wash-strong, rgba(0, 0, 0, 0.05));
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.sanc-slot.picked { border-color: var(--sanc-lantern); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sanc-lantern) 30%, transparent); }
+.sanc-slot-name { font-size: 13px; font-weight: 700; }
+.sanc-slot-active {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #8fcf5a;
+  color: #10240a;
+  font-size: 11px;
+  font-weight: 800;
+}
+.sanc-preview { width: 100%; height: 84px; border-radius: 10px; background: color-mix(in srgb, var(--bg) 80%, var(--foliage)); display: block; }
+.sanc-preview .pv-ground { fill: var(--ground-top); }
+.sanc-preview .pv-sea { fill: color-mix(in srgb, var(--foliage) 60%, var(--bg)); }
+.sanc-preview .pv-tree { stroke: var(--ink); stroke-width: 26; stroke-linecap: round; }
+.sanc-preview .pv-tree.main { stroke-width: 36; }
+.sanc-preview .pv-canopy { fill: var(--foliage); }
+.sanc-preview .pv-lake { fill: color-mix(in srgb, var(--foliage) 55%, var(--bg)); }
+.sanc-preview .pv-tent { fill: var(--sanc-tent, #b98a4e); }
+.sanc-preview .pv-fire { fill: #d9793a; }
+.sanc-preview .pv-post { stroke: var(--sanc-lantern, #f2c46b); stroke-width: 14; }
+.sanc-slot-actions { display: flex; gap: 8px; margin-top: 12px; }
+.sanc-action {
+  flex: 1;
+  border: 1px solid var(--line-strong, rgba(0, 0, 0, 0.25));
+  background: transparent;
+  color: inherit;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sanc-action.edit { background: #8fcf5a; color: #10240a; border-color: transparent; }
+.sanc-action:disabled { opacity: 0.6; cursor: default; }
+.sanc-action.wide { width: 100%; margin-top: 10px; }
+.sanc-decor-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 700; }
+.sanc-link { border: 0; background: none; color: inherit; font-weight: 700; cursor: pointer; padding: 0; text-decoration: underline; }
+
+/* ---------- Fundo em camadas (silhuetas escuras, paralaxe) ---------- */
+.sanc-bg { --bgc: color-mix(in srgb, var(--ink) 72%, var(--bg)); }
+.sanc-bg.l2 { --bgc: color-mix(in srgb, var(--ink) 52%, var(--bg)); }
+.sanc-bg.l3 { --bgc: color-mix(in srgb, var(--ink) 34%, var(--bg)); }
+.dark-mode .sanc-bg, [data-ui-dark="true"] .sanc-bg { --bgc: color-mix(in srgb, #000 55%, var(--bg)); }
+.dark-mode .sanc-bg.l2, [data-ui-dark="true"] .sanc-bg.l2 { --bgc: color-mix(in srgb, #000 35%, var(--bg)); }
+.dark-mode .sanc-bg.l3, [data-ui-dark="true"] .sanc-bg.l3 { --bgc: color-mix(in srgb, #000 18%, var(--bg)); }
+.workspace.is-sanctuary .sanc-bg .blob circle,
+.workspace.is-sanctuary .sanc-bg .blob.is-main circle,
+.workspace.is-sanctuary .sanc-bg .blob.is-sub circle { fill: var(--bgc); }
+.sanc-bg .trunk, .sanc-bg .ink-fill, .sanc-bg-body, .sanc-bg-hill { fill: var(--bgc); stroke: none; }
+.sanc-bg .branch-line { stroke: var(--bgc); }
+.sanc-bg .ink-grain, .sanc-bg .knot, .sanc-bg [fill="url(#grain-light)"] { display: none; }
+.sanc-bg .canopy { filter: none; }
+
+/* Bolinha de aleatorizar (aparece ao clicar numa árvore) */
+.sanc-poke { cursor: pointer; animation: sanc-poke-in 0.18s ease-out; }
+.sanc-poke circle { fill: var(--surface, #fbf8f0); stroke: var(--sanc-lantern, #f2c46b); stroke-width: 4; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35)); }
+.sanc-poke text { font-size: 30px; pointer-events: none; }
+.sanc-poke:hover circle { fill: var(--sanc-lantern, #f2c46b); }
+@keyframes sanc-poke-in { from { opacity: 0; transform-origin: center; } to { opacity: 1; } }
+
+/* Barraca: bandeirinha (vira junto) */
+.sanc-flag { fill: #c0504d; stroke: var(--ink); stroke-width: 0.8; }
+
+/* Painel: camada e ações do item */
+.sanc-layer-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; flex-wrap: wrap; }
+.sanc-item-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ---------- Modo galhos (árvore principal) ---------- */
+.sanc-branch-handle { cursor: grab; }
+.sanc-branch-handle .hit { fill: transparent; }
+.sanc-branch-handle .dot {
+  fill: var(--surface, #fbf8f0);
+  stroke: var(--sanc-lantern, #f2c46b);
+  stroke-width: 3;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+  transition: r 0.15s ease;
+}
+.sanc-branch-handle.sub .dot { stroke-width: 2.4; }
+.sanc-branch-handle:hover .dot { fill: color-mix(in srgb, var(--sanc-lantern, #f2c46b) 45%, var(--surface, #fff)); }
+.sanc-branch-handle.selected .dot { fill: var(--sanc-lantern, #f2c46b); stroke: var(--ink); }
+
+.sanc-branch-bar {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 7;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  max-width: calc(100% - 150px);
+  padding: 6px 10px;
+  border-radius: 16px;
+  background: var(--surface, #fbf8f0);
+  border: 1px solid var(--line-strong, rgba(0, 0, 0, 0.2));
+  box-shadow: var(--window-shadow, 0 6px 18px rgba(0, 0, 0, 0.15));
+  color: var(--text, inherit);
+  font-size: 13px;
+}
+.sanc-branch-title { font-weight: 800; margin-right: 4px; }
+.sanc-branch-bar button {
+  border: 1px solid var(--line-strong, rgba(0, 0, 0, 0.25));
+  background: transparent;
+  color: inherit;
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sanc-branch-bar button:hover:not(:disabled) { background: var(--wash-strong, rgba(0, 0, 0, 0.06)); }
+.sanc-branch-bar button:disabled { opacity: 0.4; cursor: default; }
+.sanc-branch-bar button.done { background: #8fcf5a; color: #10240a; border-color: transparent; }
+.sanc-branch-hint { display: none; }
+
+/* ---------- Baixador de layout ---------- */
+.sanc-transfer {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px dashed var(--line-strong, rgba(0, 0, 0, 0.25));
+  font-size: 12px;
+  font-weight: 700;
+}
+.sanc-transfer-row { display: flex; gap: 8px; margin-top: 8px; }
+.sanc-transfer-row .sanc-action { text-align: center; }
+label.sanc-action { display: inline-flex; align-items: center; justify-content: center; }

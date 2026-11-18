@@ -8,6 +8,8 @@ import EditorPane from './Editor.jsx';
 import { plainText, tagColor, useNeuronios } from './store.js';
 import { useUiTheme } from '../../shared/uiTheme.js';
 import { registerModeActions } from '../../shared/modeBridge.js';
+// mesmos sons do Santuário (respeitam "Efeitos sonoros" nas Configurações)
+import { sfx } from '../arvore/lib/sound.js';
 
 const isTyping = (el) =>
   el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
@@ -61,6 +63,7 @@ export default function Neuronios() {
 
   // ---------- Abrir / fechar ----------
   const open = useCallback((id, newTab = true) => {
+    sfx.play('open');
     setOpenIds((ids) => {
       if (ids.includes(id)) return ids;
       if (!newTab && ids.length > 0) {
@@ -77,6 +80,7 @@ export default function Neuronios() {
   });
 
   const closeTab = useCallback((id) => {
+    sfx.play('close');
     setOpenIds((ids) => {
       const i = ids.indexOf(id);
       const next = ids.filter((x) => x !== id);
@@ -90,6 +94,7 @@ export default function Neuronios() {
     (fields = {}) => {
       const tagsFromFilter = selectedTags.length ? [...selectedTags] : [];
       const note = store.addNote({ tags: tagsFromFilter, ...fields });
+      sfx.play('grow');
       open(note.id, true);
       // Foca no título para já digitar o nome
       setTimeout(() => {
@@ -110,6 +115,7 @@ export default function Neuronios() {
   const deleteNeuron = useCallback(
     (note) => {
       store.deleteNote(note.id);
+      sfx.play('delete');
       closeTab(note.id);
       setToast({ text: `“${note.title}” excluído`, note, id: Date.now() });
     },
@@ -123,6 +129,7 @@ export default function Neuronios() {
       const list = ids.map((id) => notesById.get(id)).filter(Boolean);
       if (!list.length) return;
       store.deleteNotes(list.map((n) => n.id));
+      sfx.play('delete');
       list.forEach((n) => closeTab(n.id));
       setToast({
         text: list.length === 1 ? `“${list[0].title}” excluído` : `${list.length} neurônios excluídos`,
@@ -141,6 +148,7 @@ export default function Neuronios() {
 
   // ---------- Filtros ----------
   const toggleTag = (tag) => {
+    sfx.play('tick');
     const next = selectedTags.includes(tag) ? selectedTags.filter((t) => t !== tag) : [...selectedTags, tag];
     setView({ tags: next });
   };
@@ -343,6 +351,7 @@ export default function Neuronios() {
                 className="link-button"
                 onClick={() => {
                   store.restoreNotes(toast.notes);
+                  sfx.play('save');
                   setToast(null);
                 }}
               >
@@ -355,6 +364,7 @@ export default function Neuronios() {
                 className="link-button"
                 onClick={() => {
                   store.restoreNote(toast.note);
+                  sfx.play('save');
                   open(toast.note.id, true);
                   setToast(null);
                 }}

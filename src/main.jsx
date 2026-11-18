@@ -16,11 +16,13 @@ import './shared/modeThemes.css'
 import { installNanquimInline } from './shared/nanquimInline.js'
 installNanquimInline()
 import { LanguageProvider } from './atualizacao2_0/UpIdioma.jsx'
+import Splash from './shared/Splash.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <LanguageProvider>
       <ModeRoot />
+      <Splash />
     </LanguageProvider>
   </StrictMode>,
 )

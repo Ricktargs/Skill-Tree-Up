@@ -1,0 +1,127 @@
+/* =========================================================
+   ABERTURA DO ORBE-G — limpa, fundo branco e letras fortes
+   (no espírito das aberturas de estúdio de jogos)
+   Linha do tempo (2,5 s):
+   0,00–0,90  palavras aparecem uma a uma
+   1,00–1,45  o resto de cada palavra some, as iniciais se juntam
+   1,30–1,80  o hífen entra e a sigla cresce em destaque
+   1,70       a frase aparece pequena embaixo
+   2,20–2,50  tudo some
+========================================================= */
+.orbe-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+  cursor: pointer;
+  animation: orbe-out 0.3s ease-in 2.2s forwards;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.orbe-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 0 16px;
+}
+
+.orbe-logo {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: nowrap;
+  font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 800;
+  font-size: clamp(18px, 3.6vw, 34px);
+  letter-spacing: 0.01em;
+  color: #1d1d1f;
+  white-space: nowrap;
+  transform-origin: 50% 60%;
+  animation: orbe-grow 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) 1.32s forwards;
+}
+
+/* cada palavra aparece escrita, uma depois da outra */
+.orbe-word {
+  display: inline-flex;
+  align-items: baseline;
+  margin-right: 0.38em;
+  opacity: 0;
+  transform: translateY(10px);
+  animation:
+    orbe-in 0.3s ease-out calc(0.08s + var(--i) * 0.14s) forwards,
+    orbe-close 0.42s cubic-bezier(0.65, 0, 0.35, 1) 1.02s forwards;
+}
+.orbe-word:last-child { margin-right: 0; }
+
+/* a inicial fica; o resto encolhe até sumir */
+.orbe-ini {
+  display: inline-block;
+  animation: orbe-ini 0.35s ease 1s forwards;
+}
+.orbe-rest {
+  display: inline-block;
+  overflow: hidden;
+  max-width: 9em;
+  vertical-align: bottom;
+  animation: orbe-collapse 0.42s cubic-bezier(0.65, 0, 0.35, 1) 1.02s forwards;
+}
+
+/* ORBE-G: o hífen entra antes do G */
+.orbe-dash {
+  display: inline-block;
+  overflow: hidden;
+  max-width: 0;
+  opacity: 0;
+  color: #e8384f;
+  animation: orbe-dash 0.3s ease-out 1.3s forwards;
+}
+
+.orbe-tag {
+  font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: clamp(10px, 1.4vw, 13px);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 30px; /* espaço para a sigla, que cresce */
+  color: #8a8a8f;
+  opacity: 0;
+  animation: orbe-fade 0.4s ease 1.7s forwards;
+  text-align: center;
+}
+
+@keyframes orbe-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes orbe-close {
+  from { margin-right: 0.38em; }
+  to { margin-right: 0; }
+}
+@keyframes orbe-collapse {
+  0% { max-width: 9em; opacity: 1; }
+  60% { opacity: 0; }
+  100% { max-width: 0; opacity: 0; }
+}
+@keyframes orbe-ini {
+  to { color: #e8384f; }
+}
+@keyframes orbe-dash {
+  to { max-width: 0.7em; opacity: 1; }
+}
+@keyframes orbe-grow {
+  0% { transform: scale(1); letter-spacing: 0.01em; }
+  100% { transform: scale(2.3); letter-spacing: 0.04em; }
+}
+@keyframes orbe-fade {
+  to { opacity: 1; }
+}
+@keyframes orbe-out {
+  to { opacity: 0; visibility: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbe-splash { animation-duration: 0.01s; }
+}
