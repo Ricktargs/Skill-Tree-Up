@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { registerModeActions } from './shared/modeBridge.js';
-import { isSkillsMode, useMode } from './modes/modeState.js';
+import { isSkillsMode, setMode, useMode } from './modes/modeState.js';
 import { useUiTheme, toggleDark } from './shared/uiTheme.js';
 import { tx } from './i18n/index.jsx';
 import { useGameData, PRESET_DECKS, getXpNeededForLevel, getGameDayKey } from './hooks/useGameData';
@@ -240,6 +240,26 @@ export default function App() {
   useEffect(
     () => registerModeActions('heroXp', { grant: (xp, title, category) => grantXpRef.current(xp, title, category) }),
     []
+  );
+  // Neurônios e galhos da Árvore podem se ligar a uma habilidade
+  const skillsRef = useRef(skills);
+  useEffect(() => {
+    skillsRef.current = skills;
+  });
+  const skillsListKey = (skills || []).map((s) => `${s.id}:${s.title}:${s.color || ''}`).join('|');
+  useEffect(
+    () =>
+      registerModeActions('skills', {
+        list: (skillsRef.current || []).map((s) => ({ id: s.id, title: s.title || s.name || 'Habilidade', color: s.color || '#7d9bb8', category: s.category || '' })),
+        open: (id) => {
+          const skill = (skillsRef.current || []).find((s) => s.id === id);
+          if (!skill) return;
+          setMode('skills');
+          setEditingSkill({ ...skill });
+        }
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [skillsListKey]
   );
   // Temas favoritos (botão direito num tema), salvos por perfil
   const [favoriteThemes, setFavoriteThemes] = useProfileStoredState('rpg_favorite_themes_v1', activeProfileId, []);

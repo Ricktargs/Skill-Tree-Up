@@ -52,6 +52,23 @@ export const escapeHtml = (s) =>
 export const wikilinkHtml = (note) =>
   `<a class="wikilink" data-id="${escapeHtml(note.id)}" contenteditable="false">${escapeHtml(note.title || 'Sem título')}</a>`;
 
+// +Pag: página de texto dentro de um neurônio (não aparece no mapa)
+export const pagelinkHtml = (page) =>
+  `<a class="pagelink" data-page="${escapeHtml(page.id)}" contenteditable="false">${escapeHtml(page.title || 'Página sem título')}</a>`;
+
+// Ids de páginas citadas num texto
+export const pagesIn = (html) => {
+  const out = new Set();
+  const re = /data-page="([^"]+)"/g;
+  let m;
+  while ((m = re.exec(html || ''))) out.add(m[1]);
+  return [...out];
+};
+
+// Texto do neurônio + das páginas dele (as ligações [[ ]] das páginas contam no mapa)
+export const fullContent = (note) =>
+  [note.content || '', ...Object.values(note.pages || {}).map((p) => p.content || '')].join('\n');
+
 // Mantém as ligações e checklists, remove o perigoso
 export const cleanHtml = (html) => sanitizeHtml(html);
 
@@ -124,6 +141,10 @@ export function useNeuronios() {
 
   const notes = data.notes;
   const byId = useMemo(() => new Map(notes.map((n) => [n.id, n])), [notes]);
+  const notesRef = useRef(notes);
+  useEffect(() => {
+    notesRef.current = notes;
+  });
 
   const addNote = useCallback((fields = {}) => {
     const now = new Date().toISOString();
@@ -167,6 +188,85 @@ export function useNeuronios() {
     return removed;
   }, []);
 
+  // ---------- Páginas (+Pag) ----------
+  const addPage = useCallback((noteId, fields = {}) => {
+    const now = new Date().toISOString();
+    const page = {
+      id: `pg_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+      title: (fields.title || '').trim() || 'Nova página',
+      content: fields.content || '',
+      createdAt: now,
+      updatedAt: now
+    };
+    setData((d) => ({
+      ...d,
+      notes: d.notes.map((n) => (n.id === noteId ? { ...n, pages: { ...(n.pages || {}), [page.id]: page }, updatedAt: now } : n))
+    }));
+    return page;
+  }, []);
+
+  const updatePage = useCallback((noteId, pageId, fields) => {
+    const now = new Date().toISOString();
+    setData((d) => ({
+      ...d,
+      notes: d.notes.map((n) => {
+        if (n.id !== noteId || !n.pages || !n.pages[pageId]) return n;
+        return { ...n, updatedAt: now, pages: { ...n.pages, [pageId]: { ...n.pages[pageId], ...fields, updatedAt: now } } };
+      })
+    }));
+  }, []);
+
+  /**
+   * Ligar uma página com [[ ]]: ela vira um neurônio de verdade (aparece no
+   * mapa). Leva junto as páginas que estão dentro dela, e as marcas +Pag que
+   * apontavam para ela viram ligações [[ ]].
+   */
+  const promotePage = useCallback((noteId, pageId) => {
+    const owner = notesRef.current.find((n) => n.id === noteId);
+    const page = owner && owner.pages && owner.pages[pageId];
+    if (!page) return null;
+    // páginas dentro da página (em qualquer profundidade) vão junto
+    const moved = new Set();
+    const walk = (html) =>
+      pagesIn(html).forEach((pid) => {
+        if (pid === pageId || moved.has(pid) || !owner.pages[pid]) return;
+        moved.add(pid);
+        walk(owner.pages[pid].content);
+      });
+    walk(page.content);
+    const now = new Date().toISOString();
+    const neuron = {
+      id: uid(),
+      title: page.title || 'Nova página',
+      tags: [],
+      content: page.content || '',
+      pages: Object.fromEntries([...moved].map((pid) => [pid, owner.pages[pid]])),
+      color: TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)],
+      createdAt: page.createdAt || now,
+      updatedAt: now,
+      x: typeof owner.x === 'number' ? owner.x + 90 : undefined,
+      y: typeof owner.y === 'number' ? owner.y + 40 : undefined
+    };
+    const re = new RegExp(`<a\\b[^>]*data-page="${pageId}"[^>]*>[\\s\\S]*?</a>`, 'g');
+    const swap = (html) => (html || '').replace(re, wikilinkHtml(neuron));
+    setData((d) => ({
+      ...d,
+      notes: [
+        ...d.notes.map((n) => {
+          if (n.id !== noteId) return n;
+          const pages = {};
+          Object.values(n.pages || {}).forEach((p) => {
+            if (p.id === pageId || moved.has(p.id)) return;
+            pages[p.id] = { ...p, content: swap(p.content) };
+          });
+          return { ...n, content: swap(n.content), pages, promoted: { ...(n.promoted || {}), [pageId]: neuron.id }, updatedAt: now };
+        }),
+        neuron
+      ]
+    }));
+    return neuron;
+  }, []);
+
   // Exclui vários de uma vez (seleção no mapa); devolve os excluídos
   const deleteNotes = useCallback((ids) => {
     const set = new Set(ids);
@@ -206,7 +306,7 @@ export function useNeuronios() {
     const list = [];
     const back = new Map();
     notes.forEach((n) => {
-      linksIn(n.content).forEach((target) => {
+      linksIn(fullContent(n)).forEach((target) => {
         if (!byId.has(target) || target === n.id) return;
         if (!back.has(target)) back.set(target, new Set());
         back.get(target).add(n.id);
@@ -232,6 +332,9 @@ export function useNeuronios() {
     savePositions,
     deleteNote,
     deleteNotes,
+    addPage,
+    updatePage,
+    promotePage,
     restoreNote,
     restoreNotes,
     setView

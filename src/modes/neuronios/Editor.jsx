@@ -1,11 +1,14 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ask } from '../../shared/Dialog.jsx';
-import { cleanHtml, escapeHtml, linksIn, normalizeTag, plainText, tagColor, wikilinkHtml } from './store.js';
+import SkillLink from '../../shared/SkillLink.jsx';
+import { cleanHtml, escapeHtml, linksIn, normalizeTag, pagelinkHtml, plainText, tagColor, wikilinkHtml } from './store.js';
 
 // =========================================================
 // EDITOR DO NEURÔNIO (fica ao lado do mapa)
 // Abas · título · tags · barra de formatação · [[ligações]]
 // Atalhos de escrita: "# ", "## ", "### ", "- ", "1. ", "> ", "[] "
+// +Pag cria uma página dentro do neurônio: um texto dentro do texto,
+// que abre numa janela dentro da janela (e pode ter páginas dentro dela)
 // =========================================================
 
 const BLOCKS = [
@@ -16,6 +19,12 @@ const BLOCKS = [
   ['blockquote', 'Citação'],
   ['pre', 'Bloco de código']
 ];
+
+// O que foi digitado logo antes do cursor abre a lista de sugestões
+const TRIGGERS = {
+  page: /\+pag(?:[ \u00a0]([^\n+]{0,40}))?$/i,
+  link: /\[\[([^\]\n[]{0,40})$/
+};
 
 const timeAgo = (iso) => {
   if (!iso) return '';
@@ -89,7 +98,12 @@ export default function EditorPane({ store, openIds, activeId, onActivate, onClo
   );
 }
 
-function NeuronEditor({ note, store, onOpen, onDelete }) {
+function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClosePage, depth = 0 }) {
+  // Numa página (+Pag), o texto editado é o da página; o "dono" continua sendo o neurônio
+  const doc = page || note;
+  const pages = note.pages || {};
+  const update = (fields) => (page ? store.updatePage(note.id, page.id, fields) : store.updateNote(note.id, fields));
+  const [openPage, setOpenPage] = useState(null);
   const editorRef = useRef(null);
   const saveTimer = useRef(null);
   const [tagDraft, setTagDraft] = useState('');
@@ -103,7 +117,7 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
   useLayoutEffect(() => {
     const el = editorRef.current;
     if (!el) return;
-    el.innerHTML = note.content || '';
+    el.innerHTML = doc.content || '';
     // Ligações mostram o título atual do neurônio citado
     el.querySelectorAll('a.wikilink').forEach((a) => {
       a.setAttribute('contenteditable', 'false');
@@ -111,8 +125,36 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
       if (target) a.textContent = target.title || 'Sem título';
       a.classList.toggle('broken', !target);
     });
+    syncPagelinks(el);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [note.id]);
+  }, [doc.id]);
+
+  // Marcas +Pag: nome atual da página; as que viraram neurônio ([[ ]]) viram ligação
+  const syncPagelinks = (el) => {
+    let changed = false;
+    el.querySelectorAll('a.pagelink').forEach((a) => {
+      a.setAttribute('contenteditable', 'false');
+      const pid = a.dataset.page;
+      const promotedTo = note.promoted && note.promoted[pid];
+      const target = promotedTo && store.byId.get(promotedTo);
+      if (!pages[pid] && target) {
+        a.outerHTML = wikilinkHtml(target);
+        changed = true;
+        return;
+      }
+      if (pages[pid]) a.textContent = pages[pid].title || 'Página sem título';
+      a.classList.toggle('broken', !pages[pid]);
+    });
+    return changed;
+  };
+  const pagesKey = Object.values(pages)
+    .map((p) => `${p.id}:${p.title}`)
+    .join('|');
+  useEffect(() => {
+    const el = editorRef.current;
+    if (el && syncPagelinks(el)) save();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagesKey]);
 
   // "Editado há X" se atualiza sozinho
   useEffect(() => {
@@ -126,7 +168,7 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
       if (saveTimer.current) {
         clearTimeout(saveTimer.current);
         const el = editorRef.current;
-        if (el) store.updateNote(note.id, { content: cleanHtml(el.innerHTML) });
+        if (el) update({ content: cleanHtml(el.innerHTML) });
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,7 +180,7 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
     saveTimer.current = setTimeout(() => {
       saveTimer.current = null;
       const el = editorRef.current;
-      if (el) store.updateNote(note.id, { content: cleanHtml(el.innerHTML) });
+      if (el) update({ content: cleanHtml(el.innerHTML) });
     }, 350);
   };
 
@@ -212,10 +254,17 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
   const matches = useMemo(() => {
     if (!suggest) return [];
     const q = suggest.query.trim().toLowerCase();
-    return store.notes
-      .filter((n) => n.id !== note.id && (!q || (n.title || '').toLowerCase().includes(q)))
-      .slice(0, 8);
-  }, [suggest, store.notes, note.id]);
+    const has = (t) => !q || (t || '').toLowerCase().includes(q);
+    // páginas deste neurônio (menos a que está aberta)
+    const pageItems = Object.values(pages)
+      .filter((p) => p.id !== page?.id && has(p.title))
+      .map((p) => ({ ...p, kind: 'page' }));
+    if (suggest.kind === 'page') return pageItems.slice(0, 8);
+    const neurons = store.notes.filter((n) => n.id !== note.id && has(n.title)).slice(0, 8);
+    // [[ numa página: ela vira neurônio
+    return [...neurons, ...pageItems.slice(0, 4)];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggest, store.notes, note.id, pagesKey, page?.id]);
 
   const detectSuggest = () => {
     const sel = window.getSelection();
@@ -223,36 +272,62 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
     const node = sel.anchorNode;
     if (!node || node.nodeType !== 3) return setSuggest(null);
     const before = node.textContent.slice(0, sel.anchorOffset);
-    const m = before.match(/\[\[([^\]\n[]{0,40})$/);
-    if (!m) return setSuggest(null);
+    const kind = TRIGGERS.page.test(before) ? 'page' : TRIGGERS.link.test(before) ? 'link' : null;
+    if (!kind) return setSuggest(null);
+    const m = before.match(TRIGGERS[kind]);
+    const query = m[1] || '';
     const rect = sel.getRangeAt(0).getBoundingClientRect();
     const host = editorRef.current.closest('.nr-editor').getBoundingClientRect();
     // Perto do fim do painel, a lista abre para cima
     const up = rect.bottom + 260 > host.bottom;
     setSuggest((s) => ({
-      query: m[1],
+      kind,
+      query,
       x: Math.min(rect.left - host.left, host.width - 240),
       y: up ? rect.top - host.top - 4 : rect.bottom - host.top + 4,
       up,
-      index: s && s.query === m[1] ? s.index : 0
+      index: s && s.query === query && s.kind === kind ? s.index : 0
     }));
     return undefined;
   };
 
   const chooseSuggestion = (target) => {
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
+    if (!sel || sel.rangeCount === 0 || !suggest) return;
     const node = sel.anchorNode;
     const offset = sel.anchorOffset;
     const before = node.textContent.slice(0, offset);
-    const m = before.match(/\[\[([^\]\n[]{0,40})$/);
+    const m = before.match(TRIGGERS[suggest.kind]);
     if (!m) return;
+    const query = (m[1] || '').trim();
     const range = document.createRange();
     range.setStart(node, offset - m[0].length);
     range.setEnd(node, offset);
     sel.removeAllRanges();
     sel.addRange(range);
-    const linked = target || store.addNote({ title: m[1].trim() || 'Novo neurônio', tags: [] });
+
+    if (suggest.kind === 'page') {
+      // +Pag: página nova (ou uma que já existe) e abre ela por cima
+      const pg = target || store.addPage(note.id, { title: query || 'Nova página' });
+      document.execCommand('insertHTML', false, `${pagelinkHtml(pg)}&nbsp;`);
+      setSuggest(null);
+      save();
+      setOpenPage(pg.id);
+      return;
+    }
+
+    let linked = target;
+    if (target && target.kind === 'page') {
+      // [[ numa página: ela sai daqui de dentro e vira um neurônio no mapa
+      linked = store.promotePage(note.id, target.id);
+      if (editorRef.current) {
+        editorRef.current.querySelectorAll(`a.pagelink[data-page="${target.id}"]`).forEach((a) => {
+          a.outerHTML = wikilinkHtml(linked);
+        });
+      }
+      if (openPage === target.id) setOpenPage(null);
+    }
+    if (!linked) linked = store.addNote({ title: query || 'Novo neurônio', tags: [] });
     document.execCommand('insertHTML', false, `${wikilinkHtml(linked)}&nbsp;`);
     setSuggest(null);
     save();
@@ -306,6 +381,13 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
         setSuggest(null);
         return;
       }
+    }
+
+    if (e.key === 'Escape' && page && onClosePage) {
+      e.preventDefault();
+      e.stopPropagation();
+      onClosePage();
+      return;
     }
 
     const mod = e.ctrlKey || e.metaKey;
@@ -381,6 +463,12 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
   };
 
   const onEditorClick = (e) => {
+    const pl = e.target.closest('a.pagelink');
+    if (pl) {
+      e.preventDefault();
+      if (pages[pl.dataset.page]) setOpenPage(pl.dataset.page);
+      return;
+    }
     const wl = e.target.closest('a.wikilink');
     if (wl) {
       e.preventDefault();
@@ -431,21 +519,32 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
   const removeTag = (t) => store.updateNote(note.id, { tags: (note.tags || []).filter((x) => x !== t) });
 
   // ---------- Rodapé ----------
-  const text = plainText(note.content);
+  const text = plainText(doc.content);
   const words = text ? text.split(/\s+/).length : 0;
+  const pageList = Object.values(pages);
   const outgoing = linksIn(note.content).filter((id) => store.byId.has(id));
   const incoming = [...(store.backlinks.get(note.id) || [])];
   const tagSuggestions = store.tags.map((t) => t.tag).filter((t) => !(note.tags || []).includes(t));
 
   return (
-    <div className="nr-editor">
+    <div className={`nr-editor ${page ? 'is-page' : ''}`}>
+      {page && (
+        <div className="nr-page-bar">
+          <span>
+            📄 Página dentro de “{note.title || 'Sem título'}”
+          </span>
+          <button type="button" className="nr-page-close" onClick={onClosePage} title="Fechar página (Esc)" aria-label="Fechar página">
+            ×
+          </button>
+        </div>
+      )}
       <div className="nr-note-head">
         <input
           className="title-input nr-title"
-          value={note.title}
-          placeholder="Título do neurônio"
+          value={doc.title}
+          placeholder={page ? 'Título da página' : 'Título do neurônio'}
           maxLength={120}
-          onChange={(e) => store.updateNote(note.id, { title: e.target.value })}
+          onChange={(e) => update({ title: e.target.value })}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
@@ -453,6 +552,7 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
             }
           }}
         />
+        {!page && (
         <div className="nr-note-actions">
           <button
             type="button"
@@ -471,9 +571,11 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
             🗑
           </button>
         </div>
+        )}
       </div>
 
       {/* Tags */}
+      {!page && (
       <div className="nr-tags-row">
         {(note.tags || []).map((t) => (
           <span key={t} className="nr-tag" style={{ '--tag': tagColor(t) }}>
@@ -508,7 +610,10 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
             <option key={t} value={t} />
           ))}
         </datalist>
+        {/* Ligação com uma habilidade, ao lado das tags */}
+        <SkillLink value={note.skillId || null} onChange={(skillId) => store.updateNote(note.id, { skillId: skillId || null })} />
       </div>
+      )}
 
       {/* Barra de formatação */}
       <div className="editor-wrap nr-editor-wrap">
@@ -616,7 +721,7 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
           contentEditable
           suppressContentEditableWarning
           spellCheck
-          data-placeholder="Escreva aqui… use [[ para ligar a outro neurônio"
+          data-placeholder={page ? 'Escreva a página… use +Pag para outra página dentro dela' : 'Escreva aqui… use [[ para ligar a outro neurônio, +Pag para criar uma página'}
           onInput={(e) => {
             const ne = e.nativeEvent;
             if (ne && ne.inputType === 'insertText' && ne.data && ne.data.endsWith(' ')) markdownShortcut();
@@ -637,16 +742,18 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
           <div className="menu nr-suggest" style={{ left: Math.max(8, suggest.x), top: suggest.y, transform: suggest.up ? 'translateY(-100%)' : undefined }}>
             {matches.map((n, i) => (
               <button
-                key={n.id}
+                key={`${n.kind || 'n'}-${n.id}`}
                 type="button"
-                className={i === suggest.index ? 'active' : ''}
+                className={`${i === suggest.index ? 'active' : ''} ${n.kind === 'page' ? 'is-page' : ''}`}
                 onMouseDown={(e) => {
                   e.preventDefault();
                   chooseSuggestion(n);
                 }}
+                title={n.kind === 'page' && suggest.kind === 'link' ? 'Ligar com [[ ]] transforma esta página num neurônio' : undefined}
               >
-                <i style={{ background: n.tags?.[0] ? tagColor(n.tags[0]) : 'var(--foliage)' }} />
+                {n.kind === 'page' ? <span className="nr-suggest-page">📄</span> : <i style={{ background: n.color || (n.tags?.[0] ? tagColor(n.tags[0]) : 'var(--foliage)') }} />}
                 {n.title}
+                {n.kind === 'page' && suggest.kind === 'link' && <small> · vira neurônio</small>}
               </button>
             ))}
             <button
@@ -657,13 +764,27 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
                 chooseSuggestion(null);
               }}
             >
-              ＋ Criar “{suggest.query.trim() || 'Novo neurônio'}”
+              {suggest.kind === 'page'
+                ? `＋ Criar página “${suggest.query.trim() || 'Nova página'}”`
+                : `＋ Criar “${suggest.query.trim() || 'Novo neurônio'}”`}
             </button>
           </div>
         )}
 
       {/* Ligações e dados */}
       <div className="nr-footer">
+        {!page && pageList.length > 0 && (
+          <div className="nr-links">
+            <span className="nr-links-title">Páginas ({pageList.length})</span>
+            {pageList.map((p) => (
+              <button key={p.id} type="button" className="nr-link-chip is-page" onClick={() => setOpenPage(p.id)}>
+                📄 {p.title || 'Página sem título'}
+              </button>
+            ))}
+          </div>
+        )}
+        {!page && (
+        <>
         <div className="nr-links">
           <span className="nr-links-title">Mencionado em ({incoming.length})</span>
           {incoming.length === 0 && <span className="muted small">Nenhum neurônio cita este ainda.</span>}
@@ -683,10 +804,31 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
             ))}
           </div>
         )}
+        </>
+        )}
         <div className="nr-meta small muted">
-          {words} {words === 1 ? 'palavra' : 'palavras'} · {text.length} caracteres · editado {timeAgo(note.updatedAt)}
+          {words} {words === 1 ? 'palavra' : 'palavras'} · {text.length} caracteres · editado {timeAgo(doc.updatedAt)}
         </div>
       </div>
+
+      {/* Página aberta: uma janela dentro desta janela */}
+      {openPage && pages[openPage] && (
+        <div className="nr-page-window" style={{ '--depth': depth + 1 }}>
+          <NeuronEditor
+            key={openPage}
+            note={note}
+            store={store}
+            onOpen={onOpen}
+            onDelete={onDelete}
+            page={pages[openPage]}
+            depth={depth + 1}
+            onClosePage={() => {
+              setOpenPage(null);
+              setTimeout(() => editorRef.current?.focus(), 0);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -5,7 +5,8 @@ import RecordCard from "./RecordCard";
 import NoteForm from "./NoteForm";
 import { useArvore, useUi } from "../state/contexts";
 import { ROOT_ID, PASTEL_COLORS, pointsForType } from "../lib/constants";
-import { findBranch, findParentBranch, getDepth } from "../lib/tree";
+import { findBranch, findParentBranch, getDepth, setBranchSkill } from "../lib/tree";
+import SkillLink from "../../../shared/SkillLink.jsx";
 import {
   getLevelItems,
   getItemName,
@@ -282,6 +283,16 @@ function BranchPanelBody({ branchId, initialPath, onNavigate, onClose }) {
           </>
         )}
       </div>
+
+      {/* Ligação com uma habilidade (só galhos e subgalhos, não pastas) */}
+      {levelIsBranch && levelId !== ROOT_ID && (
+        <div className="panel-skill">
+          <SkillLink
+            value={findBranch(tree, levelId)?.skillId || null}
+            onChange={(skillId) => commit((d) => ({ ...d, tree: setBranchSkill(d.tree, levelId, skillId) }))}
+          />
+        </div>
+      )}
 
       <div className="panel-count">
         {levelRecords.length} {levelRecords.length === 1 ? "nota" : "notas"}

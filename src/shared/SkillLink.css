@@ -1,0 +1,74 @@
+/* Ligação com uma habilidade (Neurônios e galhos da Árvore) */
+.skill-link-chip,
+.skill-link-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 26px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  max-width: 220px;
+}
+
+.skill-link-chip {
+  border: 1px solid color-mix(in srgb, var(--skill) 70%, transparent);
+  background: color-mix(in srgb, var(--skill) 18%, transparent);
+  color: inherit;
+  padding: 0 4px 0 2px;
+}
+.skill-link-chip.missing { opacity: 0.6; border-style: dashed; }
+
+.skill-link-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  padding: 0 4px 0 6px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.skill-link-open:disabled { cursor: default; }
+.skill-link-open:not(:disabled):hover { text-decoration: underline; }
+.skill-link-open i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--skill);
+  flex: none;
+}
+
+.skill-link-remove {
+  border: 0;
+  background: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+}
+.skill-link-remove:hover { opacity: 1; }
+
+.skill-link-add {
+  position: relative;
+  padding: 0 10px;
+  border: 1px dashed currentColor;
+  opacity: 0.65;
+  cursor: pointer;
+}
+.skill-link-add:hover { opacity: 1; }
+/* O select fica invisível por cima: abre a lista nativa ao clicar */
+.skill-link-add select {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+}
+.skill-link-add select:disabled { cursor: not-allowed; }

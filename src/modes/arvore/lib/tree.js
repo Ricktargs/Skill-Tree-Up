@@ -95,6 +95,16 @@ export function renameBranch(tree, id, name) {
   return next;
 }
 
+/** Liga (ou desliga, com null) um galho a uma habilidade do modo Habilidades. */
+export function setBranchSkill(tree, id, skillId) {
+  const next = cloneDeep(tree);
+  const node = findBranch(next, id);
+  if (!node) return tree;
+  if (skillId) node.skillId = skillId;
+  else delete node.skillId;
+  return next;
+}
+
 export function removeBranch(tree, id) {
   if (id === ROOT_ID) return tree;
   const next = cloneDeep(tree);

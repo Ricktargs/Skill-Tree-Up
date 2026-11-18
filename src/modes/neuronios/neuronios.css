@@ -670,3 +670,74 @@
   border-radius: 4px;
   border: 1px solid var(--line-strong);
 }
+
+/* ---------- +Pag: página dentro do neurônio ---------- */
+/* Marca parecida com a [[ligação]], mas com um brilho leve */
+.nr-root .nr-text a.pagelink {
+  padding: 0 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 16%, var(--wash-strong));
+  color: var(--title);
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), 0 0 10px color-mix(in srgb, var(--accent) 45%, transparent);
+  animation: nr-page-glow 2.8s ease-in-out infinite;
+}
+.nr-root .nr-text a.pagelink::before { content: '📄 '; font-size: 0.85em; font-weight: 400; }
+.nr-root .nr-text a.pagelink:hover {
+  background: color-mix(in srgb, var(--accent) 28%, var(--wash-strong));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 16px color-mix(in srgb, var(--accent) 65%, transparent);
+}
+.nr-root .nr-text a.pagelink.broken { animation: none; box-shadow: none; background: var(--danger-soft); color: var(--danger); text-decoration: line-through; }
+
+@keyframes nr-page-glow {
+  0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 6px color-mix(in srgb, var(--accent) 30%, transparent); }
+  50% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 13px color-mix(in srgb, var(--accent) 55%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nr-root .nr-text a.pagelink { animation: none; }
+}
+
+/* Janela da página, por cima do texto do neurônio (e páginas dentro de páginas) */
+.nr-page-window {
+  position: absolute;
+  inset: 26px 10px 10px 26px;
+  z-index: calc(30 + var(--depth, 1));
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line-strong));
+  border-radius: 14px;
+  box-shadow: var(--window-shadow), 0 0 22px color-mix(in srgb, var(--accent) 22%, transparent);
+  overflow: hidden;
+  animation: arv-fadeIn 0.18s ease;
+}
+.nr-page-window > .nr-editor { padding: 10px 14px 10px; }
+
+.nr-page-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted, inherit);
+  opacity: 0.85;
+}
+.nr-page-bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nr-page-close {
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.nr-page-close:hover { background: var(--wash-strong); }
+
+.nr-link-chip.is-page { box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 30%, transparent); }
+.nr-suggest .nr-suggest-page { width: 14px; text-align: center; font-size: 12px; }
+.nr-suggest small { opacity: 0.6; }
