@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ask, inform } from "../../../shared/Dialog.jsx";
 import Modal from "./Modal";
 import NoteForm from "./NoteForm";
 import { useArvore } from "../state/contexts";
@@ -32,7 +33,7 @@ export function QuickNoteModal({ onClose }) {
 
 /* ---------------- Configurações ---------------- */
 export function SettingsModal({ onClose, onShuffle, onOpenRevisions, onOpenInfo }) {
-  const { data, commit, darkMode, showPoints, setShowPoints } = useArvore();
+  const { data, commit, darkMode } = useArvore();
   const sound = useSoundSettings();
 
   const handleExport = () => {
@@ -59,15 +60,20 @@ export function SettingsModal({ onClose, onShuffle, onOpenRevisions, onOpenInfo 
     e.target.value = "";
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const backup = JSON.parse(reader.result);
         if (!backup || backup.app !== "Eu Sou Árvore" || !isValidTree(backup.tree)) {
-          window.alert("Este arquivo não parece ser um backup do Eu Sou Árvore.");
+          inform({ title: "Arquivo inválido", message: "Este arquivo não parece ser um backup da Árvore." });
           return;
         }
         const count = Array.isArray(backup.records) ? backup.records.length : 0;
-        if (!window.confirm(`Importar backup com ${count} nota(s)? Isso substitui os dados atuais.\n(Ctrl+Z desfaz)`)) return;
+        const ok = await ask({
+          title: "Importar backup?",
+          message: `O backup tem ${count} nota(s) e substitui os dados atuais.\n(Ctrl+Z desfaz)`,
+          yes: "Importar",
+        });
+        if (!ok) return;
         commit(() => ({
           tree: backup.tree,
           records: Array.isArray(backup.records) ? backup.records.filter((r) => r && r.id) : [],
@@ -76,7 +82,7 @@ export function SettingsModal({ onClose, onShuffle, onOpenRevisions, onOpenInfo 
         }));
         onClose();
       } catch {
-        window.alert("Erro ao ler o arquivo de backup.");
+        inform({ title: "Erro", message: "Não foi possível ler o arquivo de backup." });
       }
     };
     reader.readAsText(file);
@@ -90,10 +96,6 @@ export function SettingsModal({ onClose, onShuffle, onOpenRevisions, onOpenInfo 
           <button type="button" className="tile" onClick={onShuffle} title="Ctrl + M">
             <span className="tile-icon">🔀</span>
             <span>Aleatorizar galhos</span>
-          </button>
-          <button type="button" className="tile" onClick={() => setShowPoints(!showPoints)}>
-            <span className="tile-icon">🌱</span>
-            <span>{showPoints ? "Ocultar pontos" : "Mostrar pontos"}</span>
           </button>
         </div>
       </section>
@@ -193,9 +195,9 @@ export function RevisionsModal({ onClose }) {
               <button
                 type="button"
                 className="btn small btn-primary"
-                onClick={() => {
-                  if (!window.confirm(`Restaurar a versão de ${rev.dateLabel}?\n(Ctrl+Z desfaz)`)) return;
-                  if (!isValidTree(rev.tree)) return window.alert("Este ponto de restauração está corrompido.");
+                onClick={async () => {
+                  if (!(await ask({ title: "Restaurar esta versão?", message: `Versão de ${rev.dateLabel}.\n(Ctrl+Z desfaz)`, yes: "Restaurar" }))) return;
+                  if (!isValidTree(rev.tree)) return inform({ title: "Não foi possível", message: "Este ponto de restauração está corrompido." });
                   sfx.play("save");
                   commit(() => ({
                     tree: rev.tree,

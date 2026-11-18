@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { isSkillsMode } from '../modes/modeState.js';
 import { globalUndo, globalRedo, useGlobalUndo, useUndoRestore } from './GlobalUndo.js';
 import { tx } from '../i18n/index.jsx';
 import { readProfileValue, writeProfileValue, useProfileStoredState } from './ProfileStorage.js';
@@ -242,8 +241,7 @@ export function useTaskUpdate(profileId) {
   // "consumir" teclas enquanto o modal está aberto (stopImmediatePropagation).
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Atalhos do SkillTree só valem no modo Skills
-      if (!isSkillsMode()) return;
+      // Ferramenta compartilhada: vale nos três modos
       const el = document.activeElement;
       const isEditingText =
         el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);

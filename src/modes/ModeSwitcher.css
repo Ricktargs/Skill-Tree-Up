@@ -95,3 +95,57 @@
     bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* =========================================================
+   CASCA DE FERRAMENTAS (Habilidades fora do modo delas)
+   ========================================================= */
+#root .app-screen.shell-only {
+  position: fixed !important;
+  inset: 0;
+  z-index: 60;
+  min-height: 0 !important;
+  padding: 0 !important;
+  background: none !important;
+  pointer-events: none;
+}
+
+#root .app-screen.shell-only > * { pointer-events: auto; }
+
+#root .app-screen.shell-only .dashboard-container,
+#root .app-screen.shell-only .subtle-side-rail,
+#root .app-screen.shell-only::before {
+  display: none !important;
+}
+
+/* Na Árvore e nos Neurônios os botões são de papel, como os deles */
+html[data-ui-theme='nanquim'] #root .app-screen.shell-only .top-icon-button {
+  background: #fbf8f1;
+  border: 1px solid rgba(60, 48, 28, 0.26);
+  color: #3a3428;
+  box-shadow: 0 2px 8px rgba(40, 30, 10, 0.08);
+}
+
+html[data-ui-theme='nanquim'][data-ui-dark='true'] #root .app-screen.shell-only .top-icon-button {
+  background: #1b252f;
+  border-color: rgba(190, 210, 225, 0.22);
+  color: #c9d3d9;
+}
+
+/* Celular: fora das Habilidades as ferramentas ficam em coluna à esquerda,
+   para não cobrir o título da Árvore / Neurônios */
+@media (max-width: 760px) {
+  #root .app-screen.shell-only .top-left-nav-buttons,
+  #root .app-screen.shell-only .top-left-nav-buttons > div {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  #root .app-screen.shell-only .top-left-nav-buttons {
+    top: calc(0.65rem + env(safe-area-inset-top)) !important;
+  }
+
+  #root .app-screen.shell-only .top-icon-button {
+    width: 38px !important;
+    height: 38px !important;
+  }
+}

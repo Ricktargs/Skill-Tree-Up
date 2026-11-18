@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useUiTheme } from "../../shared/uiTheme.js";
+import { registerModeActions } from "../../shared/modeBridge.js";
 import "./App.css";
 import "./ui.css";
 import ArvoreProvider from "./state/ArvoreProvider";
@@ -7,12 +9,11 @@ import TreeCanvas from "./components/TreeCanvas";
 import BranchPanel from "./components/BranchPanel";
 import NoteWindow from "./components/NoteWindow";
 import SearchWindow from "./components/SearchWindow";
-import PointsWidget from "./components/PointsWidget";
 import { QuickNoteModal, SettingsModal, RevisionsModal, InfoModal } from "./components/Dialogs";
 import { ROOT_ID } from "./lib/constants";
 import { findBranch, shuffleTrunkBranches } from "./lib/tree";
 import { hashString } from "./lib/ids";
-import { sfx, setSoundSettings, useSoundSettings } from "./lib/sound";
+import { sfx } from "./lib/sound";
 
 export default function App() {
   return (
@@ -27,8 +28,9 @@ function isTyping(target) {
 }
 
 function AppShell() {
-  const { data, commit, undo: rawUndo, redo: rawRedo, canUndo, canRedo, darkMode, setDarkMode, showPoints, storageError } = useArvore();
-  const sound = useSoundSettings();
+  const { data, commit, undo: rawUndo, redo: rawRedo, canUndo, canRedo, storageError } = useArvore();
+  // Modo noturno é o mesmo dos três modos (botão 🌙 das ferramentas)
+  const darkMode = useUiTheme().dark;
   const undo = () => {
     if (canUndo) sfx.play("tick");
     rawUndo();
@@ -137,7 +139,15 @@ function AppShell() {
     else openPrimary(id);
   };
 
-  const shuffle = useCallback(() => commit((d) => ({ ...d, tree: shuffleTrunkBranches(d.tree) })), [commit]);
+  // Aleatorizar: embaralha os galhos e também redesenha tronco, copa e raízes
+  const shuffle = useCallback(
+    () =>
+      commit((d) => ({
+        ...d,
+        tree: { ...shuffleTrunkBranches(d.tree), look: Math.floor(Math.random() * 100000) },
+      })),
+    [commit]
+  );
 
   /* Janelas de notas/galhos que deixaram de existir não são mostradas. */
   const visibleNotes = noteIds.map((id) => data.records.find((r) => r.id === id)).filter(Boolean);
@@ -182,6 +192,17 @@ function AppShell() {
 
   const ui = useMemo(() => ({ openNote, openLinkedBranch }), [openNote, openLinkedBranch]);
 
+  useEffect(
+    () =>
+      registerModeActions("arvore", {
+        shuffle,
+        openRevisions: () => setModal("revisions"),
+        openInfo: () => setModal("info"),
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [shuffle]
+  );
+
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
@@ -190,9 +211,8 @@ function AppShell() {
       <div className={`arvore-root ${darkMode ? "dark-mode" : ""}`}>
       <main className="tree-page">
         <header className="top-bar">
-          <div className="top-left">
-            <button type="button" className="round-button" onClick={() => setModal("settings")} title="Configurações">⚙️</button>
-          </div>
+          {/* Configurações, noturno e ferramentas ficam nos botões padrão do programa */}
+          <div className="top-left" />
 
           <div className="top-center">
             <h1>ÁRVORE</h1>
@@ -214,38 +234,12 @@ function AppShell() {
             </div>
           </div>
 
-          <div className="top-right">
-            <button type="button" className="round-button" onClick={undo} disabled={!canUndo} title="Desfazer (Ctrl+Z)">↶</button>
-            <button type="button" className="round-button" onClick={redo} disabled={!canRedo} title="Refazer (Ctrl+Y)">↷</button>
-            <button
-              type="button"
-              className="round-button"
-              onClick={() => {
-                const enabled = !sound.enabled;
-                setSoundSettings({ enabled });
-                if (enabled) sfx.play("grow");
-              }}
-              title={sound.enabled ? "Desligar sons" : "Ligar sons"}
-            >
-              {sound.enabled ? "🔊" : "🔇"}
-            </button>
-            <button
-              type="button"
-              className="round-button"
-              onClick={() => {
-                sfx.play("tick");
-                setDarkMode(!darkMode);
-              }}
-              title="Alternar tema"
-            >
-              {darkMode ? "☀️" : "🌙"}
-            </button>
-          </div>
+          <div className="top-right" />
         </header>
 
         {storageError && (
           <div className="storage-warning">
-            ⚠️ O navegador recusou salvar as últimas alterações (espaço cheio). Exporte um backup em ⚙️ e remova imagens grandes das notas.
+            ⚠️ O navegador recusou salvar as últimas alterações (espaço cheio). Faça um backup em Configurações e remova imagens grandes das notas.
           </div>
         )}
 
@@ -271,7 +265,7 @@ function AppShell() {
             key="linked"
             branchId={linked.id}
             initialPath={linked.path}
-            initialPos={{ left: 30, top: 90 }}
+            initialPos={{ left: 96, top: 90 }}
             zIndex={zFor("linked")}
             onFocus={() => bringToFront("linked")}
             onClose={closeLinked}
@@ -324,8 +318,6 @@ function AppShell() {
             onCloseAll={closeAll}
           />
         )}
-
-        {showPoints && <PointsWidget />}
 
         {/* ---------------- modais ---------------- */}
         {modal === "quick" && <QuickNoteModal onClose={() => setModal(null)} />}

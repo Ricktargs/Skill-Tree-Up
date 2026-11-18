@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 // MAPA DE NEURÔNIOS — grafo com forças (estilo Obsidian)
 // Repulsão entre nós, molas nas ligações e leve puxão ao centro.
 // Rolar = zoom · arrastar o fundo = mover · arrastar nó = reposicionar
+// Shift + arrastar o fundo = caixa de seleção · Delete = excluir os selecionados
 // =========================================================
 
 const LINK_DISTANCE = 95;
@@ -12,7 +13,7 @@ const SPRING = 0.035;
 const CENTER = 0.006;
 const DAMPING = 0.58;
 
-export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreateAt, onSettle, highlightIds, resizeKey }) {
+export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreateAt, onSettle, onDeleteMany, highlightIds, resizeKey }) {
   const svgRef = useRef(null);
   const sim = useRef(new Map()); // id -> { x, y, vx, vy, fixed }
   const alpha = useRef(1);
@@ -21,7 +22,49 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
   const [view, setView] = useState({ x: 0, y: 0, k: 1 });
   const [size, setSize] = useState({ w: 800, h: 600 });
   const [hover, setHover] = useState(null);
-  const drag = useRef(null); // { id?, pan?, sx, sy, moved }
+  const drag = useRef(null); // { id?, pan?, box?, sx, sy, moved }
+  const [selected, setSelected] = useState(() => new Set());
+  const [box, setBox] = useState(null); // retângulo de seleção (coordenadas da tela, dentro do svg)
+  const onDeleteRef = useRef(onDeleteMany);
+  const selectedRef = useRef(selected);
+  useEffect(() => {
+    onDeleteRef.current = onDeleteMany;
+    selectedRef.current = selected;
+  });
+
+  // Neurônios que somem do mapa saem da seleção
+  const idsKey = nodes.map((n) => n.id).join('|');
+  useEffect(() => {
+    const ids = new Set(nodes.map((n) => n.id));
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- só limpa ids que deixaram de existir
+    setSelected((s) => {
+      const next = new Set([...s].filter((id) => ids.has(id)));
+      return next.size === s.size ? s : next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idsKey]);
+
+  // Delete / Backspace: exclui os selecionados · Esc: limpa a seleção
+  useEffect(() => {
+    const onKey = (e) => {
+      const el = document.activeElement;
+      const editing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+      if (editing || !selectedRef.current.size || document.querySelector('.ui-dialog-backdrop, .modal-backdrop')) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        e.stopPropagation();
+        const ids = [...selectedRef.current];
+        setSelected(new Set());
+        if (onDeleteRef.current) onDeleteRef.current(ids);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelected(new Set());
+      }
+    };
+    window.addEventListener('keydown', onKey, { capture: true });
+    return () => window.removeEventListener('keydown', onKey, { capture: true });
+  }, []);
   const settledRef = useRef(false);
   const onSettleRef = useRef(onSettle);
   useEffect(() => {
@@ -226,12 +269,28 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
   const onPointerDown = (e, id) => {
     if (e.button !== 0) return;
     e.stopPropagation();
-    svgRef.current.setPointerCapture(e.pointerId);
+    try {
+      svgRef.current.setPointerCapture(e.pointerId);
+    } catch {
+      // ponteiro sem captura (ex.: caneta/toque já solto): segue sem capturar
+    }
     if (id) {
       const p = sim.current.get(id);
       const g = toGraph(e.clientX, e.clientY);
-      drag.current = { id, sx: e.clientX, sy: e.clientY, ox: g.x - p.x, oy: g.y - p.y, moved: false };
+      // Arrastar um selecionado leva todos os selecionados juntos
+      const group = selected.has(id)
+        ? [...selected].filter((sid) => sid !== id && sim.current.get(sid)).map((sid) => {
+            const q = sim.current.get(sid);
+            q.fixed = true;
+            return { id: sid, dx: q.x - p.x, dy: q.y - p.y };
+          })
+        : [];
+      drag.current = { id, sx: e.clientX, sy: e.clientY, ox: g.x - p.x, oy: g.y - p.y, moved: false, group };
       p.fixed = true;
+    } else if (e.shiftKey) {
+      const r = svgRef.current.getBoundingClientRect();
+      drag.current = { box: true, sx: e.clientX, sy: e.clientY, left: r.left, top: r.top, base: e.ctrlKey || e.metaKey ? new Set(selected) : new Set(), moved: false };
+      setBox({ x: e.clientX - r.left, y: e.clientY - r.top, w: 0, h: 0 });
     } else {
       drag.current = { pan: true, sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y, moved: false };
     }
@@ -241,13 +300,36 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
     const d = drag.current;
     if (!d) return;
     if (Math.abs(e.clientX - d.sx) + Math.abs(e.clientY - d.sy) > 4) d.moved = true;
-    if (d.pan) {
+    if (d.box) {
+      // Vai selecionando enquanto arrasta
+      const x0 = Math.min(d.sx, e.clientX);
+      const y0 = Math.min(d.sy, e.clientY);
+      const x1 = Math.max(d.sx, e.clientX);
+      const y1 = Math.max(d.sy, e.clientY);
+      setBox({ x: x0 - d.left, y: y0 - d.top, w: x1 - x0, h: y1 - y0 });
+      const a = toGraph(x0, y0);
+      const b = toGraph(x1, y1);
+      const next = new Set(d.base);
+      nodes.forEach((n) => {
+        if (n.kind === 'tag') return;
+        const p = sim.current.get(n.id);
+        if (p && p.x >= a.x && p.x <= b.x && p.y >= a.y && p.y <= b.y) next.add(n.id);
+      });
+      setSelected(next);
+    } else if (d.pan) {
       setView((v) => ({ ...v, x: d.vx + (e.clientX - d.sx), y: d.vy + (e.clientY - d.sy) }));
     } else if (d.moved) {
       const p = sim.current.get(d.id);
       const g = toGraph(e.clientX, e.clientY);
       p.x = g.x - d.ox;
       p.y = g.y - d.oy;
+      (d.group || []).forEach((m) => {
+        const q = sim.current.get(m.id);
+        if (q) {
+          q.x = p.x + m.dx;
+          q.y = p.y + m.dy;
+        }
+      });
       reheat(0.25);
     }
   };
@@ -256,9 +338,19 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
     const d = drag.current;
     drag.current = null;
     if (!d) return;
+    if (d.box) {
+      setBox(null);
+      return;
+    }
+    // Clique simples no fundo limpa a seleção
+    if (d.pan && !d.moved) setSelected((s) => (s.size ? new Set() : s));
     if (d.id) {
       const p = sim.current.get(d.id);
       if (p) p.fixed = false;
+      (d.group || []).forEach((m) => {
+        const q = sim.current.get(m.id);
+        if (q) q.fixed = false;
+      });
       if (!d.moved) onOpen(d.id, e.ctrlKey || e.metaKey || e.shiftKey);
       else reheat(0.2);
     }
@@ -318,13 +410,14 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
             return (
               <g
                 key={n.id}
-                className={`nr-node ${n.kind === 'tag' ? 'is-tag' : ''} ${isActive ? 'active' : ''} ${openSet.has(n.id) ? 'open' : ''} ${dim ? 'dim' : ''}`}
+                className={`nr-node ${n.kind === 'tag' ? 'is-tag' : ''} ${isActive ? 'active' : ''} ${openSet.has(n.id) ? 'open' : ''} ${selected.has(n.id) ? 'selected' : ''} ${dim ? 'dim' : ''}`}
                 transform={`translate(${p.x} ${p.y})`}
                 onPointerDown={(e) => onPointerDown(e, n.id)}
                 onPointerEnter={() => setHover(n.id)}
                 onPointerLeave={() => setHover((h) => (h === n.id ? null : h))}
               >
                 {isActive && <circle className="nr-halo" r={r + 7} />}
+                {selected.has(n.id) && <circle className="nr-select-ring" r={r + 5} />}
                 <circle className="nr-dot" r={r} style={{ '--nr-c': n.color }} />
                 {label && (
                   <text className="nr-label" y={r + 13} textAnchor="middle" style={{ fontSize: `${Math.max(9, 11.5 / Math.sqrt(view.k))}px` }}>
@@ -335,7 +428,13 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
             );
           })}
         </g>
+        {box && <rect className="nr-select-box" x={box.x} y={box.y} width={box.w} height={box.h} rx="4" />}
       </svg>
+      {selected.size > 0 && (
+        <div className="nr-select-hint">
+          {selected.size === 1 ? '1 neurônio selecionado' : `${selected.size} neurônios selecionados`} · <kbd>Delete</kbd> exclui · <kbd>Esc</kbd> limpa
+        </div>
+      )}
 
       <div className="nr-graph-tools">
         <button type="button" className="round-button" onClick={() => setView((v) => ({ ...v, k: Math.min(3.5, v.k * 1.25) }))} title="Aproximar">

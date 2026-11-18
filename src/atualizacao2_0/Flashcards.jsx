@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ask } from '../shared/Dialog.jsx';
 import { createPortal } from 'react-dom';
 import './Flashcards.css';
 import { tx, useLanguage } from '../i18n/index.jsx';
@@ -32,7 +33,7 @@ const STATUS_LABEL = { new: 'Nova', due: 'Para revisar', learning: 'Aprendendo',
 export function FlashcardsModal({ fc, skills = [], playSound }) {
   useLanguage();
   const [view, setView] = useState({ name: 'home' });
-  const [menu, setMenu] = useState(null); // { x, y, deckId, confirm }
+  const [menu, setMenu] = useState(null); // { x, y, deckId }
   const click = (t = 'click') => playSound && playSound(t);
 
   // Ao abrir, sempre começa nos decks
@@ -116,7 +117,7 @@ export function FlashcardsModal({ fc, skills = [], playSound }) {
             }}
             onMenu={(deckId, x, y) => {
               click();
-              setMenu({ deckId, x, y, confirm: false });
+              setMenu({ deckId, x, y });
             }}
           />
         )}
@@ -331,28 +332,7 @@ function DeckMenu({ fc, menu, setMenu, click, onEdit, onAdd }) {
       <div className="fc-menu-title">
         {deck.emoji || '🎴'} {deck.name}
       </div>
-      {menu.confirm ? (
-        <div className="fc-menu-confirm">
-          <span>{tx('Excluir o deck e {n} carta(s)?', { n: count })}</span>
-          <div>
-            <button type="button" className="fc-btn small" onClick={() => setMenu({ ...menu, confirm: false })}>
-              {tx('Cancelar')}
-            </button>
-            <button
-              type="button"
-              className="fc-btn small danger"
-              onClick={() => {
-                click('delete');
-                fc.deleteDeck(deck.id);
-                setMenu(null);
-              }}
-            >
-              {tx('Excluir')}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <>
+      <>
           <button
             type="button"
             role="menuitem"
@@ -388,11 +368,26 @@ function DeckMenu({ fc, menu, setMenu, click, onEdit, onAdd }) {
             {notifyOn ? '🔔' : '🔕'} {tx('Notificação')}
             <span className={`fc-switch ${notifyOn ? 'on' : ''}`}>{notifyOn ? tx('Ativa') : tx('Desativada')}</span>
           </button>
-          <button type="button" role="menuitem" className="danger" onClick={() => setMenu({ ...menu, confirm: true })}>
+          <button
+            type="button"
+            role="menuitem"
+            className="danger"
+            onClick={async () => {
+              setMenu(null);
+              const ok = await ask({
+                title: tx('Excluir “{name}”?', { name: deck.name }),
+                message: tx('O deck e {n} carta(s) serão apagados.', { n: count }),
+                yes: tx('Excluir'),
+                danger: true
+              });
+              if (!ok) return;
+              click('delete');
+              fc.deleteDeck(deck.id);
+            }}
+          >
             🗑 {tx('Excluir Flashcards')}
           </button>
-        </>
-      )}
+      </>
     </div>,
     document.body
   );
@@ -533,7 +528,6 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
   const [bulk, setBulk] = useState('');
   const [query, setQuery] = useState('');
   const [editingId, setEditingId] = useState(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [notice, setNotice] = useState('');
   const [choosingModule, setChoosingModule] = useState(false);
   const frontRef = useRef(null);
@@ -735,29 +729,24 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
             >
               ↺ {tx('Zerar progresso')}
             </button>
-            {confirmDelete ? (
-              <div className="fc-confirm">
-                <span>{tx('Excluir o deck e {n} carta(s)?', { n: s.total })}</span>
-                <button
-                  type="button"
-                  className="fc-btn small danger"
-                  onClick={() => {
-                    click('delete');
-                    fc.deleteDeck(deck.id);
-                    onBack();
-                  }}
-                >
-                  {tx('Excluir')}
-                </button>
-                <button type="button" className="fc-btn small" onClick={() => setConfirmDelete(false)}>
-                  {tx('Cancelar')}
-                </button>
-              </div>
-            ) : (
-              <button type="button" className="fc-btn small danger-ghost" onClick={() => setConfirmDelete(true)}>
-                🗑 {tx('Excluir deck')}
-              </button>
-            )}
+            <button
+              type="button"
+              className="fc-btn small danger-ghost"
+              onClick={async () => {
+                const ok = await ask({
+                  title: tx('Excluir “{name}”?', { name: deck.name }),
+                  message: tx('O deck e {n} carta(s) serão apagados.', { n: s.total }),
+                  yes: tx('Excluir'),
+                  danger: true
+                });
+                if (!ok) return;
+                click('delete');
+                fc.deleteDeck(deck.id);
+                onBack();
+              }}
+            >
+              🗑 {tx('Excluir deck')}
+            </button>
           </div>
         </aside>
 

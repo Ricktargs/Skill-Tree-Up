@@ -1,6 +1,24 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import './Settings.css';
 import { useLanguage, LANGUAGES, tx } from '../i18n/index.jsx';
+import { useMode, MODES } from '../modes/modeState.js';
+import { useUiTheme, setVisual, setDark, VISUAL_THEMES } from '../shared/uiTheme.js';
+import { useModeActions } from '../shared/modeBridge.js';
+import { useSoundSettings, setSoundSettings, sfx } from '../modes/arvore/lib/sound.js';
+
+// Interruptor no padrão das Configurações
+function Toggle({ title, desc, checked, onChange }) {
+  return (
+    <label className="st-row st-toggle-row">
+      <div className="st-row-text">
+        <strong>{title}</strong>
+        {desc && <span>{desc}</span>}
+      </div>
+      <input type="checkbox" checked={!!checked} onChange={(e) => onChange(e.target.checked)} />
+      <span className="st-switch" />
+    </label>
+  );
+}
 
 // =========================================================
 // CONFIGURAÇÕES (Esc) — tudo num lugar só, agrupado por assunto
@@ -24,7 +42,14 @@ export function SettingsModal({
   onImport
 }) {
   const { lang, setLanguage } = useLanguage();
+  const mode = useMode();
+  const ui = useUiTheme();
+  const arvore = useModeActions('arvore');
+  const growth = useModeActions('arvoreGrowth');
+  const neuronios = useModeActions('neuronios');
+  const sound = useSoundSettings();
   if (!isOpen) return null;
+  const modeName = (MODES.find((m) => m.id === mode) || {}).name;
 
   const click = (type = 'click') => playSound && playSound(type);
   const close = () => {
@@ -42,7 +67,7 @@ export function SettingsModal({
         <div className="st-header">
           <div>
             <h3>⚙️ {tx('Configurações')}</h3>
-            <p>{tx('Aparência, idioma, habilidades e seus dados')}</p>
+            <p>{tx('Vale para Neurônios, Árvore e Habilidades')}</p>
           </div>
           <button type="button" className="st-close" onClick={close} title={tx('Fechar (Esc)')}>
             ✕
@@ -71,12 +96,47 @@ export function SettingsModal({
             </div>
           </section>
 
-          {/* Aparência */}
+          {/* Aparência (todos os modos) */}
           <section className="st-section">
             <h4>🎨 {tx('Aparência')}</h4>
             <div className="st-row">
               <div className="st-row-text">
-                <strong>{tx('Tema visual')}</strong>
+                <strong>{tx('Estilo visual')}</strong>
+                <span>{tx((VISUAL_THEMES.find((t) => t.id === ui.visual) || {}).desc || '')}</span>
+              </div>
+              <div className="st-segmented">
+                {VISUAL_THEMES.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={ui.visual === t.id ? 'active' : ''}
+                    onClick={() => {
+                      click();
+                      setVisual(t.id);
+                    }}
+                  >
+                    {tx(t.name)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Toggle
+              title={tx('Modo noturno')}
+              desc={ui.visual === 'gamificado' ? tx('No estilo Gameficado as Habilidades já são escuras') : tx('Papel escuro e tinta clara nos três modos')}
+              checked={ui.dark}
+              onChange={(v) => {
+                click();
+                setDark(v);
+              }}
+            />
+          </section>
+
+          {mode === 'skills' && (
+          <section className="st-section">
+            <h4>🖌️ {tx('Cores das Habilidades')}</h4>
+            <div className="st-row">
+              <div className="st-row-text">
+                <strong>{ui.visual === 'nanquim' ? tx('Cor da tinta') : tx('Tema de cores')}</strong>
                 <span>
                   {tx('Atual')}: <em style={{ color: themeColor }}>{tx(themeName)}</em>
                 </span>
@@ -114,8 +174,131 @@ export function SettingsModal({
               </div>
             </div>
           </section>
+          )}
 
-          {/* Habilidades */}
+          {/* Opções do modo aberto */}
+          {mode === 'arvore' && (
+            <section className="st-section">
+              <h4>🌳 {tx('Árvore')}</h4>
+              {arvore ? (
+                <>
+                  {growth && (
+                    <>
+                      <Toggle
+                        title={tx('Dividir o tronco ao crescer')}
+                        desc={tx('Com muitos galhos, o tronco vira dois (um saindo do outro)')}
+                        checked={growth.fork === true}
+                        onChange={(v) => {
+                          click();
+                          growth.setFork(v);
+                        }}
+                      />
+                      <Toggle
+                        title={tx('Árvores novas ao lado')}
+                        desc={
+                          growth.allowTrees
+                            ? tx('Quando ficar grande demais, os galhos novos crescem numa árvore ligada pelas raízes')
+                            : tx('Recusado: todos os galhos ficam numa árvore só')
+                        }
+                        checked={growth.allowTrees}
+                        onChange={(v) => {
+                          click();
+                          growth.setAllowTrees(v);
+                        }}
+                      />
+                      {growth.extraTrees && (
+                        <div className="st-actions list">
+                          <button type="button" className="st-btn wide" onClick={() => { click(); growth.mergeTrees(); }}>
+                            <span>🌳 {tx('Recusar árvores extras e juntar numa só')}</span>
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <div className="st-actions list">
+                    <button type="button" className="st-btn wide" onClick={open(arvore.shuffle)}>
+                      <span>🔀 {tx('Aleatorizar galhos')}</span> <kbd>Ctrl+M</kbd>
+                    </button>
+                    <button
+                      type="button"
+                      className="st-btn wide"
+                      onClick={() => {
+                        click();
+                        onClose();
+                        arvore.openRevisions();
+                      }}
+                    >
+                      <span>🕰️ {tx('Pontos de restauração (diários)')}</span>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p className="st-note">{tx('Carregando…')}</p>
+              )}
+              <Toggle
+                title={tx('Efeitos sonoros')}
+                desc={tx('Sons ao criar galhos, notas e pastas')}
+                checked={sound.enabled}
+                onChange={(v) => {
+                  setSoundSettings({ enabled: v });
+                  if (v) sfx.play('grow');
+                }}
+              />
+              <Toggle
+                title={tx('Som ambiente')}
+                desc={tx('Vento e pássaros')}
+                checked={sound.ambient}
+                onChange={(v) => setSoundSettings({ ambient: v })}
+              />
+              <div className="st-row">
+                <div className="st-row-text">
+                  <strong>{tx('Volume')}</strong>
+                </div>
+                <input
+                  className="st-range"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={sound.volume}
+                  disabled={!sound.enabled}
+                  onChange={(e) => setSoundSettings({ volume: Number(e.target.value) })}
+                />
+              </div>
+            </section>
+          )}
+
+          {mode === 'neuronios' && (
+            <section className="st-section">
+              <h4>🧠 {tx('Neurônios')}</h4>
+              {neuronios ? (
+                <>
+                  <Toggle
+                    title={tx('Tags no mapa')}
+                    desc={tx('Mostra as tags como nós ligados aos neurônios')}
+                    checked={neuronios.tagNodes}
+                    onChange={(v) => {
+                      click();
+                      neuronios.setView({ tagNodes: v });
+                    }}
+                  />
+                  <Toggle
+                    title={tx('Esconder neurônios sem ligação')}
+                    desc={tx('Deixa no mapa só quem está ligado a alguém')}
+                    checked={neuronios.hideOrphans}
+                    onChange={(v) => {
+                      click();
+                      neuronios.setView({ hideOrphans: v });
+                    }}
+                  />
+                </>
+              ) : (
+                <p className="st-note">{tx('Carregando…')}</p>
+              )}
+            </section>
+          )}
+
+          {mode === 'skills' && (
           <section className="st-section">
             <h4>🧩 {tx('Habilidades')}</h4>
             <label className="st-row st-toggle-row">
@@ -149,12 +332,13 @@ export function SettingsModal({
               </button>
             </div>
           </section>
+          )}
 
           {/* Dados */}
           <section className="st-section">
             <h4>💾 {tx('Dados e backup')}</h4>
             <p className="st-note">
-              {tx('O backup inclui perfis, habilidades, missões, diamantes, checklists e Pomodoro.')}
+              {tx('Um backup só para os três modos: Neurônios, Árvore e Habilidades de todos os perfis, com tarefas, flashcards, Pomodoro e aparência.')}
             </p>
             <div className="st-actions two">
               <button type="button" className="st-btn primary" onClick={onExport}>
@@ -170,7 +354,7 @@ export function SettingsModal({
           <section className="st-section">
             <h4>⌨️ {tx('Atalhos')}</h4>
             <button type="button" className="st-btn wide" onClick={open(onOpenCommands)}>
-              {tx('Ver todos os comandos do sistema')} →
+              {tx('Ver os atalhos de {mode}', { mode: tx(modeName) })} →
             </button>
           </section>
         </div>
@@ -184,6 +368,75 @@ export function SettingsModal({
 // =========================================================
 // COMANDOS DO SISTEMA — lista completa, agrupada
 // =========================================================
+// Atalhos que valem nos três modos
+const SHARED_GROUPS = [
+  {
+    title: 'Em todos os modos',
+    items: [
+      { keys: ['Alt', '1'], alt: ['Alt', '3'], text: 'Troca entre Neurônios, Árvore e Habilidades.' },
+      { keys: ['P'], text: 'Perfis.' },
+      { keys: ['M'], text: 'Missões diárias e diamantes.' },
+      { keys: ['C'], text: 'Temas (Nanquim e Gameficado).' },
+      { keys: ['T'], text: 'Checklists (tarefas).' },
+      { keys: ['F'], text: 'Flashcards.' },
+      { keys: ['R'], text: 'Pomodoro.' },
+      { keys: ['Esc'], text: 'Fecha a janela da frente.' },
+      { keys: ['Enter'], alt: ['Esc'], text: 'Numa pergunta: Sim / Não.' }
+    ]
+  }
+];
+
+const ARVORE_GROUPS = [
+  {
+    title: 'Árvore',
+    items: [
+      { keys: ['Clique'], text: 'Num galho: abre o painel dele.' },
+      { keys: ['Shift', 'Clique'], text: 'Abre mais um painel sem fechar os outros.' },
+      { keys: ['Arrastar'], text: 'Um galho: reposiciona (os subgalhos vão junto).' },
+      { keys: ['Segurar'], text: 'Um galho por 1,5s: modo de troca de posição.' },
+      { keys: ['Arrastar'], text: 'Uma nota até um galho: move a nota.' },
+      { keys: ['Roda do mouse'], text: 'Zoom.' },
+      { keys: ['Espaço', 'Espaço'], text: 'Centraliza a visão.' },
+      { keys: ['Ctrl', 'Z'], alt: ['Ctrl', 'Y'], text: 'Desfaz / refaz na árvore ou no editor da nota.' },
+      { keys: ['Ctrl', 'M'], text: 'Aleatoriza os galhos do tronco.' },
+      { keys: ['Botão direito'], text: 'No tronco de uma árvore ao lado: juntar tudo numa árvore só.' },
+      { keys: ['Ctrl', 'Clique no ×'], text: 'Fecha todas as janelas.' },
+      { keys: ['Ctrl', 'S'], text: 'No editor: salva a nota.' },
+      { keys: ['[palavra]'], text: 'Nas notas: cria cipós (conexões) entre galhos.' }
+    ]
+  }
+];
+
+const NEURONIOS_GROUPS = [
+  {
+    title: 'Mapa',
+    items: [
+      { keys: ['N'], text: 'Novo neurônio.' },
+      { keys: ['/'], text: 'Buscar neurônios.' },
+      { keys: ['Clique duplo'], text: 'No vazio do mapa: cria um neurônio ali.' },
+      { keys: ['Clique'], text: 'Num neurônio: abre no editor.' },
+      { keys: ['Ctrl', 'Clique'], text: 'Abre numa aba nova.' },
+      { keys: ['Arrastar'], text: 'Move o mapa ou um neurônio.' },
+      { keys: ['Roda do mouse'], text: 'Zoom.' },
+      { keys: ['Esc'], text: 'Fecha a aba aberta.' }
+    ]
+  },
+  {
+    title: 'Editor',
+    items: [
+      { keys: ['[['], text: 'Liga a outro neurônio (ou cria um novo).' },
+      { keys: ['#', 'Espaço'], text: 'Título (## e ### para menores).' },
+      { keys: ['-', 'Espaço'], text: 'Lista.' },
+      { keys: ['1.', 'Espaço'], text: 'Lista numerada.' },
+      { keys: ['[]', 'Espaço'], text: 'Caixa de tarefa.' },
+      { keys: ['>', 'Espaço'], text: 'Citação.' },
+      { keys: ['Ctrl', 'K'], text: 'Link.' },
+      { keys: ['Ctrl', 'Enter'], text: 'Marca/desmarca a caixa de tarefa.' },
+      { keys: ['Ctrl', 'B'], alt: ['Ctrl', 'I'], text: 'Negrito / itálico.' }
+    ]
+  }
+];
+
 const COMMAND_GROUPS = [
   {
     title: 'Geral',
@@ -198,13 +451,7 @@ const COMMAND_GROUPS = [
   {
     title: 'Abrir janelas',
     items: [
-      { keys: ['C'], text: 'Tema visual e cores.' },
-      { keys: ['P'], text: 'Perfis.' },
       { keys: ['A'], text: 'Emoji do avatar.' },
-      { keys: ['M'], text: 'Missões diárias e diamantes.' },
-      { keys: ['T'], text: 'Checklists (tarefas).' },
-      { keys: ['F'], text: 'Flashcards.' },
-      { keys: ['R'], text: 'Pomodoro.' },
       { keys: ['G'], text: 'Pastas e filtros.' },
       { keys: ['O'], text: 'Habilidades e ocultas.' },
       { keys: ['E'], text: 'Editor de layout (ordem das habilidades).' }
@@ -261,9 +508,23 @@ const Keys = ({ keys }) => (
   </span>
 );
 
+const TABS = [
+  { id: 'neuronios', name: 'Neurônios', groups: NEURONIOS_GROUPS },
+  { id: 'arvore', name: 'Árvore', groups: ARVORE_GROUPS },
+  { id: 'skills', name: 'Habilidades', groups: COMMAND_GROUPS },
+  { id: 'shared', name: 'Ferramentas', groups: SHARED_GROUPS }
+];
+
 export function CommandsModal({ isOpen, onClose, playSound }) {
   useLanguage();
+  const mode = useMode();
+  const [tab, setTab] = useState(mode);
+  // Abre na aba do modo em que você está
+  useEffect(() => {
+    if (isOpen) setTab(mode);
+  }, [isOpen, mode]);
   if (!isOpen) return null;
+  const current = TABS.find((t) => t.id === tab) || TABS[2];
 
   const close = () => {
     if (playSound) playSound('click');
@@ -283,8 +544,26 @@ export function CommandsModal({ isOpen, onClose, playSound }) {
           </button>
         </div>
 
+        <div className="cm-tabs" role="tablist">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              className={tab === t.id ? 'active' : ''}
+              onClick={() => {
+                if (playSound) playSound('click');
+                setTab(t.id);
+              }}
+            >
+              {tx(t.name)}
+            </button>
+          ))}
+        </div>
+
         <div className="st-body">
-          {COMMAND_GROUPS.map((group) => (
+          {current.groups.map((group) => (
             <section key={group.title} className="st-section">
               <h4>{tx(group.title)}</h4>
               <div className="cm-list">

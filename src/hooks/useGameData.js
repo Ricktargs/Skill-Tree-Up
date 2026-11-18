@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { STARTER_FOLDERS, seedStarterProfile, starterSkills } from '../shared/starterProfile.js';
+import { publishActiveProfile } from '../shared/activeProfile.js';
 import { useUndoRestore } from '../atualizacao2_0/GlobalUndo.js';
 
 export const PRESET_DECKS = [
@@ -195,21 +197,8 @@ const DEFAULT_PROFILE_DATA = {
   linkSkillsByCategory: true,
   extraXp: 0,
   xpHistory: [],
-  folders: ['Geral', 'Trabalho', 'Estudos'],
-  skills: [
-    {
-      id: 'skill_1',
-      title: 'Programação React',
-      category: 'Tecnologia',
-      folder: 'Estudos',
-      level: 1,
-      maxLevel: 10,
-      color: '#3b82f6',
-      levelDescriptions: { 1: 'Aprender JSX e Props' },
-      levelTasks: { 1: [{ id: 't1', text: 'Criar primeiro app', done: false }] },
-      miniMissions: ['Praticar React por 20 minutos', 'Revisar componentes']
-    }
-  ],
+  folders: STARTER_FOLDERS,
+  skills: starterSkills(),
   diamonds: 1,
   diamondLog: [],
   dailyMissions: [],
@@ -233,6 +222,8 @@ export function useGameData() {
         return JSON.parse(saved);
       } catch (e) {}
     }
+    // Primeira vez no app: o perfil padrão começa com o conteúdo inicial
+    if (localStorage.getItem('rpg_profile_data_profile_default') === null) seedStarterProfile('profile_default');
     return [{ id: 'profile_default', name: 'Seu Nick', avatar: '🧙🏻‍♂️' }];
   });
 
@@ -421,6 +412,8 @@ export function useGameData() {
 
   useEffect(() => {
     localStorage.setItem('rpg_active_profile_id', activeProfileId);
+    // Avisa a Árvore e os Neurônios para carregarem os dados deste perfil
+    publishActiveProfile(activeProfileId);
   }, [activeProfileId]);
 
   useEffect(() => {
@@ -606,8 +599,8 @@ export function useGameData() {
       linkSkillsByCategory: true,
       extraXp: 0,
       xpHistory: [],
-      folders: ['Geral'],
-      skills: [],
+      folders: STARTER_FOLDERS,
+      skills: starterSkills(),
       diamonds: 0,
       diamondLog: [],
       dailyMissions: [],
@@ -624,6 +617,7 @@ export function useGameData() {
     };
 
     localStorage.setItem(getProfileStorageKey(newId), JSON.stringify(initialProfileData));
+    seedStarterProfile(newId);
     setProfiles((prev) => [...prev, newProfileMeta]);
     switchProfile(newId);
   };

@@ -1,0 +1,192 @@
+/* =========================================================
+   NANQUIM — o visual da Árvore aplicado às Habilidades e às
+   ferramentas (Perfil, Pomodoro, Tarefas, Flashcards, Configurações).
+   As cores de cada regra antiga vêm traduzidas em
+   nanquim.generated.css; aqui ficam papel, tipografia e formas.
+   ========================================================= */
+
+html[data-ui-theme='nanquim'] {
+  --nq-wash: color-mix(in srgb, var(--nq-accent) 8%, transparent);
+  --nq-overlay: rgba(28, 38, 46, 0.38);
+  --nq-serif: Georgia, 'Palatino Linotype', 'Book Antiqua', 'Times New Roman', serif;
+  --nq-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 18px 50px -12px rgba(40, 30, 10, 0.35), 0 4px 14px rgba(40, 30, 10, 0.08);
+  --nq-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.32 0 0 0 0 0.15 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.22'/%3E%3C/svg%3E");
+  --nq-page: radial-gradient(ellipse at 50% 35%, transparent 55%, rgba(60, 40, 10, 0.12) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.27 0 0 0 0 0.12 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+}
+
+html[data-ui-theme='nanquim'][data-ui-dark='true'] {
+  --nq-overlay: rgba(4, 8, 12, 0.55);
+  --nq-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 18px 50px -10px rgba(0, 0, 0, 0.7), 0 4px 14px rgba(0, 0, 0, 0.3);
+  --nq-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.8 0 0 0 0 0.88 0 0 0 0 0.95 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+  --nq-page: radial-gradient(ellipse at 50% 30%, transparent 50%, rgba(0, 0, 0, 0.35) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.8 0 0 0 0 0.88 0 0 0 0 0.95 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.12'/%3E%3C/svg%3E");
+}
+
+html[data-ui-theme='nanquim'] body {
+  background-color: var(--nq-bg);
+}
+
+/* ---------- Página e variáveis do tema ---------- */
+html[data-ui-theme='nanquim'] #root .app-screen {
+  /* A tinta é a do tema do Nanquim escolhido */
+  --theme-accent: var(--nq-accent) !important;
+  --theme-on-accent: var(--nq-paper) !important;
+  --theme-modal-bg: var(--nq-paper) !important;
+  --theme-border: var(--nq-line-strong) !important;
+  background: var(--nq-page), var(--nq-bg) !important;
+  background-color: var(--nq-bg) !important;
+  color: var(--nq-ink);
+}
+
+/* Clássico: a tinta vem do tema de cores das Habilidades (escurecida no papel,
+   clareada no noturno, porque mistura com a cor da tinta do papel) */
+html[data-ui-theme='nanquim'][data-nq-follow='true'] #root .app-screen {
+  --theme-accent: color-mix(in srgb, var(--theme-accent-src, #2e6f8e) 70%, var(--nq-ink)) !important;
+}
+
+html[data-ui-theme='nanquim'] #root .app-screen.shell-only {
+  background: none !important;
+}
+
+/* ---------- Botões redondos de papel (iguais aos da Árvore) ---------- */
+html[data-ui-theme='nanquim'] #root .top-icon-button {
+  border-radius: 50% !important;
+  background: var(--nq-paper) var(--nq-grain) !important;
+  border: 1px solid var(--nq-line-strong) !important;
+  color: var(--nq-ink-soft) !important;
+  box-shadow: 0 2px 8px rgba(40, 30, 10, 0.08) !important;
+  backdrop-filter: none !important;
+}
+
+html[data-ui-theme='nanquim'] #root .top-icon-button:hover {
+  background-color: var(--nq-paper-2) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(40, 30, 10, 0.14) !important;
+}
+
+/* ---------- Janelas de papel ---------- */
+html[data-ui-theme='nanquim'] #root .modal-backdrop {
+  background: var(--nq-overlay) !important;
+  backdrop-filter: blur(3px) !important;
+  -webkit-backdrop-filter: blur(3px) !important;
+}
+
+html[data-ui-theme='nanquim'] #root .modal-window {
+  background: var(--nq-paper) var(--nq-grain) !important;
+  border: 1px solid var(--nq-line-strong) !important;
+  border-radius: 18px !important;
+  box-shadow: var(--nq-shadow) !important;
+  color: var(--nq-ink);
+}
+
+/* Títulos com a fonte serifada da Árvore */
+html[data-ui-theme='nanquim'] #root .modal-window h2,
+html[data-ui-theme='nanquim'] #root .modal-window h3,
+html[data-ui-theme='nanquim'] #root .hero-nickname,
+html[data-ui-theme='nanquim'] #root .section-title,
+html[data-ui-theme='nanquim'] #root .skills-panel h2,
+html[data-ui-theme='nanquim'] #root .panel-title,
+html[data-ui-theme='nanquim'] #root .ui-title {
+  font-family: var(--nq-serif) !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.5px;
+  color: var(--nq-ink) !important;
+  text-shadow: none !important;
+}
+
+html[data-ui-theme='nanquim'] #root .modal-window h4,
+html[data-ui-theme='nanquim'] #root .card-section-label {
+  font-family: var(--nq-serif);
+  font-variant: small-caps;
+  letter-spacing: 1.5px;
+  color: var(--theme-accent) !important;
+}
+
+/* Campos */
+html[data-ui-theme='nanquim'] #root .app-screen input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
+html[data-ui-theme='nanquim'] #root .app-screen textarea,
+html[data-ui-theme='nanquim'] #root .app-screen select {
+  background-color: var(--nq-input) !important;
+  color: var(--nq-ink) !important;
+  border-color: var(--nq-line-strong) !important;
+}
+
+html[data-ui-theme='nanquim'] #root .app-screen input::placeholder,
+html[data-ui-theme='nanquim'] #root .app-screen textarea::placeholder {
+  color: var(--nq-muted) !important;
+}
+
+html[data-ui-theme='nanquim'] #root .app-screen kbd {
+  background: var(--nq-input) !important;
+  border: 1px solid var(--nq-line-strong) !important;
+  border-bottom-width: 2px !important;
+  box-shadow: none !important;
+  color: var(--nq-ink-soft) !important;
+}
+
+/* Sem brilhos neon no papel */
+html[data-ui-theme='nanquim'] #root .app-screen *:not(.vx-face):not(.nr-dot) {
+  text-shadow: none !important;
+}
+
+/* ---------- Tela principal das Habilidades ---------- */
+html[data-ui-theme='nanquim'] #root .character-panel,
+html[data-ui-theme='nanquim'] #root .skills-panel > .skill-card,
+html[data-ui-theme='nanquim'] #root .skill-card {
+  background: var(--nq-paper) var(--nq-grain) !important;
+  border-color: var(--nq-line-strong) !important;
+  box-shadow: 0 2px 10px rgba(40, 30, 10, 0.08) !important;
+}
+
+html[data-ui-theme='nanquim'] #root .character-panel {
+  border-radius: 18px !important;
+  box-shadow: var(--nq-shadow) !important;
+}
+
+html[data-ui-theme='nanquim'] #root .hero-nickname {
+  font-size: 1.6rem !important;
+}
+
+html[data-ui-theme='nanquim'] #root .vx-shadow {
+  background: radial-gradient(ellipse, rgba(40, 30, 10, 0.25), transparent 70%) !important;
+}
+
+/* Botões principais em tinta */
+html[data-ui-theme='nanquim'] #root .confirm-button,
+html[data-ui-theme='nanquim'] #root .plus-button,
+html[data-ui-theme='nanquim'] #root .add-skill-button {
+  background: var(--theme-accent) !important;
+  color: var(--theme-on-accent) !important;
+  border-color: transparent !important;
+  box-shadow: 0 2px 8px rgba(40, 30, 10, 0.12) !important;
+}
+
+html[data-ui-theme='nanquim'] #root .cancel-button {
+  background: var(--nq-paper-2) !important;
+  color: var(--nq-ink) !important;
+  border: 1px solid var(--nq-line-strong) !important;
+}
+
+/* Menus do botão direito */
+html[data-ui-theme='nanquim'] #root .custom-context-menu,
+html[data-ui-theme='nanquim'] .fc-menu {
+  background: var(--nq-paper) var(--nq-grain) !important;
+  border: 1px solid var(--nq-line-strong) !important;
+  box-shadow: var(--nq-shadow) !important;
+  color: var(--nq-ink) !important;
+}
+
+/* Barra de troca de modo no papel do tema */
+html[data-ui-theme='nanquim'] .mode-switcher {
+  background: color-mix(in srgb, var(--nq-paper) 88%, transparent) !important;
+  border-color: var(--nq-line-strong) !important;
+  box-shadow: 0 8px 24px rgb(var(--nq-shade-rgb) / 0.18) !important;
+}
+
+html[data-ui-theme='nanquim'] .mode-switcher .mode-btn { color: var(--nq-muted) !important; }
+html[data-ui-theme='nanquim'] .mode-switcher .mode-btn:hover { background: rgb(var(--nq-shade-rgb) / 0.08) !important; color: var(--nq-ink) !important; }
+html[data-ui-theme='nanquim'] .mode-switcher .mode-btn.active { background: var(--nq-accent) !important; color: var(--nq-paper) !important; }
+html[data-ui-theme='nanquim'][data-nq-follow='true'] .mode-switcher .mode-btn.active {
+  background: var(--nq-foliage) !important;
+}

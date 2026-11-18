@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { isSkillsMode } from '../modes/modeState.js';
 import { useProfileStoredState } from './ProfileStorage.js';
 
 // =========================================================
@@ -239,8 +238,7 @@ export function useFlashcards(profileId, { onReward } = {}) {
   // Registrado antes do atalho global do App: consegue consumir as teclas
   useEffect(() => {
     const onKey = (e) => {
-      // Atalhos do SkillTree só valem no modo Skills
-      if (!isSkillsMode()) return;
+      // Ferramenta compartilhada: vale nos três modos
       const el = document.activeElement;
       const editing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
       const key = e.key ? e.key.toLowerCase() : '';

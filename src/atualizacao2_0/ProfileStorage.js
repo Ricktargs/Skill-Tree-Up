@@ -17,11 +17,25 @@ export const PER_PROFILE_KEYS = [
   'selected_folder_filters_v1', // filtros de pastas
   'rpg_favorite_themes_v1', // temas favoritos
   'rpg_hero_v1', // personagem (classe e cores)
-  'rpg_flashcards_v1' // decks, cartas e progresso dos flashcards
+  'rpg_flashcards_v1', // decks, cartas e progresso dos flashcards
+  // Árvore
+  'eu-sou-arvore-tree',
+  'eu-sou-arvore-records',
+  'eu-sou-arvore-offsets',
+  'eu-sou-arvore-folders-all-v1',
+  'eu-sou-arvore-historico-pontos',
+  'eu-sou-arvore-xp-sync', // pontos antigos da Árvore já viraram XP
+  'eu-sou-arvore-growth', // permissões de crescimento (dividir tronco, árvores novas)
+  // Neurônios
+  'neuronios-v1'
 ];
 
 // Dados do app inteiro que também vão no backup
 export const GLOBAL_BACKUP_KEYS = [
+  'eu-sou-arvore-theme',
+  'ui_visual_theme_v1',
+  'ui_nanquim_theme_v1',
+  'eu-sou-arvore-show-points',
   'rpg_language_v1',
   'rpg_custom_themes_v1',
   'pomodoro_mode_presets_v3',

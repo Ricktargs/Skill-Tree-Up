@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ask } from "../../../shared/Dialog.jsx";
 import { useArvore } from "../state/contexts";
 import { BRANCH_POINTS, pointsForType, ROOT_ID } from "../lib/constants";
 import { generateId } from "../lib/ids";
@@ -16,8 +17,8 @@ export default function PointsWidget() {
   const current = Math.min(page, totalPages);
   const items = pointsLog.slice((current - 1) * PER_PAGE, current * PER_PAGE);
 
-  const rebuild = () => {
-    if (!window.confirm("Recriar o histórico de pontos com base em tudo que existe na árvore hoje?")) return;
+  const rebuild = async () => {
+    if (!(await ask({ title: "Recriar o histórico de pontos?", message: "Ele é recalculado com base em tudo que existe na árvore hoje.", yes: "Recriar" }))) return;
     const log = [];
     let total = 0;
     const now = new Date().toLocaleString("pt-BR");

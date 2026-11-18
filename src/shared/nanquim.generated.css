@@ -1,0 +1,2895 @@
+/* GERADO por scripts/build-nanquim.mjs — não editar à mão (npm run nanquim) */
+
+/* ===== src/index.css ===== */
+html[data-ui-theme='nanquim'] body, html[data-ui-theme='nanquim'] {
+    background-color: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 17%);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .top-icon-button {
+    background: rgb(var(--nq-shade-rgb) / 0.12);
+    border: 1px solid var(--theme-border, rgb(var(--nq-shade-rgb) / 0.09));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .top-icon-button:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.12);
+    border-color: var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.22))
+}
+html[data-ui-theme='nanquim'] .avatar-circle {
+    background: radial-gradient(circle, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 50%) 0%, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%) 100%);
+    box-shadow: 0 0 35px var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18))
+}
+html[data-ui-theme='nanquim'] .hero-nickname {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .hero-nickname:hover {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)));
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .edit-nickname-btn {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .edit-nickname-btn:hover {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .nickname-input {
+    background: rgb(var(--nq-shade-rgb) / 0.072) !important;
+    border: 1px solid var(--theme-accent, rgb(59, 130, 246)) !important;
+    color: var(--nq-ink) !important
+}
+html[data-ui-theme='nanquim'] .hero-level-title {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .inspect-level-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .inspect-level-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.162)
+}
+html[data-ui-theme='nanquim'] .hero-rank {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .xp-labels {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .xp-track {
+    background: rgb(var(--nq-shade-rgb) / 0.12)
+}
+html[data-ui-theme='nanquim'] .xp-fill {
+    background: linear-gradient(90deg, rgb(37, 99, 235), var(--theme-accent, rgb(56, 189, 248)));
+    box-shadow: 0 0 12px var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18))
+}
+html[data-ui-theme='nanquim'] .panel-title {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .category-connector-line {
+    background: var(--category-line-color, var(--theme-accent, rgb(56, 189, 248)));
+    box-shadow: 0 0 8px var(--category-line-color, var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18)))
+}
+html[data-ui-theme='nanquim'] .skill-card {
+    background: rgb(var(--nq-shade-rgb) / 0.12);
+    box-shadow: 0 10px 25px rgb(var(--nq-shade-rgb) / 0.14)
+}
+html[data-ui-theme='nanquim'] .skill-card:hover {
+    box-shadow: 0 15px 30px rgb(var(--nq-shade-rgb) / 0.21);
+    border-color: var(--skill-accent, rgb(59, 130, 246))
+}
+html[data-ui-theme='nanquim'] .skill-card.gold-maxed {
+    border-color: rgb(250, 204, 21) !important;
+    background: linear-gradient(135deg, rgb(var(--nq-shade-rgb) / 0.12) 0%, rgb(var(--nq-shade-rgb) / 0.12) 100%)
+}
+html[data-ui-theme='nanquim'] .skill-card.shake-warning {
+    border-color: rgb(239, 68, 68) !important
+}
+html[data-ui-theme='nanquim'] .gear-button {
+    background: rgb(var(--nq-shade-rgb) / 0.12);
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .gear-button:hover {
+    background: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 50%);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .skill-name {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .skill-category {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .current-goal-title {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .tasks-toggle-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.12);
+    border: 1px solid var(--nq-line-strong);
+    color: color-mix(in srgb, rgb(251, 191, 36) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .tasks-toggle-btn.has-pending {
+    border-color: rgb(245, 158, 11);
+    color: color-mix(in srgb, rgb(251, 191, 36) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .tasks-toggle-btn.all-done {
+    border-color: rgb(16, 185, 129);
+    color: color-mix(in srgb, rgb(52, 211, 153) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .tasks-toggle-btn:hover {
+    background: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 50%)
+}
+html[data-ui-theme='nanquim'] .segment-item {
+    background: rgb(var(--nq-shade-rgb) / 0.12)
+}
+html[data-ui-theme='nanquim'] .hide-skill-mini-btn {
+    background: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 50%);
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted));
+    border: 1px solid var(--nq-line-strong)
+}
+html[data-ui-theme='nanquim'] .hide-skill-mini-btn:hover {
+    background: rgb(239, 68, 68);
+    border-color: rgb(248, 113, 113);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .rail-line-glow {
+    background: rgb(var(--nq-shade-rgb) / 0.22)
+}
+html[data-ui-theme='nanquim'] .rail-plus-badge {
+    background: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 50%);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.22);
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)));
+    box-shadow: 0 0 8px rgb(var(--nq-shade-rgb) / 0.175)
+}
+html[data-ui-theme='nanquim'] .subtle-side-rail:hover .rail-line-glow {
+    background: var(--theme-accent, rgb(56, 189, 248));
+    box-shadow: 0 0 15px var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18))
+}
+html[data-ui-theme='nanquim'] .subtle-side-rail:hover .rail-plus-badge {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink);
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .rail-tooltip {
+    background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%));
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)));
+    box-shadow: 0 4px 12px rgb(var(--nq-shade-rgb) / 0.175)
+}
+html[data-ui-theme='nanquim'] .custom-context-menu {
+    background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%));
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    box-shadow: 0 10px 25px rgb(var(--nq-shade-rgb) / 0.22)
+}
+html[data-ui-theme='nanquim'] .context-menu-item {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .context-menu-item:hover {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .context-menu-item.delete-item:hover {
+    background: rgb(239, 68, 68);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .modal-backdrop {
+    background: rgb(var(--nq-shade-rgb) / 0.12)
+}
+html[data-ui-theme='nanquim'] .modal-window {
+    background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%));
+    box-shadow: 0 25px 50px rgb(var(--nq-shade-rgb) / 0.22);
+    color: var(--nq-ink);
+    border: 1px solid var(--theme-border, rgb(var(--nq-shade-rgb) / 0.135))
+}
+html[data-ui-theme='nanquim'] .modal-window h2, html[data-ui-theme='nanquim'] .modal-window h3 {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .rare-mission-card {
+    border: 2px solid rgb(255, 0, 85) !important;
+    background: linear-gradient(135deg, rgb(var(--nq-shade-rgb) / 0.072) 0%, rgb(var(--nq-shade-rgb) / 0.12) 100%) !important
+}
+html[data-ui-theme='nanquim'] .level-stats-summary {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .stat-box span {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .stat-box strong {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .level-row-item {
+    background: rgb(var(--nq-shade-rgb) / 0.036);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .level-row-item.current {
+    border-color: var(--theme-accent, rgb(59, 130, 246));
+    box-shadow: 0 0 10px rgb(var(--nq-shade-rgb) / 0.15)
+}
+html[data-ui-theme='nanquim'] .level-row-xp {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .level-row-rank {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .reorder-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)));
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .reorder-btn:hover:not(:disabled) {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink);
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .reorder-btn.edge-btn {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .editor-remove-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    color: color-mix(in srgb, rgb(239, 68, 68) 62%, var(--nq-ink));
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .editor-remove-btn:hover {
+    background: rgb(239, 68, 68);
+    color: var(--nq-ink);
+    border-color: rgb(248, 113, 113)
+}
+html[data-ui-theme='nanquim'] .manage-card-section {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .restore-btn {
+    background: rgb(5, 150, 105);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .restore-btn:hover {
+    background: rgb(16, 185, 129)
+}
+html[data-ui-theme='nanquim'] .hide-action-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted));
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .hide-action-btn:hover {
+    background: rgb(239, 68, 68);
+    color: var(--nq-ink);
+    border-color: rgb(248, 113, 113)
+}
+html[data-ui-theme='nanquim'] .manage-edit-btn {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .card-section-label {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .color-custom-card-compact {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .picker-square-compact {
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .color-name-compact {
+    background: rgb(var(--nq-shade-rgb) / 0.054) !important;
+    border: 1px solid var(--theme-border, var(--nq-line-strong)) !important;
+    color: var(--nq-ink) !important
+}
+html[data-ui-theme='nanquim'] .color-hex-compact {
+    background: rgb(var(--nq-shade-rgb) / 0.054) !important;
+    border: 1px solid var(--theme-border, var(--nq-line-strong)) !important;
+    color: var(--nq-ink) !important
+}
+html[data-ui-theme='nanquim'] .use-btn {
+    color: var(--nq-ink);
+    text-shadow: 0 1px 2px rgb(var(--nq-shade-rgb) / 0.22)
+}
+html[data-ui-theme='nanquim'] .save-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .save-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.135)
+}
+html[data-ui-theme='nanquim'] .edit-max-custom-btn {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .edit-max-custom-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.09)
+}
+html[data-ui-theme='nanquim'] .custom-max-lvl-input {
+    background: rgb(var(--nq-shade-rgb) / 0.054) !important;
+    border: 1px solid var(--theme-accent, rgb(59, 130, 246)) !important;
+    color: var(--nq-ink) !important
+}
+html[data-ui-theme='nanquim'] .preset-level-dropdown {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .preset-level-dropdown.mini {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    border-color: var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .decks-list-scroll-area::-webkit-scrollbar-track {
+    background: rgb(var(--nq-shade-rgb) / 0.036)
+}
+html[data-ui-theme='nanquim'] .decks-list-scroll-area::-webkit-scrollbar-thumb {
+    background: var(--theme-border, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 76%))
+}
+html[data-ui-theme='nanquim'] .deck-row-card {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .deck-row-card.is-active-deck {
+    border-color: var(--theme-accent, rgb(59, 130, 246));
+    box-shadow: 0 0 10px rgb(var(--nq-shade-rgb) / 0.14)
+}
+html[data-ui-theme='nanquim'] .deck-title {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .deck-status-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted));
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .deck-status-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.135);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .deck-status-btn.active {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink);
+    border-color: var(--theme-accent, rgb(59, 130, 246))
+}
+html[data-ui-theme='nanquim'] .color-chip-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .color-chip-btn:hover {
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .chip-color-name {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .delete-color-x {
+    background: rgb(239, 68, 68);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .no-colors-msg {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .settings-description {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .export-btn {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .import-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    color: var(--nq-ink);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .import-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.135)
+}
+html[data-ui-theme='nanquim'] .commands-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    color: color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink));
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .commands-btn:hover {
+    border-color: rgb(56, 189, 248)
+}
+html[data-ui-theme='nanquim'] .command-item {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] kbd {
+    background: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 50%);
+    border: 1px solid var(--nq-line-strong);
+    box-shadow: 0 2px 0 rgb(var(--nq-shade-rgb) / 0.22);
+    color: color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .mouse-badge {
+    border: 1px solid rgb(56, 189, 248);
+    color: color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .command-desc {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .command-desc strong {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .theme-card {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 2px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .theme-card:hover {
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .theme-card.active {
+    border-color: var(--theme-accent, rgb(59, 130, 246));
+    box-shadow: 0 0 15px var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18))
+}
+html[data-ui-theme='nanquim'] .theme-card-name {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .tasks-modal-window {
+    background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%));
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .close-popup-btn {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .close-popup-btn:hover {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .tasks-modal-item {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .tasks-modal-item:hover {
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .tasks-modal-item input[type="checkbox"] {
+    accent-color: var(--theme-accent, rgb(37, 99, 235))
+}
+html[data-ui-theme='nanquim'] .done-text {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .level-text {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .plus-button {
+    color: var(--nq-ink);
+    box-shadow: 0 4px 12px rgb(var(--nq-shade-rgb) / 0.14)
+}
+html[data-ui-theme='nanquim'] .plus-button:disabled {
+    background: rgb(var(--nq-shade-rgb) / 0.045) !important;
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .add-skill-button {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .add-skill-button:hover {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)));
+    background: rgb(var(--nq-shade-rgb) / 0.072)
+}
+html[data-ui-theme='nanquim'] .color-dot.selected {
+    border-color: var(--nq-line-strong)
+}
+html[data-ui-theme='nanquim'] .add-custom-color-dot-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    border: 2px dashed rgb(var(--nq-shade-rgb) / 0.22);
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .add-custom-color-dot-btn:hover {
+    border-color: var(--theme-accent, rgb(56, 189, 248));
+    background: rgb(var(--nq-shade-rgb) / 0.162);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .subtasks-editor {
+    background: rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .subtasks-header {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .add-task-mini-btn {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .task-checkbox {
+    accent-color: var(--theme-accent, rgb(37, 99, 235))
+}
+html[data-ui-theme='nanquim'] .subtask-row input[type="text"] {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .subtask-row input[type="text"]:focus {
+    border-color: var(--theme-accent, rgb(59, 130, 246))
+}
+html[data-ui-theme='nanquim'] .remove-task-btn {
+    color: color-mix(in srgb, rgb(239, 68, 68) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .modal-header-row h2, html[data-ui-theme='nanquim'] .modal-header-row h3 {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .delete-btn {
+    color: color-mix(in srgb, rgb(239, 68, 68) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .horizontal-info-bar {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid var(--theme-border, rgb(var(--nq-shade-rgb) / 0.09))
+}
+html[data-ui-theme='nanquim'] .field-group label {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .link-new-skill-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    border: 1px dashed var(--theme-accent, rgb(56, 189, 248));
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .link-new-skill-btn:hover {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .horizontal-info-bar input, html[data-ui-theme='nanquim'] .modal-window input {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .horizontal-info-bar input:focus, html[data-ui-theme='nanquim'] .modal-window input:focus {
+    border-color: var(--theme-accent, rgb(59, 130, 246))
+}
+html[data-ui-theme='nanquim'] .control-box {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .icon-button {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .icon-button:hover:not(:disabled) {
+    background: rgb(var(--nq-shade-rgb) / 0.162)
+}
+html[data-ui-theme='nanquim'] .section-label-large {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .level-card-item {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .level-card-item.active-level {
+    border-color: var(--theme-accent, rgb(59, 130, 246));
+    box-shadow: 0 0 15px var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18))
+}
+html[data-ui-theme='nanquim'] .level-card-item.passed-level {
+    border-color: rgb(16, 185, 129)
+}
+html[data-ui-theme='nanquim'] .level-card-badge {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .current-indicator {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .passed-indicator {
+    background: rgb(5, 150, 105);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .level-card-item textarea {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .level-card-item textarea:focus {
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .cancel-button {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .cancel-button:hover {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .confirm-button {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink)
+}
+@media (min-width: 769px) and (max-width: 1024px) {
+    html[data-ui-theme='nanquim'] .horizontal-info-bar {
+        background: rgb(var(--nq-shade-rgb) / 0.054) !important;
+        border: 1px solid var(--theme-border, rgb(var(--nq-shade-rgb) / 0.09)) !important
+    }
+}
+@media (max-width: 768px) {
+    html[data-ui-theme='nanquim'] .modal-actions-bar {
+        background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%)) !important;
+        border-top: 1px solid var(--theme-border, rgb(var(--nq-shade-rgb) / 0.09)) !important
+    }
+}
+
+/* ===== src/App.css ===== */
+html[data-ui-theme='nanquim'] body, html[data-ui-theme='nanquim'] {
+    background-color: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 17%);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .top-icon-button {
+    background: rgb(var(--nq-shade-rgb) / 0.12);
+    border: 1px solid var(--theme-border, rgb(var(--nq-shade-rgb) / 0.09));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .top-icon-button:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.12);
+    border-color: var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.22))
+}
+html[data-ui-theme='nanquim'] .subtle-mission-badge {
+    background: rgb(239, 68, 68);
+    color: var(--nq-ink);
+    border: 1.5px solid var(--nq-line-strong);
+    box-shadow: 0 2px 5px rgb(var(--nq-shade-rgb) / 0.14)
+}
+html[data-ui-theme='nanquim'] .mail-count-badge {
+    background: rgb(239, 68, 68);
+    color: var(--nq-ink);
+    border: 2px solid var(--nq-line-strong)
+}
+html[data-ui-theme='nanquim'] .avatar-circle {
+    background: radial-gradient(circle, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 50%) 0%, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%) 100%);
+    box-shadow: 0 0 35px var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18))
+}
+html[data-ui-theme='nanquim'] .hero-nickname {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .hero-nickname:hover {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)));
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .edit-nickname-btn {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .edit-nickname-btn:hover {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .nickname-input {
+    background: rgb(var(--nq-shade-rgb) / 0.072) !important;
+    border: 1px solid var(--theme-accent, rgb(59, 130, 246)) !important;
+    color: var(--nq-ink) !important
+}
+html[data-ui-theme='nanquim'] .hero-level-title {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .inspect-level-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .inspect-level-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.162)
+}
+html[data-ui-theme='nanquim'] .hero-rank {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .xp-labels {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .xp-track {
+    background: rgb(var(--nq-shade-rgb) / 0.12)
+}
+html[data-ui-theme='nanquim'] .xp-fill {
+    background: linear-gradient(90deg, rgb(37, 99, 235), var(--theme-accent, rgb(56, 189, 248)));
+    box-shadow: 0 0 12px var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18))
+}
+html[data-ui-theme='nanquim'] .diamonds-box {
+    background: rgb(var(--nq-shade-rgb) / 0.12);
+    box-shadow: 0 4px 12px rgb(var(--nq-shade-rgb) / 0.105)
+}
+html[data-ui-theme='nanquim'] .diamonds-count {
+    color: color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .panel-title {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .show-categories-trigger {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted));
+    border-bottom: 1px dashed var(--nq-line-strong)
+}
+html[data-ui-theme='nanquim'] .show-categories-trigger:hover {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)));
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .skills-list::-webkit-scrollbar-track {
+    background: rgb(var(--nq-shade-rgb) / 0.108)
+}
+html[data-ui-theme='nanquim'] .skills-list::-webkit-scrollbar-thumb {
+    background: var(--theme-border, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 76%))
+}
+html[data-ui-theme='nanquim'] .skills-list::-webkit-scrollbar-thumb:hover {
+    background: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .category-connector-line {
+    background: var(--category-line-color, var(--theme-accent, rgb(56, 189, 248)));
+    box-shadow: 0 0 8px var(--category-line-color, var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18)))
+}
+html[data-ui-theme='nanquim'] .skill-card {
+    background: rgb(var(--nq-shade-rgb) / 0.12);
+    box-shadow: 0 10px 25px rgb(var(--nq-shade-rgb) / 0.14)
+}
+html[data-ui-theme='nanquim'] .skill-card:hover {
+    box-shadow: 0 15px 30px rgb(var(--nq-shade-rgb) / 0.21);
+    border-color: var(--skill-accent, rgb(59, 130, 246))
+}
+html[data-ui-theme='nanquim'] .skill-card.gold-maxed {
+    border-color: rgb(250, 204, 21) !important;
+    background: linear-gradient(135deg, rgb(var(--nq-shade-rgb) / 0.12) 0%, rgb(var(--nq-shade-rgb) / 0.12) 100%)
+}
+html[data-ui-theme='nanquim'] .skill-card.shake-warning {
+    border-color: rgb(239, 68, 68) !important
+}
+html[data-ui-theme='nanquim'] .gear-button {
+    background: rgb(var(--nq-shade-rgb) / 0.12);
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .gear-button:hover {
+    background: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 50%);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .skill-name {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .skill-category {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .current-goal-title {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .tasks-toggle-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.12);
+    border: 1px solid var(--nq-line-strong);
+    color: color-mix(in srgb, rgb(251, 191, 36) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .tasks-toggle-btn.has-pending {
+    border-color: rgb(245, 158, 11);
+    color: color-mix(in srgb, rgb(251, 191, 36) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .tasks-toggle-btn.all-done {
+    border-color: rgb(16, 185, 129);
+    color: color-mix(in srgb, rgb(52, 211, 153) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .tasks-toggle-btn:hover {
+    background: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 50%)
+}
+html[data-ui-theme='nanquim'] .segment-item {
+    background: rgb(var(--nq-shade-rgb) / 0.12)
+}
+html[data-ui-theme='nanquim'] .level-text {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .hide-skill-mini-btn {
+    background: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 50%);
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted));
+    border: 1px solid var(--nq-line-strong)
+}
+html[data-ui-theme='nanquim'] .hide-skill-mini-btn:hover {
+    background: rgb(239, 68, 68);
+    border-color: rgb(248, 113, 113);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .plus-button {
+    color: var(--nq-ink);
+    box-shadow: 0 4px 12px rgb(var(--nq-shade-rgb) / 0.14)
+}
+html[data-ui-theme='nanquim'] .plus-button:disabled {
+    background: rgb(var(--nq-shade-rgb) / 0.045) !important;
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .search-input-field {
+    background: rgb(var(--nq-shade-rgb) / 0.072) !important;
+    border: 1px solid var(--theme-accent, rgb(59, 130, 246)) !important;
+    color: var(--nq-ink) !important
+}
+html[data-ui-theme='nanquim'] .search-results-list::-webkit-scrollbar-track {
+    background: rgb(var(--nq-shade-rgb) / 0.036)
+}
+html[data-ui-theme='nanquim'] .search-results-list::-webkit-scrollbar-thumb {
+    background: var(--theme-border, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 76%))
+}
+html[data-ui-theme='nanquim'] .no-missions-box {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px dashed var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .no-missions-box p {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .no-missions-box span {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .mission-card-item {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .mission-card-item:hover {
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .mission-card-item.completed {
+    border-color: rgb(16, 185, 129)
+}
+html[data-ui-theme='nanquim'] .mission-skill-badge {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .mission-reward-badge {
+    color: color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink));
+    background: rgb(var(--nq-shade-rgb) / 0.072)
+}
+html[data-ui-theme='nanquim'] .mission-text-content {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .mission-complete-btn {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .mission-complete-btn.is-done {
+    background: rgb(16, 185, 129)
+}
+html[data-ui-theme='nanquim'] .missions-bonus-footer-banner {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .bonus-pending-text {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .bonus-claimed-text {
+    color: color-mix(in srgb, rgb(52, 211, 153) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .mini-missions-envelope-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .mini-missions-envelope-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.162)
+}
+html[data-ui-theme='nanquim'] .mini-tab-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .mini-tab-btn.active {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink);
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .mini-mission-row-item {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .rail-line-glow {
+    background: rgb(var(--nq-shade-rgb) / 0.22)
+}
+html[data-ui-theme='nanquim'] .rail-plus-badge {
+    background: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 50%);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.22);
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)));
+    box-shadow: 0 0 8px rgb(var(--nq-shade-rgb) / 0.175)
+}
+html[data-ui-theme='nanquim'] .subtle-side-rail:hover .rail-line-glow {
+    background: var(--theme-accent, rgb(56, 189, 248));
+    box-shadow: 0 0 15px var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18))
+}
+html[data-ui-theme='nanquim'] .subtle-side-rail:hover .rail-plus-badge {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink);
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .rail-tooltip {
+    background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%));
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)));
+    box-shadow: 0 4px 12px rgb(var(--nq-shade-rgb) / 0.175)
+}
+html[data-ui-theme='nanquim'] .custom-context-menu {
+    background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%));
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    box-shadow: 0 10px 25px rgb(var(--nq-shade-rgb) / 0.22)
+}
+html[data-ui-theme='nanquim'] .context-menu-item {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .context-menu-item:hover {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .context-menu-item.delete-item:hover {
+    background: rgb(239, 68, 68);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .modal-backdrop {
+    background: rgb(var(--nq-shade-rgb) / 0.12)
+}
+html[data-ui-theme='nanquim'] .modal-window {
+    background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%));
+    box-shadow: 0 25px 50px rgb(var(--nq-shade-rgb) / 0.22);
+    color: var(--nq-ink);
+    border: 1px solid var(--theme-border, rgb(var(--nq-shade-rgb) / 0.135))
+}
+html[data-ui-theme='nanquim'] .modal-window h2, html[data-ui-theme='nanquim'] .modal-window h3 {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .close-modal-x-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .close-modal-x-btn:hover {
+    background: rgb(239, 68, 68);
+    border-color: rgb(248, 113, 113);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .close-popup-btn {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .close-popup-btn:hover {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .level-stats-summary {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .stat-box span {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .stat-box strong {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .level-row-item {
+    background: rgb(var(--nq-shade-rgb) / 0.036);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .level-row-item.current {
+    border-color: var(--theme-accent, rgb(59, 130, 246));
+    box-shadow: 0 0 10px rgb(var(--nq-shade-rgb) / 0.15)
+}
+html[data-ui-theme='nanquim'] .level-row-xp {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .level-row-rank {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .profile-card-item {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .profile-card-item:hover {
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .profile-card-item.active {
+    border-color: var(--theme-accent, rgb(59, 130, 246));
+    box-shadow: 0 0 12px rgb(var(--nq-shade-rgb) / 0.18)
+}
+html[data-ui-theme='nanquim'] .profile-card-avatar {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .profile-card-title {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .profile-card-xp {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .profile-card-badge {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .editor-transfer-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)));
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .editor-transfer-btn:hover {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink);
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .profile-transfer-inline-box {
+    background: rgb(var(--nq-shade-rgb) / 0.12);
+    border: 1px solid var(--theme-accent, rgb(59, 130, 246));
+    box-shadow: 0 8px 20px rgb(var(--nq-shade-rgb) / 0.175)
+}
+html[data-ui-theme='nanquim'] .transfer-title {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .transfer-target-select {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .transfer-question {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .transfer-opt-btn.all-opt {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .transfer-opt-btn.xp-opt {
+    background: rgb(234, 179, 8);
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .transfer-confirm-subbox {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.09)
+}
+html[data-ui-theme='nanquim'] .transfer-confirm-subbox.xp-warning-style {
+    border-color: rgb(234, 179, 8)
+}
+html[data-ui-theme='nanquim'] .transfer-info-notice {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .transfer-info-notice.warning {
+    color: color-mix(in srgb, rgb(254, 240, 138) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .profile-delete-confirm-box {
+    border: 1px solid rgb(239, 68, 68)
+}
+html[data-ui-theme='nanquim'] .confirm-delete-text {
+    color: color-mix(in srgb, rgb(248, 113, 113) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .confirm-yes-btn {
+    background: rgb(239, 68, 68);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .confirm-no-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.09);
+    color: var(--nq-ink);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .confirm-no-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.18);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .new-profile-emoji-select {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .new-profile-emoji-select:hover {
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .emoji-change-label {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .reorder-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)));
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .reorder-btn:hover:not(:disabled) {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink);
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .reorder-btn.edge-btn {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .editor-remove-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    color: color-mix(in srgb, rgb(239, 68, 68) 62%, var(--nq-ink));
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .editor-remove-btn:hover {
+    background: rgb(239, 68, 68);
+    color: var(--nq-ink);
+    border-color: rgb(248, 113, 113)
+}
+html[data-ui-theme='nanquim'] .batch-toggle-square {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .batch-toggle-square:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.162);
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .batch-toggle-square.active {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink);
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .card-batch-checkbox {
+    accent-color: var(--theme-accent, rgb(37, 99, 235))
+}
+html[data-ui-theme='nanquim'] .batch-actions-panel {
+    background: rgb(var(--nq-shade-rgb) / 0.063);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .batch-delete-btn {
+    background: rgb(239, 68, 68);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .batch-confirm-box {
+    border: 1px solid rgb(239, 68, 68);
+    color: color-mix(in srgb, rgb(248, 113, 113) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .manage-card-section {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .restore-btn {
+    background: rgb(5, 150, 105);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .restore-btn:hover {
+    background: rgb(16, 185, 129)
+}
+html[data-ui-theme='nanquim'] .hide-action-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted));
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .hide-action-btn:hover {
+    background: rgb(239, 68, 68);
+    color: var(--nq-ink);
+    border-color: rgb(248, 113, 113)
+}
+html[data-ui-theme='nanquim'] .manage-edit-btn {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .high-z-backdrop {
+    background: rgb(var(--nq-shade-rgb) / 0.12) !important
+}
+html[data-ui-theme='nanquim'] .card-section-label {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .color-custom-card-compact {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .picker-square-compact {
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .color-name-compact {
+    background: rgb(var(--nq-shade-rgb) / 0.054) !important;
+    border: 1px solid var(--theme-border, var(--nq-line-strong)) !important;
+    color: var(--nq-ink) !important
+}
+html[data-ui-theme='nanquim'] .color-hex-compact {
+    background: rgb(var(--nq-shade-rgb) / 0.054) !important;
+    border: 1px solid var(--theme-border, var(--nq-line-strong)) !important;
+    color: var(--nq-ink) !important
+}
+html[data-ui-theme='nanquim'] .use-btn {
+    color: var(--nq-ink);
+    text-shadow: 0 1px 2px rgb(var(--nq-shade-rgb) / 0.22)
+}
+html[data-ui-theme='nanquim'] .save-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .save-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.135)
+}
+html[data-ui-theme='nanquim'] .edit-max-custom-btn {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .edit-max-custom-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.09)
+}
+html[data-ui-theme='nanquim'] .custom-max-lvl-input {
+    background: rgb(var(--nq-shade-rgb) / 0.054) !important;
+    border: 1px solid var(--theme-accent, rgb(59, 130, 246)) !important;
+    color: var(--nq-ink) !important
+}
+html[data-ui-theme='nanquim'] .preset-level-dropdown {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .preset-level-dropdown.mini {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    border-color: var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .decks-list-scroll-area::-webkit-scrollbar-track {
+    background: rgb(var(--nq-shade-rgb) / 0.036)
+}
+html[data-ui-theme='nanquim'] .decks-list-scroll-area::-webkit-scrollbar-thumb {
+    background: var(--theme-border, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 76%))
+}
+html[data-ui-theme='nanquim'] .deck-row-card {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .deck-row-card.is-active-deck {
+    border-color: var(--theme-accent, rgb(59, 130, 246));
+    box-shadow: 0 0 10px rgb(var(--nq-shade-rgb) / 0.14)
+}
+html[data-ui-theme='nanquim'] .deck-title {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .deck-status-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted));
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .deck-status-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.135);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .deck-status-btn.active {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--nq-ink);
+    border-color: var(--theme-accent, rgb(59, 130, 246))
+}
+html[data-ui-theme='nanquim'] .color-chip-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .color-chip-btn:hover {
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .chip-color-name {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .delete-color-x {
+    background: rgb(239, 68, 68);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .no-colors-msg {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .settings-description {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .export-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    color: var(--nq-ink);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .export-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.135)
+}
+html[data-ui-theme='nanquim'] .import-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    color: var(--nq-ink);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .import-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.135)
+}
+html[data-ui-theme='nanquim'] .settings-footer-credit {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .commands-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    color: color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink));
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .commands-btn:hover {
+    border-color: rgb(56, 189, 248)
+}
+html[data-ui-theme='nanquim'] .command-item {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] kbd {
+    background: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 50%);
+    border: 1px solid var(--nq-line-strong);
+    box-shadow: 0 2px 0 rgb(var(--nq-shade-rgb) / 0.22);
+    color: color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .mouse-badge {
+    border: 1px solid rgb(56, 189, 248);
+    color: color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .command-desc {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .command-desc strong {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .theme-card {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 2px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .theme-card:hover {
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .theme-card.active {
+    border-color: var(--theme-accent, rgb(59, 130, 246));
+    box-shadow: 0 0 15px var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18))
+}
+html[data-ui-theme='nanquim'] .theme-card-name {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .tasks-modal-window {
+    background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%));
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .tasks-modal-item {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .tasks-modal-item:hover {
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .tasks-modal-item input[type="checkbox"] {
+    accent-color: var(--theme-accent, rgb(37, 99, 235))
+}
+html[data-ui-theme='nanquim'] .done-text {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .add-skill-button {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .add-skill-button:hover {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)));
+    background: rgb(var(--nq-shade-rgb) / 0.072)
+}
+html[data-ui-theme='nanquim'] .color-dot.selected {
+    border-color: var(--nq-line-strong)
+}
+html[data-ui-theme='nanquim'] .add-custom-color-dot-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.09);
+    border: 1px dashed var(--theme-border, var(--nq-line-strong));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .add-custom-color-dot-btn:hover {
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .folder-list-select-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .folder-list-select-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.162);
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .folder-list-select-btn option {
+    background: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .folder-list-select-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .folder-list-select-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.162);
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .folder-list-select-btn option {
+    background: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .folder-list-checkbox-label {
+    color: var(--nq-ink);
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .folder-list-checkbox-label:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.108);
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .folder-list-checkbox-label input[type="checkbox"] {
+    accent-color: var(--theme-accent, rgb(37, 99, 235))
+}
+html[data-ui-theme='nanquim'] .custom-folder-dropdown-item:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.108)
+}
+html[data-ui-theme='nanquim'] .btn-level-info {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)));
+    border: 1px solid var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .btn-level-info:hover {
+    background: var(--theme-accent, rgb(56, 189, 248));
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .info-textarea:focus {
+    border-color: var(--theme-accent, rgb(56, 189, 248)) !important;
+    box-shadow: 0 0 0 2px rgb(var(--nq-shade-rgb) / 0.18)
+}
+
+/* ===== src/SetMobileGrande.css ===== */
+@media (max-width: 1280px) {
+    html[data-ui-theme='nanquim'] .character-panel {
+        background: rgb(var(--nq-shade-rgb) / 0.072);
+        border: 1px solid var(--theme-border, rgb(var(--nq-shade-rgb) / 0.072))
+    }
+}
+
+/* ===== src/SetMobilePequeno.css ===== */
+@media (max-width: 768px) {
+    html[data-ui-theme='nanquim'] .character-panel {
+        background: rgb(var(--nq-shade-rgb) / 0.081);
+        border: 1px solid var(--theme-border, rgb(var(--nq-shade-rgb) / 0.072))
+    }
+}
+
+/* ===== src/Responsive.css ===== */
+@media (max-width: 768px) {
+    html[data-ui-theme='nanquim'] .app-screen::before {
+        background: linear-gradient(to bottom, rgb(var(--nq-shade-rgb) / 0.099), transparent)
+    }
+}
+
+/* ===== src/atualizacao2_0/ColorDeck.css ===== */
+html[data-ui-theme='nanquim'] .cd-window {
+    --cd-border: var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .cd-header p {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .cd-preview {
+    box-shadow: inset 0 -40px 60px rgb(var(--nq-shade-rgb) / 0.063), 0 10px 24px rgb(var(--nq-shade-rgb) / 0.105)
+}
+html[data-ui-theme='nanquim'] .cd-preview-hint {
+    background: rgb(var(--nq-shade-rgb) / 0.04);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .cd-sample {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .cd-sample-top {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .cd-sample-top strong {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .cd-sample-bar {
+    background: rgb(var(--nq-shade-rgb) / 0.072)
+}
+html[data-ui-theme='nanquim'] .cd-fields span {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .cd-fields input {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .cd-fields input.invalid {
+    border-color: rgb(239, 68, 68)
+}
+html[data-ui-theme='nanquim'] .cd-current {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .cd-current:hover {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .cd-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .cd-btn.primary {
+    box-shadow: 0 6px 16px rgb(var(--nq-shade-rgb) / 0.105)
+}
+html[data-ui-theme='nanquim'] .cd-deck-tab {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.063);
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .cd-deck-tab:hover {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .cd-deck-tab.active {
+    color: var(--nq-ink);
+    background: color-mix(in srgb, var(--cd-accent) 12%, rgb(var(--nq-shade-rgb) / 0.045))
+}
+html[data-ui-theme='nanquim'] .cd-deck-strip i.empty {
+    background: repeating-linear-gradient(45deg, rgb(var(--nq-shade-rgb) / 0.072) 0 4px, transparent 4px 8px);
+    border: 1px dashed rgb(var(--nq-shade-rgb) / 0.18)
+}
+html[data-ui-theme='nanquim'] .cd-deck-panel {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .cd-deck-head h4 {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .cd-deck-head small {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .cd-default {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .cd-default:hover:not(:disabled) {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .cd-default.on {
+    color: var(--theme-on-accent, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .cd-tile-main, html[data-ui-theme='nanquim'] .cd-tile.add {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.063);
+    background: rgb(var(--nq-shade-rgb) / 0.027);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .cd-tile-color {
+    box-shadow: inset 0 -10px 18px rgb(var(--nq-shade-rgb) / 0.063)
+}
+html[data-ui-theme='nanquim'] .cd-tile-hex {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .cd-tile-del {
+    background: rgb(var(--nq-shade-rgb) / 0.108);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .cd-tile-del:hover {
+    background: rgb(220, 38, 38)
+}
+html[data-ui-theme='nanquim'] .cd-tile.add {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .cd-tile.add .cd-tile-color {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink);
+    text-shadow: 0 1px 3px rgb(var(--nq-shade-rgb) / 0.175)
+}
+html[data-ui-theme='nanquim'] .cd-empty {
+    color: var(--nq-muted)
+}
+
+/* ===== src/atualizacao2_0/DiamondHistory.css ===== */
+html[data-ui-theme='nanquim'] .dh-window {
+    --dh-border: var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .dh-header p {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .dh-close {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .dh-close:hover {
+    background: rgb(239, 68, 68);
+    border-color: rgb(248, 113, 113);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .dh-stat {
+    background: rgb(var(--nq-shade-rgb) / 0.05);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .dh-stat.main {
+    background: color-mix(in srgb, var(--dh-accent) 10%, rgb(var(--nq-shade-rgb) / 0.05))
+}
+html[data-ui-theme='nanquim'] .dh-stat-value {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .dh-stat-label {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .dh-filters button {
+    background: rgb(var(--nq-shade-rgb) / 0.036);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .dh-filters button:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.09)
+}
+html[data-ui-theme='nanquim'] .dh-filters button.active {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .dh-group-head {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .dh-group-total.neg {
+    color: color-mix(in srgb, rgb(248, 113, 113) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .dh-entry {
+    background: rgb(var(--nq-shade-rgb) / 0.032)
+}
+html[data-ui-theme='nanquim'] .dh-entry:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .dh-entry-icon {
+    background: rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .dh-entry-title {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .dh-entry-sub {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .dh-amount.neg {
+    color: color-mix(in srgb, rgb(248, 113, 113) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .dh-empty {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .dh-footnote {
+    border-top: 1px solid rgb(var(--nq-shade-rgb) / 0.063);
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .diamonds-box.dh-clickable:hover {
+    box-shadow: 0 0 14px color-mix(in srgb, var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18)) 35%, transparent)
+}
+
+/* ===== src/atualizacao2_0/Flashcards.css ===== */
+html[data-ui-theme='nanquim'] .fc-window {
+    --fc-border: var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .fc-pill {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.063);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-pill.hot {
+    color: color-mix(in srgb, rgb(254, 215, 170) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fc-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-btn.primary {
+    color: var(--theme-on-accent, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fc-btn.ghost {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-btn.ghost:hover {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-btn.danger {
+    background: rgb(220, 38, 38);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-btn.danger-ghost {
+    color: color-mix(in srgb, rgb(252, 165, 165) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fc-btn kbd, html[data-ui-theme='nanquim'] .fc-rate kbd {
+    background: rgb(var(--nq-shade-rgb) / 0.045)
+}
+html[data-ui-theme='nanquim'] .fc-input {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-help {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .fc-bar-stats {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-hero {
+    background: radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--fc-accent) 22%, transparent), transparent 60%),
+    rgb(var(--nq-shade-rgb) / 0.045)
+}
+html[data-ui-theme='nanquim'] .fc-hero strong {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-hero span {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-deck {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.063)
+}
+html[data-ui-theme='nanquim'] .fc-deck-name {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-skill-chip {
+    background: color-mix(in srgb, var(--fc-deck) 16%, rgb(var(--nq-shade-rgb) / 0.054));
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-skill-chip.muted {
+    color: var(--nq-muted);
+    background: rgb(var(--nq-shade-rgb) / 0.036)
+}
+html[data-ui-theme='nanquim'] .fc-deck-counts {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-deck-counts b.new {
+    color: color-mix(in srgb, rgb(96, 165, 250) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fc-deck-counts b.due {
+    color: color-mix(in srgb, rgb(251, 191, 36) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fc-mastery {
+    background: rgb(var(--nq-shade-rgb) / 0.072)
+}
+html[data-ui-theme='nanquim'] .fc-mastery span {
+    background: linear-gradient(90deg, var(--fc-deck), rgb(34, 197, 94))
+}
+html[data-ui-theme='nanquim'] .fc-deck-study {
+    border-left: 1px solid rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-deck-study:disabled {
+    color: color-mix(in srgb, rgb(34, 197, 94) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fc-deck-new button {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-deck-new button + button {
+    border-top: 1px dashed rgb(var(--nq-shade-rgb) / 0.072)
+}
+html[data-ui-theme='nanquim'] .fc-deck-new button:hover:not(:disabled) {
+    color: var(--nq-ink);
+    background: rgb(var(--nq-shade-rgb) / 0.036)
+}
+html[data-ui-theme='nanquim'] .fc-skill-row {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.063);
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-skill-row-name small {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .fc-skill-row-count {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-field > span {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-emojis button {
+    background: rgb(var(--nq-shade-rgb) / 0.036)
+}
+html[data-ui-theme='nanquim'] .fc-linked {
+    background: color-mix(in srgb, var(--fc-deck) 10%, rgb(var(--nq-shade-rgb) / 0.045))
+}
+html[data-ui-theme='nanquim'] .fc-linked small {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-confirm {
+    color: color-mix(in srgb, rgb(252, 165, 165) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fc-add {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .fc-add-actions small {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-card-row {
+    background: rgb(var(--nq-shade-rgb) / 0.027);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.045)
+}
+html[data-ui-theme='nanquim'] .fc-card-text strong {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-card-text span {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-status {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-status.new {
+    color: color-mix(in srgb, rgb(147, 197, 253) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fc-status.due {
+    color: color-mix(in srgb, rgb(252, 211, 77) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fc-status.learning {
+    color: color-mix(in srgb, rgb(196, 181, 253) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fc-status.mastered {
+    color: color-mix(in srgb, rgb(134, 239, 172) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fc-row-actions button:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.072)
+}
+html[data-ui-theme='nanquim'] .fc-progress {
+    background: rgb(var(--nq-shade-rgb) / 0.072)
+}
+html[data-ui-theme='nanquim'] .fc-study-meta {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-study-meta em {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-face {
+    background: radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--fc-deck) 22%, transparent), transparent 65%),
+    color-mix(in srgb, var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%)) 70%, var(--nq-paper));
+    box-shadow: 0 18px 40px rgb(var(--nq-shade-rgb) / 0.158), inset 0 1px 0 rgb(var(--nq-shade-rgb) / 0.017)
+}
+html[data-ui-theme='nanquim'] .fc-face-text {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-face-q {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .fc-face em {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .fc-rate {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-rate.again {
+    background: rgb(185, 28, 28)
+}
+html[data-ui-theme='nanquim'] .fc-rate.hard {
+    background: rgb(194, 65, 12)
+}
+html[data-ui-theme='nanquim'] .fc-rate.good {
+    background: color-mix(in srgb, rgb(21, 128, 61) 16%, var(--nq-paper))
+}
+html[data-ui-theme='nanquim'] .fc-rate.easy {
+    background: rgb(29, 78, 216)
+}
+html[data-ui-theme='nanquim'] .fc-summary-badge {
+    background: color-mix(in srgb, var(--fc-deck) 18%, rgb(var(--nq-shade-rgb) / 0.054))
+}
+html[data-ui-theme='nanquim'] .fc-summary-grid div {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .fc-summary-grid b {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-summary-grid span {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-menu {
+    background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%));
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    box-shadow: 0 14px 34px rgb(var(--nq-shade-rgb) / 0.193)
+}
+html[data-ui-theme='nanquim'] .fc-menu-title {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted));
+    border-bottom: 1px solid rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .fc-menu > button {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-menu > button:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.063)
+}
+html[data-ui-theme='nanquim'] .fc-menu > button.danger {
+    color: color-mix(in srgb, rgb(252, 165, 165) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fc-switch {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-switch.on {
+    color: color-mix(in srgb, rgb(134, 239, 172) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fc-menu-confirm {
+    color: color-mix(in srgb, rgb(252, 165, 165) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fc-module {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.072);
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-module.active {
+    background: color-mix(in srgb, var(--fc-deck, var(--fc-accent)) 14%, rgb(var(--nq-shade-rgb) / 0.045))
+}
+html[data-ui-theme='nanquim'] .fc-module-name small {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .fc-module-count {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-intervals {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .fc-interval.again b {
+    border-color: rgb(239, 68, 68)
+}
+html[data-ui-theme='nanquim'] .fc-interval.hard b {
+    border-color: rgb(249, 115, 22)
+}
+html[data-ui-theme='nanquim'] .fc-interval.good b {
+    border-color: rgb(34, 197, 94)
+}
+html[data-ui-theme='nanquim'] .fc-interval.easy b {
+    border-color: rgb(59, 130, 246)
+}
+html[data-ui-theme='nanquim'] .fc-interval input {
+    background: rgb(var(--nq-shade-rgb) / 0.063);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-interval small {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-check {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-interval-help {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .fc-btn.ghost-line {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+
+/* ===== src/atualizacao2_0/Hero.css ===== */
+html[data-ui-theme='nanquim'] .vx-face {
+    box-shadow: inset 0 0 0 1px rgb(var(--nq-shade-rgb) / 0.077)
+}
+html[data-ui-theme='nanquim'] .vx-top {
+    background: color-mix(in srgb, var(--vx) 82%, var(--nq-paper-2))
+}
+html[data-ui-theme='nanquim'] .vx-right {
+    background: color-mix(in srgb, var(--vx) 80%, var(--nq-paper))
+}
+html[data-ui-theme='nanquim'] .vx-left {
+    background: color-mix(in srgb, var(--vx) 88%, var(--nq-paper))
+}
+html[data-ui-theme='nanquim'] .vx-back {
+    background: color-mix(in srgb, var(--vx) 70%, var(--nq-paper))
+}
+html[data-ui-theme='nanquim'] .vx-bottom {
+    background: color-mix(in srgb, var(--vx) 55%, var(--nq-paper))
+}
+html[data-ui-theme='nanquim'] .vx-gem .vx-face {
+    box-shadow: inset 0 0 0 1px rgb(var(--nq-shade-rgb) / 0.122), 0 0 12px var(--vx)
+}
+html[data-ui-theme='nanquim'] .vx-wing .vx-face {
+    box-shadow: inset 0 0 0 1px rgb(var(--nq-shade-rgb) / 0.158), 0 0 10px var(--vx)
+}
+html[data-ui-theme='nanquim'] .vx-shadow {
+    background: radial-gradient(ellipse, rgb(var(--nq-shade-rgb) / 0.099), transparent 70%)
+}
+html[data-ui-theme='nanquim'] .vx-sparkles span {
+    background: var(--theme-accent, rgb(56, 189, 248));
+    box-shadow: 0 0 8px var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18))
+}
+html[data-ui-theme='nanquim'] .hero-thought-bubble {
+    background: rgb(var(--nq-shade-rgb) / 0.22);
+    box-shadow: 0 4px 14px rgb(var(--nq-shade-rgb) / 0.122), 0 0 0 3px color-mix(in srgb, var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18)) 35%, transparent)
+}
+html[data-ui-theme='nanquim'] .hero-thought-dot {
+    background: rgb(var(--nq-shade-rgb) / 0.22)
+}
+html[data-ui-theme='nanquim'] .hm-window {
+    --hm-border: var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .hm-header p {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .hm-preview {
+    background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--hm-accent) 22%, transparent), transparent 60%),
+    linear-gradient(180deg, rgb(var(--nq-shade-rgb) / 0.027), rgb(var(--nq-shade-rgb) / 0.081))
+}
+html[data-ui-theme='nanquim'] .hm-preview-info {
+    background: rgb(var(--nq-shade-rgb) / 0.063);
+    border-top: 1px solid rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .hm-preview-info strong {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .hm-preview-info span {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .hm-tabs {
+    background: rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .hm-tabs button {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .hm-tabs button.active {
+    color: var(--theme-on-accent, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .hm-slot {
+    border: 2px solid rgb(var(--nq-shade-rgb) / 0.072);
+    background: linear-gradient(180deg, rgb(var(--nq-shade-rgb) / 0.045), rgb(var(--nq-shade-rgb) / 0.063)),
+    rgb(var(--nq-shade-rgb) / 0.063);
+    box-shadow: inset 0 2px 0 rgb(var(--nq-shade-rgb) / 0.021), inset 0 -3px 0 rgb(var(--nq-shade-rgb) / 0.122)
+}
+html[data-ui-theme='nanquim'] .hm-slot-name {
+    color: var(--nq-ink);
+    background: rgb(var(--nq-shade-rgb) / 0.081)
+}
+html[data-ui-theme='nanquim'] .hm-colors section {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .hm-colors h4 {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .hm-hint {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .hm-swatch {
+    border: 2px solid rgb(var(--nq-shade-rgb) / 0.108);
+    box-shadow: inset 0 -4px 0 rgb(var(--nq-shade-rgb) / 0.088)
+}
+html[data-ui-theme='nanquim'] .hm-swatch.active {
+    border-color: var(--nq-line-strong);
+    box-shadow: 0 0 0 2px var(--hm-accent), inset 0 -4px 0 rgb(var(--nq-shade-rgb) / 0.088)
+}
+html[data-ui-theme='nanquim'] .hm-swatch.theme {
+    background: conic-gradient(from 0deg, var(--hm-accent), color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 50%), var(--hm-accent))
+}
+html[data-ui-theme='nanquim'] .hm-swatch.custom {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .hm-reset {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .hm-reset:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.09)
+}
+html[data-ui-theme='nanquim'] .hm-power {
+    background: linear-gradient(90deg, color-mix(in srgb, var(--hm-accent) 18%, transparent), rgb(var(--nq-shade-rgb) / 0.054))
+}
+html[data-ui-theme='nanquim'] .hm-power-label {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .hm-power-value {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .hm-power-side {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .hm-wallet {
+    background: rgb(var(--nq-shade-rgb) / 0.063);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.09);
+    color: color-mix(in srgb, rgb(125, 211, 252) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .hm-stat {
+    background: linear-gradient(180deg, rgb(var(--nq-shade-rgb) / 0.036), rgb(var(--nq-shade-rgb) / 0.054));
+    border: 2px solid rgb(var(--nq-shade-rgb) / 0.063);
+    box-shadow: inset 0 -3px 0 rgb(var(--nq-shade-rgb) / 0.105)
+}
+html[data-ui-theme='nanquim'] .hm-stat.maxed {
+    border-color: color-mix(in srgb, rgb(250, 204, 21) 55%, transparent)
+}
+html[data-ui-theme='nanquim'] .hm-stat-icon {
+    background: rgb(var(--nq-shade-rgb) / 0.072)
+}
+html[data-ui-theme='nanquim'] .hm-stat-top strong {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .hm-stat-value {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .hm-stat-body small {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .hm-pips span {
+    background: rgb(var(--nq-shade-rgb) / 0.072)
+}
+html[data-ui-theme='nanquim'] .hm-stat.maxed .hm-pips span.on {
+    background: rgb(250, 204, 21);
+    box-shadow: 0 0 6px rgb(var(--nq-shade-rgb) / 0.18)
+}
+html[data-ui-theme='nanquim'] .hm-upgrade-btn {
+    color: var(--theme-on-accent, var(--nq-ink));
+    box-shadow: inset 0 -3px 0 rgb(var(--nq-shade-rgb) / 0.088)
+}
+html[data-ui-theme='nanquim'] .hm-upgrade-btn:disabled {
+    background: rgb(var(--nq-shade-rgb) / 0.063);
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .hm-stat.maxed .hm-upgrade-btn:disabled {
+    color: color-mix(in srgb, rgb(250, 204, 21) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .hm-slot-power {
+    background: rgb(var(--nq-shade-rgb) / 0.09);
+    color: color-mix(in srgb, rgb(250, 204, 21) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .hm-gender {
+    background: rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .hm-gender > span {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .hm-gender-toggle {
+    background: rgb(var(--nq-shade-rgb) / 0.063)
+}
+html[data-ui-theme='nanquim'] .hm-gender-toggle button {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .hm-gender-toggle button.active {
+    color: var(--theme-on-accent, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .up-node {
+    background: color-mix(in srgb, var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%)) 82%, transparent);
+    box-shadow: 0 6px 16px rgb(var(--nq-shade-rgb) / 0.122)
+}
+html[data-ui-theme='nanquim'] .up-node.maxed {
+    border-color: rgb(250, 204, 21)
+}
+html[data-ui-theme='nanquim'] .up-node-icon {
+    background: color-mix(in srgb, var(--hm-accent) 20%, rgb(var(--nq-shade-rgb) / 0.054))
+}
+html[data-ui-theme='nanquim'] .up-node-name {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .up-node-lvl {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .up-pips span {
+    background: rgb(var(--nq-shade-rgb) / 0.09)
+}
+html[data-ui-theme='nanquim'] .up-node.maxed .up-pips span.on {
+    background: rgb(250, 204, 21)
+}
+html[data-ui-theme='nanquim'] .up-buy {
+    color: var(--theme-on-accent, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .up-buy:disabled {
+    background: rgb(var(--nq-shade-rgb) / 0.072);
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .up-node.maxed .up-buy:disabled {
+    color: color-mix(in srgb, rgb(250, 204, 21) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .rp-sheet {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .rp-head h4 {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .rp-head small {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .rp-purse {
+    background: rgb(var(--nq-shade-rgb) / 0.063);
+    color: color-mix(in srgb, rgb(125, 211, 252) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .rp-radar-ring {
+    stroke: rgb(var(--nq-shade-rgb) / 0.09)
+}
+html[data-ui-theme='nanquim'] .rp-radar-axis {
+    stroke: rgb(var(--nq-shade-rgb) / 0.072)
+}
+html[data-ui-theme='nanquim'] .rp-radar-base {
+    fill: rgb(var(--nq-shade-rgb) / 0.045);
+    stroke: rgb(var(--nq-shade-rgb) / 0.22)
+}
+html[data-ui-theme='nanquim'] .rp-row {
+    background: rgb(var(--nq-shade-rgb) / 0.027)
+}
+html[data-ui-theme='nanquim'] .rp-row-name {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .rp-row-name small {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .rp-row-value {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .rp-tip {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .hm-swatch-caption {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .hm-swatch-caption-dot {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.22)
+}
+html[data-ui-theme='nanquim'] .hm-swatch-caption-dot.theme {
+    background: conic-gradient(from 0deg, var(--hm-accent), color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 50%), var(--hm-accent))
+}
+html[data-ui-theme='nanquim'] .hm-chip {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.09);
+    background: rgb(var(--nq-shade-rgb) / 0.036);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .hm-chip:hover {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .hm-chip.active {
+    color: var(--theme-on-accent, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .vx-chain .vx-face {
+    background-image: radial-gradient(circle at 50% 50%, transparent 1.2px, rgb(var(--nq-shade-rgb) / 0.05) 1.6px, transparent 2.2px)
+}
+
+/* ===== src/atualizacao2_0/Settings.css ===== */
+html[data-ui-theme='nanquim'] .st-window {
+    --st-border: var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .st-header p {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .st-close {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .st-close:hover {
+    background: rgb(239, 68, 68);
+    border-color: rgb(248, 113, 113);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .st-section {
+    background: rgb(var(--nq-shade-rgb) / 0.04);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .st-section h4 {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .st-note {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .st-lang {
+    background: rgb(var(--nq-shade-rgb) / 0.036);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .st-lang:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.081)
+}
+html[data-ui-theme='nanquim'] .st-lang.active {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .st-row-text strong {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .st-row-text span {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .st-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .st-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.108);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .st-btn.primary {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .st-btn kbd, html[data-ui-theme='nanquim'] .cm-keys kbd {
+    background: rgb(var(--nq-shade-rgb) / 0.063);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.108);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .st-segmented {
+    background: rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .st-segmented button {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .st-segmented button.active {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .st-switch {
+    background: rgb(var(--nq-shade-rgb) / 0.108)
+}
+html[data-ui-theme='nanquim'] .st-switch::after {
+    background: var(--nq-paper-2)
+}
+html[data-ui-theme='nanquim'] .st-toggle-row input:checked + .st-switch::after {
+    background: var(--nq-paper-2)
+}
+html[data-ui-theme='nanquim'] .st-footer {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .cm-item:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.036)
+}
+html[data-ui-theme='nanquim'] .cm-plus, html[data-ui-theme='nanquim'] .cm-or {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .cm-text {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .cm-tabs {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .cm-tabs button {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .cm-tabs button.active {
+    background: var(--theme-accent, rgb(56, 189, 248));
+    color: var(--theme-on-accent, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .st-range {
+    accent-color: var(--theme-accent, rgb(56, 189, 248))
+}
+
+/* ===== src/atualizacao2_0/TaskUpdate.css ===== */
+html[data-ui-theme='nanquim'] .ck-window, html[data-ui-theme='nanquim'] .ck-editor, html[data-ui-theme='nanquim'] .ck-alert {
+    --ck-border: var(--theme-border, var(--nq-line-strong));
+    --ck-muted: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .ck-icon-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-icon-btn:hover:not(:disabled) {
+    background: rgb(var(--nq-shade-rgb) / 0.108);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-icon-btn.close:hover {
+    background: rgb(239, 68, 68);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-btn.primary {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-btn.ghost {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-btn.ghost:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.108);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-input {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-select {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-select option {
+    background: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%)
+}
+html[data-ui-theme='nanquim'] .ck-sidebar {
+    border-right: 1px solid rgb(var(--nq-shade-rgb) / 0.063)
+}
+html[data-ui-theme='nanquim'] .ck-list-item {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-list-item:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-list-item.active {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-count {
+    background: rgb(var(--nq-shade-rgb) / 0.09)
+}
+html[data-ui-theme='nanquim'] .ck-list-item.active .ck-count {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-list-title {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-progress-track {
+    background: rgb(var(--nq-shade-rgb) / 0.063)
+}
+html[data-ui-theme='nanquim'] .ck-quick-add {
+    background: rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .ck-quick-add input {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-quick-details {
+    background: rgb(var(--nq-shade-rgb) / 0.063);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-quick-details:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.126);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-segmented {
+    background: rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .ck-segmented button:hover {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-segmented button.active {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-task {
+    background: rgb(var(--nq-shade-rgb) / 0.032)
+}
+html[data-ui-theme='nanquim'] .ck-task:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .ck-handle {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .ck-check {
+    border: 2px solid var(--nq-line-strong);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-check.partial {
+    background: radial-gradient(circle, var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%)) 55%, transparent 56%),
+    conic-gradient(var(--ck-accent) var(--ck-progress), var(--nq-paper-3) 0)
+}
+html[data-ui-theme='nanquim'] .ck-task-title {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-chip {
+    background: rgb(var(--nq-shade-rgb) / 0.063);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-chip.muted {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .ck-chip.done-due.ontime {
+    color: color-mix(in srgb, rgb(52, 211, 153) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .ck-chip.done-due.late {
+    color: color-mix(in srgb, rgb(252, 165, 165) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .ck-chip.pick {
+    background: rgb(var(--nq-shade-rgb) / 0.045)
+}
+html[data-ui-theme='nanquim'] .ck-chip.pick:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.09)
+}
+html[data-ui-theme='nanquim'] .ck-chip.pick.active {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-completed {
+    border-top: 1px solid rgb(var(--nq-shade-rgb) / 0.063)
+}
+html[data-ui-theme='nanquim'] .ck-completed-toggle:hover {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-toast {
+    background: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 24%);
+    box-shadow: 0 10px 25px rgb(var(--nq-shade-rgb) / 0.21);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-field {
+    background: rgb(var(--nq-shade-rgb) / 0.04);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .ck-inline {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-stepper button {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-stepper button:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.126)
+}
+html[data-ui-theme='nanquim'] .ck-weekdays button, html[data-ui-theme='nanquim'] .ck-monthdays button {
+    background: rgb(var(--nq-shade-rgb) / 0.036)
+}
+html[data-ui-theme='nanquim'] .ck-weekdays button:hover, html[data-ui-theme='nanquim'] .ck-monthdays button:hover {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-weekdays button.active, html[data-ui-theme='nanquim'] .ck-monthdays button.active {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-monthdays small {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .ck-meta {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .ck-editor-footer {
+    border-top: 1px solid rgb(var(--nq-shade-rgb) / 0.063)
+}
+html[data-ui-theme='nanquim'] .ck-alert {
+    background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%));
+    box-shadow: 0 8px 20px rgb(var(--nq-shade-rgb) / 0.158);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .ck-alert button:hover {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .subtle-mission-badge.ck-badge-overdue {
+    background: rgb(239, 68, 68) !important
+}
+@media (max-width: 680px) {
+    html[data-ui-theme='nanquim'] .ck-sidebar {
+        border-bottom: 1px solid rgb(var(--nq-shade-rgb) / 0.063)
+    }
+}
+html[data-ui-theme='nanquim'] .ck-list-item.task-drop {
+    color: var(--nq-ink)
+}
+
+/* ===== src/atualizacao2_0/Themes.css ===== */
+html[data-ui-theme='nanquim'] .th-window {
+    --th-border: var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .th-header p {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .th-icon-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .th-icon-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.108)
+}
+html[data-ui-theme='nanquim'] .th-icon-btn.close:hover {
+    background: rgb(239, 68, 68);
+    border-color: rgb(248, 113, 113);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .th-tab {
+    background: rgb(var(--nq-shade-rgb) / 0.036);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .th-tab:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.09);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .th-tab.active {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .th-tab em {
+    background: rgb(var(--nq-shade-rgb) / 0.045)
+}
+html[data-ui-theme='nanquim'] .th-card {
+    background: rgb(var(--nq-shade-rgb) / 0.045)
+}
+html[data-ui-theme='nanquim'] .th-check, html[data-ui-theme='nanquim'] .th-edit-badge {
+    background: rgb(var(--nq-shade-rgb) / 0.099);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .th-name {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .th-editor {
+    background: rgb(var(--nq-shade-rgb) / 0.045)
+}
+html[data-ui-theme='nanquim'] .th-input {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .th-color {
+    background: rgb(var(--nq-shade-rgb) / 0.036);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .th-color input[type='color'] {
+    border: 2px solid rgb(var(--nq-shade-rgb) / 0.135)
+}
+html[data-ui-theme='nanquim'] .th-color strong {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .th-color small {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .th-btn.primary {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .th-btn.ghost {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .th-btn.danger {
+    color: color-mix(in srgb, rgb(248, 113, 113) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .th-hint {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .th-empty {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .mission-complete-btn {
+    background: var(--theme-accent, rgb(37, 99, 235));
+    color: var(--theme-on-accent, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .mission-complete-btn.is-done {
+    background: color-mix(in srgb, var(--theme-accent, rgb(16, 185, 129)) 18%, transparent);
+    color: var(--theme-accent, color-mix(in srgb, rgb(16, 185, 129) 62%, var(--nq-ink)));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18)) 55%, transparent)
+}
+html[data-ui-theme='nanquim'] .mission-card-item.completed {
+    border-color: var(--theme-accent, rgb(16, 185, 129));
+    background: color-mix(in srgb, var(--theme-accent, rgb(16, 185, 129)) 8%, rgb(var(--nq-shade-rgb) / 0.054))
+}
+html[data-ui-theme='nanquim'] .mission-skill-badge {
+    background: color-mix(in srgb, var(--theme-accent, rgb(56, 189, 248)) 14%, transparent)
+}
+html[data-ui-theme='nanquim'] .mission-reward-badge {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)));
+    border-color: color-mix(in srgb, var(--theme-accent, rgb(56, 189, 248)) 35%, transparent)
+}
+html[data-ui-theme='nanquim'] .bonus-claimed-text {
+    color: var(--theme-accent, color-mix(in srgb, rgb(52, 211, 153) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .th-fav-badge {
+    background: rgb(var(--nq-shade-rgb) / 0.099);
+    color: color-mix(in srgb, rgb(250, 204, 21) 62%, var(--nq-ink));
+    text-shadow: 0 0 6px rgb(var(--nq-shade-rgb) / 0.18)
+}
+html[data-ui-theme='nanquim'] .th-empty small {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .th-menu {
+    background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%));
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    box-shadow: 0 12px 28px rgb(var(--nq-shade-rgb) / 0.21)
+}
+html[data-ui-theme='nanquim'] .th-menu-title {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted));
+    border-bottom: 1px solid rgb(var(--nq-shade-rgb) / 0.063)
+}
+html[data-ui-theme='nanquim'] .th-menu button {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .th-menu button:hover {
+    background: color-mix(in srgb, var(--theme-accent, rgb(56, 189, 248)) 18%, transparent)
+}
+html[data-ui-theme='nanquim'] .th-family-btn {
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    background: rgb(var(--nq-shade-rgb) / 0.036)
+}
+html[data-ui-theme='nanquim'] .th-family-btn:hover {
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .th-family-btn.active {
+    border-color: var(--theme-accent, rgb(56, 189, 248));
+    background: color-mix(in srgb, var(--theme-accent, rgb(56, 189, 248)) 14%, transparent)
+}
+html[data-ui-theme='nanquim'] .th-family-btn em {
+    background: var(--theme-accent, rgb(56, 189, 248));
+    color: var(--theme-on-accent, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .th-ink {
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    background: rgb(var(--nq-shade-rgb) / 0.022)
+}
+html[data-ui-theme='nanquim'] .th-ink-dot {
+    border: 2px solid rgb(var(--nq-shade-rgb) / 0.22);
+    box-shadow: 0 1px 3px rgb(var(--nq-shade-rgb) / 0.088)
+}
+html[data-ui-theme='nanquim'] .th-ink-dot.active {
+    outline: 2px solid var(--theme-accent, rgb(56, 189, 248))
+}
+
+/* ===== src/atualizacao2_0/Update_2.css ===== */
+html[data-ui-theme='nanquim'] .pomodoro-modal-window {
+    --pomo-border: var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .pomo-icon-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-icon-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.108);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-icon-btn.close:hover {
+    border-color: rgb(248, 113, 113);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-modes {
+    background: rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .pomodoro-mode-btn {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .pomodoro-mode-btn:hover {
+    color: var(--nq-ink);
+    background: rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .pomodoro-mode-btn.active {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-mode-remove {
+    color: var(--nq-ink);
+    box-shadow: 0 2px 5px rgb(var(--nq-shade-rgb) / 0.14)
+}
+html[data-ui-theme='nanquim'] .pomo-mode-edit {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .pomo-mode-edit:hover {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-manage {
+    background: rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .pomo-input {
+    background: rgb(var(--nq-shade-rgb) / 0.063);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-hms {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .pomo-save-btn {
+    color: color-mix(in srgb, rgb(52, 211, 153) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .pomo-small-btn {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-ghost-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-ghost-btn:hover:not(:disabled) {
+    background: rgb(var(--nq-shade-rgb) / 0.108);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-chip {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-chip small {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .pomo-chip:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.09)
+}
+html[data-ui-theme='nanquim'] .pomo-chip.active {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-chip.active small {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-dial-track {
+    stroke: rgb(var(--nq-shade-rgb) / 0.063)
+}
+html[data-ui-theme='nanquim'] .timer-text {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .timer-text.editable:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .timer-text.ringing {
+    color: color-mix(in srgb, rgb(248, 113, 113) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .timer-status-tag {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .timer-status-tag.ringing {
+    color: color-mix(in srgb, rgb(248, 113, 113) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .timer-edit-input {
+    color: var(--nq-ink);
+    background: rgb(var(--nq-shade-rgb) / 0.072)
+}
+html[data-ui-theme='nanquim'] .timer-colon {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .timer-edit-hint {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .pomo-primary {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-primary.pause {
+    background: rgb(var(--nq-shade-rgb) / 0.09);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-primary.alarm {
+    box-shadow: 0 0 16px rgb(var(--nq-shade-rgb) / 0.18)
+}
+html[data-ui-theme='nanquim'] .pomo-secondary {
+    background: rgb(var(--nq-shade-rgb) / 0.045);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-secondary:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.108);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-footer {
+    border-top: 1px solid rgb(var(--nq-shade-rgb) / 0.054);
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .pomodoro-select-input {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomodoro-select-input option {
+    background: color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%)
+}
+html[data-ui-theme='nanquim'] .pomo-tabs {
+    border-bottom: 1px solid rgb(var(--nq-shade-rgb) / 0.072)
+}
+html[data-ui-theme='nanquim'] .pomo-tab {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .pomo-tab:hover {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-tab.active {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-tab-badge {
+    background: rgb(var(--nq-shade-rgb) / 0.09);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-tab-badge.running {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-tab-badge.ringing {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-timers-summary {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .pomo-card {
+    background: rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .pomo-card.ringing {
+    border-color: rgb(248, 113, 113)
+}
+html[data-ui-theme='nanquim'] .pomo-emoji-quick {
+    background: rgb(var(--nq-shade-rgb) / 0.036)
+}
+html[data-ui-theme='nanquim'] .pomo-emoji-quick:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.09)
+}
+html[data-ui-theme='nanquim'] .pomo-emoji-quick.more {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-emoji-overlay {
+    background: rgb(var(--nq-shade-rgb) / 0.09)
+}
+html[data-ui-theme='nanquim'] .pomo-card-name {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-card-time {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-card.ringing .pomo-card-time {
+    color: color-mix(in srgb, rgb(248, 113, 113) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .pomo-card-meta {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .pomo-empty {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .pomo-empty p {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-float {
+    --pomo-border: var(--theme-border, var(--nq-line-strong));
+    background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%));
+    box-shadow: 0 8px 22px rgb(var(--nq-shade-rgb) / 0.193);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-float.ringing {
+    border-color: rgb(248, 113, 113)
+}
+html[data-ui-theme='nanquim'] .pomo-float-head {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .pomo-float-time {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-float.ringing .pomo-float-time {
+    color: color-mix(in srgb, rgb(248, 113, 113) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .pomo-mini-btn {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-mini-btn:hover {
+    background: rgb(var(--nq-shade-rgb) / 0.126)
+}
+html[data-ui-theme='nanquim'] .pomo-mini-btn.play {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-mini-btn.ghost {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .pomo-mini-btn.ghost:hover {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-mini-btn.ghost.danger:hover {
+    color: color-mix(in srgb, rgb(248, 113, 113) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .pomo-float.ringing .pomo-float-bar {
+    background: rgb(248, 113, 113)
+}
+html[data-ui-theme='nanquim'] .pomo-context-menu {
+    background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%));
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    box-shadow: 0 10px 25px rgb(var(--nq-shade-rgb) / 0.21)
+}
+html[data-ui-theme='nanquim'] .pomo-context-menu button {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-context-menu button:hover {
+    background: color-mix(in srgb, var(--theme-accent, rgb(56, 189, 248)) 18%, transparent)
+}
+html[data-ui-theme='nanquim'] .pomo-switch {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .pomo-switch-track {
+    background: rgb(var(--nq-shade-rgb) / 0.108)
+}
+html[data-ui-theme='nanquim'] .pomo-switch-track::after {
+    background: var(--nq-paper-2)
+}
+html[data-ui-theme='nanquim'] .pomo-switch input:checked + .pomo-switch-track::after {
+    background: var(--nq-paper-2)
+}
+
+/* ===== src/atualizacao2_0/UpIdioma.css ===== */
+html[data-ui-theme='nanquim'] .up-idioma-modal-title {
+    color: var(--nq-ink) !important
+}
+html[data-ui-theme='nanquim'] .up-idioma-modal-desc {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted)) !important
+}
+html[data-ui-theme='nanquim'] .up-idioma-card {
+    background: rgb(var(--nq-shade-rgb) / 0.054);
+    border: 1px solid var(--theme-border, var(--nq-line-strong))
+}
+html[data-ui-theme='nanquim'] .up-idioma-card:hover {
+    border-color: var(--theme-accent, rgb(56, 189, 248));
+    background: rgb(var(--nq-shade-rgb) / 0.045)
+}
+html[data-ui-theme='nanquim'] .up-idioma-card.active {
+    border-color: var(--theme-accent, rgb(59, 130, 246));
+    box-shadow: 0 0 14px rgb(var(--nq-shade-rgb) / 0.18)
+}
+html[data-ui-theme='nanquim'] .up-idioma-name {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .up-idioma-code {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .up-idioma-active-badge {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .up-idioma-settings-btn {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink))) !important;
+    border: 1px solid var(--theme-border, rgb(56, 189, 248)) !important
+}

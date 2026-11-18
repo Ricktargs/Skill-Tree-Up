@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ask } from "../../../shared/Dialog.jsx";
 import Modal from "./Modal";
 import ColorPicker from "./ColorPicker";
 import { PASTEL_COLORS } from "../lib/constants";
@@ -121,8 +122,8 @@ export default function ImageEditorModal({ imgSrc, onClose, onSave }) {
     setDirty(true);
   };
 
-  const close = () => {
-    if (dirty && !window.confirm("Descartar as alterações da imagem?")) return;
+  const close = async () => {
+    if (dirty && !(await ask({ title: "Descartar as alterações da imagem?", yes: "Descartar", no: "Continuar editando", danger: true }))) return;
     onClose();
   };
 

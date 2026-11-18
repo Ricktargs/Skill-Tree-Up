@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "nanquim": "node scripts/build-nanquim.mjs"
   },
   "dependencies": {
     "build": "^0.1.4",

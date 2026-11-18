@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ask, askText } from "../../../shared/Dialog.jsx";
 import { createPortal } from "react-dom";
 import { portalRoot } from "../lib/portal";
 import FloatingWindow from "./FloatingWindow";
@@ -213,8 +214,12 @@ function NoteBody({ record }) {
 
   const resizeImage = (width) => mutateImage((img) => (img.style.width = width));
 
-  const customResize = () => {
-    const value = window.prompt("Largura da imagem (ex.: 300px, 50%):", selectedImg?.style.width || "100%");
+  const customResize = async () => {
+    const value = await askText({
+      title: "Largura da imagem",
+      message: "Exemplos: 300px, 50%",
+      value: selectedImg?.style.width || "100%",
+    });
     if (value && /^\d+(\.\d+)?(px|%|vw|em|rem)$/.test(value.trim())) resizeImage(value.trim());
     else setCtxMenu(null);
   };
@@ -254,9 +259,9 @@ function NoteBody({ record }) {
     setSelectedImg(null);
   };
 
-  const cancel = () => {
+  const cancel = async () => {
     const changed = editorRef.current && editorRef.current.innerHTML !== noteToHtml(record.text || "");
-    if ((changed || title !== (record.title || "")) && !window.confirm("Descartar as alterações?")) return;
+    if ((changed || title !== (record.title || "")) && !(await ask({ title: "Descartar as alterações?", yes: "Descartar", no: "Continuar editando", danger: true }))) return;
     setTitle(record.title || "");
     setType(record.type || "Ideia");
     setCharCount(stripHtml(record.text || "").length);
@@ -264,8 +269,8 @@ function NoteBody({ record }) {
     setSelectedImg(null);
   };
 
-  const remove = () => {
-    if (!window.confirm(`Excluir a nota "${recordLabel(record)}"?\n(Ctrl+Z desfaz)`)) return;
+  const remove = async () => {
+    if (!(await ask({ title: "Excluir a nota?", message: `"${recordLabel(record)}"\n(Ctrl+Z desfaz)`, yes: "Excluir", danger: true }))) return;
     sfx.play("delete");
     commit((d) => ({ ...d, records: d.records.filter((r) => r.id !== record.id) }));
   };

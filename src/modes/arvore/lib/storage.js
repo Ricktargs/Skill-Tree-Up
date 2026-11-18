@@ -5,10 +5,16 @@
      para o localStorage e estouravam a cota de ~5MB)
 ========================================================= */
 import { STORAGE_KEYS, REVISION_DAYS } from "./constants";
+import { PER_PROFILE_KEYS, profileKey, readProfileRaw } from "../../../atualizacao2_0/ProfileStorage.js";
+import { getActiveProfileId } from "../../../shared/activeProfile.js";
+
+// Árvore por perfil: as chaves da lista PER_PROFILE_KEYS viram "<chave>__<perfil>".
+// Na primeira vez, a Árvore antiga (sem perfil) vai para o perfil ativo.
+const isPerProfile = (key) => PER_PROFILE_KEYS.includes(key);
 
 export function loadJSON(key, fallback) {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = isPerProfile(key) ? readProfileRaw(key, getActiveProfileId()) : localStorage.getItem(key);
     if (raw == null) return fallback;
     const parsed = JSON.parse(raw);
     return parsed ?? fallback;
@@ -20,7 +26,7 @@ export function loadJSON(key, fallback) {
 /** Retorna false se o navegador recusar (ex.: cota cheia). */
 export function saveJSON(key, value) {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(isPerProfile(key) ? profileKey(key, getActiveProfileId()) : key, JSON.stringify(value));
     return true;
   } catch (err) {
     console.warn(`[Eu Sou Árvore] Falha ao salvar "${key}":`, err);
@@ -45,13 +51,24 @@ export function saveString(key, value) {
 }
 
 /* ---------------- IndexedDB (revisões) ---------------- */
-const DB_NAME = "eu-sou-arvore";
 const STORE = "revisions";
-let dbPromise = null;
+const dbPromises = new Map();
+
+function dbName() {
+  const pid = getActiveProfileId();
+  let owner = null;
+  try {
+    owner = localStorage.getItem(`${STORAGE_KEYS.tree}__claimed_by`);
+  } catch {
+    /* ignore */
+  }
+  return !owner || owner === pid ? "eu-sou-arvore" : `eu-sou-arvore__${pid}`;
+}
 
 function openDb() {
-  if (dbPromise) return dbPromise;
-  dbPromise = new Promise((resolve, reject) => {
+  const DB_NAME = dbName();
+  if (dbPromises.has(DB_NAME)) return dbPromises.get(DB_NAME);
+  const dbPromise = new Promise((resolve, reject) => {
     if (typeof indexedDB === "undefined") return reject(new Error("IndexedDB indisponível"));
     const req = indexedDB.open(DB_NAME, 1);
     req.onupgradeneeded = () => {
@@ -61,6 +78,7 @@ function openDb() {
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
+  dbPromises.set(DB_NAME, dbPromise);
   return dbPromise;
 }
 

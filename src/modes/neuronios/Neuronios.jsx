@@ -5,18 +5,12 @@ import '../arvore/ui.css';
 import './neuronios.css';
 import Graph from './Graph.jsx';
 import EditorPane from './Editor.jsx';
-import { THEME_KEY, plainText, tagColor, useNeuronios } from './store.js';
+import { plainText, tagColor, useNeuronios } from './store.js';
+import { useUiTheme } from '../../shared/uiTheme.js';
+import { registerModeActions } from '../../shared/modeBridge.js';
 
 const isTyping = (el) =>
   el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
-
-const readTheme = () => {
-  try {
-    return localStorage.getItem(THEME_KEY) === 'dark';
-  } catch (e) {
-    return false;
-  }
-};
 
 const useNarrow = () => {
   const [narrow, setNarrow] = useState(() => window.innerWidth < 760);
@@ -31,16 +25,15 @@ const useNarrow = () => {
 export default function Neuronios() {
   const store = useNeuronios();
   const { notes, tags, links, view, setView } = store;
-  const [dark, setDark] = useState(readTheme);
+  // Modo noturno é o mesmo dos três modos (botão 🌙 das ferramentas)
+  const dark = useUiTheme().dark;
   const [openIds, setOpenIds] = useState(() => (Array.isArray(view.openIds) ? view.openIds : []));
   const [activeId, setActiveId] = useState(() => view.activeId || null);
   const [query, setQuery] = useState('');
-  const [menuOpen, setMenuOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const [split, setSplit] = useState(() => (typeof view.split === 'number' ? view.split : 0.5));
   const narrow = useNarrow();
   const splitRef = useRef(null);
-  const fileRef = useRef(null);
   const searchRef = useRef(null);
 
   const selectedTags = useMemo(() => view.tags || [], [view.tags]);
@@ -48,14 +41,11 @@ export default function Neuronios() {
   const tagNodes = Boolean(view.tagNodes);
   const hideOrphans = Boolean(view.hideOrphans);
 
-  // Tema compartilhado com a Árvore
-  useEffect(() => {
-    try {
-      localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
-    } catch (e) {
-      // ignore
-    }
-  }, [dark]);
+  // Opções do mapa aparecem nas Configurações padrão
+  useEffect(
+    () => registerModeActions('neuronios', { tagNodes, hideOrphans, setView, createNeuron: () => createNeuronRef.current() }),
+    [tagNodes, hideOrphans, setView]
+  );
 
   // Abas abertas sobrevivem a trocar de modo/recarregar
   useEffect(() => {
@@ -95,6 +85,7 @@ export default function Neuronios() {
     });
   }, []);
 
+  const createNeuronRef = useRef(() => {});
   const createNeuron = useCallback(
     (fields = {}) => {
       const tagsFromFilter = selectedTags.length ? [...selectedTags] : [];
@@ -112,6 +103,9 @@ export default function Neuronios() {
     },
     [store, open, selectedTags]
   );
+  useEffect(() => {
+    createNeuronRef.current = createNeuron;
+  });
 
   const deleteNeuron = useCallback(
     (note) => {
@@ -120,6 +114,23 @@ export default function Neuronios() {
       setToast({ text: `“${note.title}” excluído`, note, id: Date.now() });
     },
     [store, closeTab]
+  );
+
+  // Delete com neurônios selecionados no mapa
+  const deleteMany = useCallback(
+    (ids) => {
+      const notesById = new Map(notes.map((n) => [n.id, n]));
+      const list = ids.map((id) => notesById.get(id)).filter(Boolean);
+      if (!list.length) return;
+      store.deleteNotes(list.map((n) => n.id));
+      list.forEach((n) => closeTab(n.id));
+      setToast({
+        text: list.length === 1 ? `“${list[0].title}” excluído` : `${list.length} neurônios excluídos`,
+        notes: list,
+        id: Date.now()
+      });
+    },
+    [notes, store, closeTab]
   );
 
   useEffect(() => {
@@ -150,7 +161,7 @@ export default function Neuronios() {
     const nodes = visible.map((n) => ({
       id: n.id,
       label: n.title || 'Sem título',
-      color: n.tags && n.tags[0] ? tagColor(n.tags[0]) : 'var(--foliage)',
+      color: n.color || (n.tags && n.tags[0] ? tagColor(n.tags[0]) : 'var(--foliage)'),
       x: n.x,
       y: n.y
     }));
@@ -182,7 +193,6 @@ export default function Neuronios() {
     const onKey = (e) => {
       if (e.key === 'Escape') {
         if (e.defaultPrevented) return;
-        if (document.querySelector('.nr-root .menu.nr-settings')) return setMenuOpen(false);
         if (isTyping(document.activeElement)) return document.activeElement.blur();
         if (activeIdRef.current) return closeTab(activeIdRef.current);
         return undefined;
@@ -214,37 +224,6 @@ export default function Neuronios() {
     window.addEventListener('pointerup', up);
   };
 
-  // ---------- Exportar / importar ----------
-  const exportJson = () => {
-    const blob = new Blob([JSON.stringify({ app: 'neuronios', version: 1, exportedAt: new Date().toISOString(), notes }, null, 2)], {
-      type: 'application/json'
-    });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `neuronios-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  };
-  const importJson = async (file) => {
-    try {
-      const data = JSON.parse(await file.text());
-      const list = Array.isArray(data) ? data : data.notes;
-      if (!Array.isArray(list)) throw new Error('formato');
-      let added = 0;
-      list.forEach((n) => {
-        if (n && n.id && !store.byId.has(n.id)) {
-          store.restoreNote({ ...n, tags: Array.isArray(n.tags) ? n.tags : [], content: String(n.content || '') });
-          added += 1;
-        }
-      });
-      setToast({ text: `${added} neurônio(s) importado(s)`, id: Date.now() });
-    } catch (err) {
-      setToast({ text: 'Arquivo inválido', id: Date.now() });
-    }
-  };
-
   const editorOpen = openIds.length > 0;
   const showEditor = editorOpen && (!narrow || activeId);
 
@@ -252,43 +231,8 @@ export default function Neuronios() {
     <div className={`arvore-root nr-root ${dark ? 'dark-mode' : ''}`}>
       <main className="tree-page nr-page">
         <header className="top-bar">
-          <div className="top-left">
-            <div className="menu-anchor">
-              <button type="button" className="round-button" onClick={() => setMenuOpen((v) => !v)} title="Opções do mapa">
-                ⚙️
-              </button>
-              {menuOpen && (
-                <div className="menu nr-settings" onMouseLeave={() => setMenuOpen(false)}>
-                  <label className="nr-switch">
-                    <input type="checkbox" checked={tagNodes} onChange={(e) => setView({ tagNodes: e.target.checked })} />
-                    Tags no mapa
-                  </label>
-                  <label className="nr-switch">
-                    <input type="checkbox" checked={hideOrphans} onChange={(e) => setView({ hideOrphans: e.target.checked })} />
-                    Esconder neurônios sem ligação
-                  </label>
-                  <hr />
-                  <button type="button" onClick={exportJson}>
-                    💾 Exportar neurônios
-                  </button>
-                  <button type="button" onClick={() => fileRef.current?.click()}>
-                    📥 Importar neurônios
-                  </button>
-                </div>
-              )}
-              <input
-                ref={fileRef}
-                type="file"
-                accept="application/json,.json"
-                hidden
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) importJson(f);
-                  e.target.value = '';
-                }}
-              />
-            </div>
-          </div>
+          {/* Configurações, noturno e ferramentas ficam nos botões padrão do programa */}
+          <div className="top-left" />
 
           <div className="top-center">
             <h1>NEURÔNIOS</h1>
@@ -297,20 +241,16 @@ export default function Neuronios() {
             </div>
           </div>
 
-          <div className="top-right">
-            <button type="button" className="round-button" onClick={() => createNeuron()} title="Novo neurônio (N)">
-              ＋
-            </button>
-            <button type="button" className="round-button" onClick={() => setDark((d) => !d)} title="Alternar tema">
-              {dark ? '☀️' : '🌙'}
-            </button>
-          </div>
+          <div className="top-right" />
         </header>
 
         {store.saveError && <div className="storage-warning">⚠️ O navegador recusou salvar (espaço cheio). Exporte um backup no ⚙️.</div>}
 
         {/* Busca + filtro de tags */}
         <div className="nr-filters">
+          <button type="button" className="btn small btn-primary nr-new" onClick={() => createNeuron()} title="Novo neurônio (N)">
+            ＋ Neurônio
+          </button>
           <input
             ref={searchRef}
             className="search-input nr-search"
@@ -368,6 +308,7 @@ export default function Neuronios() {
               }}
               onCreateAt={(x, y) => createNeuron({ x, y })}
               onSettle={store.savePositions}
+              onDeleteMany={deleteMany}
             />
           )}
 
@@ -396,6 +337,18 @@ export default function Neuronios() {
         {toast && (
           <div className="nr-toast" key={toast.id}>
             <span>{toast.text}</span>
+            {toast.notes && (
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => {
+                  store.restoreNotes(toast.notes);
+                  setToast(null);
+                }}
+              >
+                Desfazer
+              </button>
+            )}
             {toast.note && (
               <button
                 type="button"

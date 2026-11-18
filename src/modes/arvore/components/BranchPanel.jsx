@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ask, inform } from "../../../shared/Dialog.jsx";
 import FloatingWindow from "./FloatingWindow";
 import RecordCard from "./RecordCard";
 import NoteForm from "./NoteForm";
@@ -172,32 +173,37 @@ function BranchPanelBody({ branchId, initialPath, onNavigate, onClose }) {
     resetForms();
   };
 
-  const confirmDeleteFolder = (folderId, targetLevel) => {
+  const confirmDeleteFolder = async (folderId, targetLevel) => {
     const name = getItemName(tree, foldersMap, folderId);
     const node = findBranch(tree, folderId);
     const extra = node?.children?.length ? " Os subgalhos dentro dele também serão removidos." : "";
-    if (!window.confirm(`Excluir a pasta "${name}"?\nAs notas de dentro serão movidas para "${getItemName(tree, foldersMap, targetLevel)}".${extra}\n(Ctrl+Z desfaz)`)) return false;
+    const ok = await ask({
+      title: `Excluir a pasta "${name}"?`,
+      message: `As notas de dentro serão movidas para "${getItemName(tree, foldersMap, targetLevel)}".${extra}\n(Ctrl+Z desfaz)`,
+      yes: "Excluir",
+      danger: true,
+    });
+    if (!ok) return false;
     commit((d) => deleteFolder(d, folderId, targetLevel));
     sfx.play("delete");
     return true;
   };
 
-  const handleDeleteCurrent = () => {
+  const handleDeleteCurrent = async () => {
     setMenuOpen(false);
     if (!atRoot) {
-      if (confirmDeleteFolder(levelId, parentLevelId)) setPath((p) => p.slice(0, -1));
+      if (await confirmDeleteFolder(levelId, parentLevelId)) setPath((p) => p.slice(0, -1));
       return;
     }
     if (branchId === ROOT_ID) return;
     const scope = branchDeletionScope(data, branchId);
     const sub = scope.treeIds.length - 1;
     const msg =
-      `Excluir o galho "${branch.name}"?\n\n` +
       `Serão apagados: ${scope.recordIds.length} nota(s)` +
       (sub ? `, ${sub} subgalho(s)` : "") +
       (scope.folderIds.length ? `, ${scope.folderIds.length} pasta(s)` : "") +
       `.\n(Ctrl+Z desfaz)`;
-    if (!window.confirm(msg)) return;
+    if (!(await ask({ title: `Excluir o galho "${branch.name}"?`, message: msg, yes: "Excluir", danger: true }))) return;
     commit((d) => deleteBranch(d, branchId));
     sfx.play("delete");
     onClose();
@@ -207,7 +213,7 @@ function BranchPanelBody({ branchId, initialPath, onNavigate, onClose }) {
     const targetId = atRoot ? branchId : levelId;
     if (findBranch(tree, targetId)) {
       const result = subbranchToFolder(data, targetId);
-      if (result.error) return window.alert(result.error);
+      if (result.error) return inform({ title: "Não foi possível", message: result.error });
       commit(() => result.data);
       sfx.play("folder");
       if (atRoot) onNavigate(result.newOwner, [targetId]);
@@ -217,8 +223,8 @@ function BranchPanelBody({ branchId, initialPath, onNavigate, onClose }) {
     }
   };
 
-  const handleDeleteRecord = (record) => {
-    if (!window.confirm(`Excluir a nota "${recordLabel(record)}"?\n(Ctrl+Z desfaz)`)) return;
+  const handleDeleteRecord = async (record) => {
+    if (!(await ask({ title: "Excluir a nota?", message: `"${recordLabel(record)}"\n(Ctrl+Z desfaz)`, yes: "Excluir", danger: true }))) return;
     sfx.play("delete");
     commit((d) => ({ ...d, records: d.records.filter((r) => r.id !== record.id) }));
   };

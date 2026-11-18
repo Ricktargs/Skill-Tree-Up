@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { isSkillsMode } from './modes/modeState.js';
+import { registerModeActions } from './shared/modeBridge.js';
+import { isSkillsMode, useMode } from './modes/modeState.js';
+import { useUiTheme, toggleDark } from './shared/uiTheme.js';
 import { tx } from './i18n/index.jsx';
 import { useGameData, PRESET_DECKS, getXpNeededForLevel, getGameDayKey } from './hooks/useGameData';
 import EmojiPicker from 'emoji-picker-react';
@@ -20,6 +22,7 @@ import { useProfileStoredState, collectBackupExtras, applyBackupExtras } from '.
 import { globalUndo, globalRedo } from './atualizacao2_0/GlobalUndo.js';
 import UndoToast from './atualizacao2_0/UndoToast.jsx';
 import ColorDeckModal from './atualizacao2_0/ColorDeck.jsx';
+import { ask, inform } from './shared/Dialog.jsx';
 import { useFlashcards } from './atualizacao2_0/Flashcards.js';
 import { FlashcardsModal } from './atualizacao2_0/Flashcards.jsx';
 import { TaskModal, TaskAlert, TaskBadge } from './atualizacao2_0/TaskUpdate.jsx';
@@ -223,9 +226,21 @@ export default function App() {
   // Checklists de cada perfil (antes eram os mesmos para todos)
   const taskState = useTaskUpdate(activeProfileId);
   // Flashcards: sessões de estudo rendem XP (na categoria da habilidade ligada ao deck)
+  const mode = useMode();
+  const inSkills = mode === 'skills';
+  const uiTheme = useUiTheme();
   const flashcards = useFlashcards(activeProfileId, {
     onReward: (xp, deckName, skill) => grantBonusXp(xp, `🎴 Flashcards: ${deckName}`, skill?.category || 'Flashcards')
   });
+  // Árvore e outros modos rendem XP do herói (a Árvore não tem mais pontos próprios)
+  const grantXpRef = useRef(grantBonusXp);
+  useEffect(() => {
+    grantXpRef.current = grantBonusXp;
+  });
+  useEffect(
+    () => registerModeActions('heroXp', { grant: (xp, title, category) => grantXpRef.current(xp, title, category) }),
+    []
+  );
   // Temas favoritos (botão direito num tema), salvos por perfil
   const [favoriteThemes, setFavoriteThemes] = useProfileStoredState('rpg_favorite_themes_v1', activeProfileId, []);
   // Personagem (classe e cores), salvo por perfil
@@ -275,13 +290,10 @@ export default function App() {
   const [newMiniMissionText, setNewMiniMissionText] = useState('');
   const [editingMiniIdx, setEditingMiniIdx] = useState(null);
 const [tempMiniText, setTempMiniText] = useState('');
-const [confirmDeleteMiniIdx, setConfirmDeleteMiniIdx] = useState(null);
 
   const [isHackModalOpen, setIsHackModalOpen] = useState(false);
   const [hackXpInput, setHackXpInput] = useState('');
   const [hackDiamondsInput, setHackDiamondsInput] = useState('');
-  const [confirmClearHistory, setConfirmClearHistory] = useState(false);
-  const [confirmClearSkills, setConfirmClearSkills] = useState(false);
 
   const [isCategoryFilterModalOpen, setIsCategoryFilterModalOpen] = useState(false);
   // Salvo por perfil (antes era o mesmo para todos os perfis)
@@ -452,7 +464,7 @@ const handleFileImport = (event) => {
       const content = e.target.result;
       processAndApplySkillData(content);
     } catch (err) {
-      alert(tx("Erro ao ler o arquivo importado."));
+      inform({ title: tx("Erro"), message: tx("Erro ao ler o arquivo importado.") });
     }
   };
   reader.readAsText(file);
@@ -628,7 +640,6 @@ const handleSaveMiniEdit = (idx, oldText) => {
 
   const [isBatchSelectMode, setIsBatchSelectMode] = useState(false);
   const [selectedBatchIds, setSelectedBatchIds] = useState([]);
-  const [batchConfirmDelete, setBatchConfirmDelete] = useState(false);
 
   const fileInputRef = useRef(null);
   const holdIntervalRef = useRef(null);
@@ -750,12 +761,13 @@ const handleSaveMiniEdit = (idx, oldText) => {
   
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Atalhos do SkillTree só valem no modo Skills
-      if (!isSkillsMode()) return;
+      // As ferramentas (Perfil, Configurações, janelas) valem em todos os modos;
+      // o resto dos atalhos é só do modo Habilidades
+      const inSkills = isSkillsMode();
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
       const keyLower = e.key ? e.key.toLowerCase() : '';
 
-      const isHackTrigger = isCtrlOrCmd && e.shiftKey && (e.code === 'KeyH' || keyLower === 'h');
+      const isHackTrigger = inSkills && isCtrlOrCmd && e.shiftKey && (e.code === 'KeyH' || keyLower === 'h');
 
       if (isHackTrigger) {
         e.preventDefault();
@@ -766,17 +778,25 @@ const handleSaveMiniEdit = (idx, oldText) => {
       }
 
       if (e.key === 'Escape') {
-        e.preventDefault();
-        playSound('click');
         // Menus do botão direito fecham primeiro
-        if (document.querySelector('.custom-context-menu')) {
+        if (document.querySelector('.app-screen .custom-context-menu')) {
+          e.preventDefault();
+          playSound('click');
           setContextMenu(null);
           setFolderCardContextMenu(null);
           setGlobalContextMenu(null);
           return;
         }
         // Depois, só a janela de cima (igual a clicar no ✕ dela)
-        if (closeTopmostWindow()) return;
+        if (closeTopmostWindow()) {
+          e.preventDefault();
+          playSound('click');
+          return;
+        }
+        // Na Árvore e nos Neurônios o Esc fica para as janelas deles
+        if (!inSkills) return;
+        e.preventDefault();
+        playSound('click');
         setIsSettingsModalOpen(true);
         return;
       }
@@ -787,6 +807,9 @@ const handleSaveMiniEdit = (idx, oldText) => {
         (activeElem.tagName === 'INPUT' ||
           activeElem.tagName === 'TEXTAREA' ||
           activeElem.isContentEditable);
+
+      // Fora das Habilidades, só P (Perfil), M (Missões) e C (Tema) são atalhos daqui
+      if (!inSkills && !(['p', 'm', 'c'].includes(keyLower) && !isCtrlOrCmd && !e.altKey && !isEditingText)) return;
 
       if (isCtrlOrCmd && e.code === 'Space') {
         e.preventDefault();
@@ -862,6 +885,18 @@ const handleSaveMiniEdit = (idx, oldText) => {
   }, []);
 
   const activeThemePreset = getThemeById(currentTheme, customThemes);
+
+  // Cores do tema Gameficado ficam no <html> para a Árvore, os Neurônios e as
+  // janelas padrão usarem o mesmo tema nos três modos
+  useEffect(() => {
+    const html = document.documentElement.style;
+    html.setProperty('--g-bg', activeThemePreset.bg);
+    html.setProperty('--g-modal', activeThemePreset.modalBg);
+    html.setProperty('--g-border', activeThemePreset.border);
+    html.setProperty('--g-accent', activeThemePreset.color);
+    html.setProperty('--g-box', activeThemePreset.boxBg || activeThemePreset.modalBg);
+    html.setProperty('--g-on-accent', onAccentColor(activeThemePreset.color));
+  }, [activeThemePreset]);
   const activeDeckColors = getActiveDeckColors();
 
   const pendingMissionsCount = dailyMissions ? dailyMissions.filter((m) => !m.completed).length : 0;
@@ -1176,9 +1211,27 @@ const handleSaveEdit = (e) => {
 
     if (file) {
       fileReader.readAsText(file, 'UTF-8');
-      fileReader.onload = (event) => {
+      fileReader.onload = async (event) => {
         try {
           const parsedData = JSON.parse(event.target.result);
+
+          // Backup antigo do "Eu Sou Árvore" (formato próprio): vai para a Árvore do perfil ativo
+          if (parsedData && parsedData.app === 'Eu Sou Árvore' && parsedData.tree) {
+            const ok = await ask({
+              title: tx('Importar a Árvore?'),
+              message: tx('Este é um backup antigo da Árvore. Ele vai substituir a Árvore do perfil atual.'),
+              yes: tx('Importar')
+            });
+            if (!ok) return;
+            const pid = activeProfileId;
+            const put = (base, value) => localStorage.setItem(`${base}__${pid}`, JSON.stringify(value));
+            put('eu-sou-arvore-tree', parsedData.tree);
+            put('eu-sou-arvore-records', Array.isArray(parsedData.records) ? parsedData.records : []);
+            put('eu-sou-arvore-offsets', parsedData.offsets || {});
+            put('eu-sou-arvore-folders-all-v1', parsedData.foldersMap || {});
+            window.location.reload();
+            return;
+          }
 
           const success = importData(parsedData);
 
@@ -1192,9 +1245,11 @@ const handleSaveEdit = (e) => {
             window.location.reload();
           } else {
             playSound('error');
+            inform({ title: tx('Backup inválido'), message: tx('Este arquivo não parece ser um backup do programa.') });
           }
         } catch (error) {
           playSound('error');
+          inform({ title: tx('Erro'), message: tx('Não foi possível ler o arquivo de backup.') });
         }
       };
     }
@@ -1389,7 +1444,7 @@ if (folderSortOrder === 'a-z') {
 
   return (
     <div
-      className="app-screen"
+      className={`app-screen ${inSkills ? '' : 'shell-only'}`}
       onContextMenu={handleGlobalContextMenu}
       onTouchStart={(e) => {
         if (e.target.closest('button, input, select, textarea, .skill-card, .clickable-xp-history-box, .avatar-circle, .hero-stage, .subtle-side-rail, .top-icon-button, .custom-context-menu, .modal-backdrop')) {
@@ -1410,6 +1465,8 @@ if (folderSortOrder === 'a-z') {
       style={{
         background: activeThemePreset.bg,
         '--theme-accent': activeThemePreset.color,
+        // Cor "crua" do tema: no Nanquim vira a cor da tinta (mais escura no papel)
+        '--theme-accent-src': activeThemePreset.color,
         '--theme-on-accent': onAccentColor(activeThemePreset.color),
         '--theme-modal-bg': activeThemePreset.modalBg,
         '--theme-border': activeThemePreset.border
@@ -1472,6 +1529,7 @@ if (folderSortOrder === 'a-z') {
           </button>
         </div>
 
+        {(
         <button
           className="top-icon-button"
           onClick={() => { playSound('click'); setIsMissionsModalOpen(true); }}
@@ -1485,10 +1543,11 @@ if (folderSortOrder === 'a-z') {
             </span>
           )}
         </button>
+        )}
 
         <TaskAlert taskState={taskState} />
 
-        {pendingTransfers && pendingTransfers.length > 0 && (
+        {inSkills && pendingTransfers && pendingTransfers.length > 0 && (
           <button
             className="top-icon-button mail-badge-btn pulse-glow"
             title={tx('Você tem {n} solicitação(ões) de transferência!', { n: pendingTransfers.length })}
@@ -1502,19 +1561,28 @@ if (folderSortOrder === 'a-z') {
       </div>
 
       <div className="top-nav-buttons">
-        <button
-          className="top-icon-button"
-          title={tx("Editor de Layouts / Habilidades (E)")}
-          onClick={() => { playSound('click'); setIsLayoutEditorOpen(true); }}
-        >
-          ✏️
-        </button>
+        {inSkills && (
+          <button
+            className="top-icon-button"
+            title={tx("Editor de Layouts / Habilidades (E)")}
+            onClick={() => { playSound('click'); setIsLayoutEditorOpen(true); }}
+          >
+            ✏️
+          </button>
+        )}
         <button
           className="top-icon-button"
           title={tx("Customizar Tema (C)")}
           onClick={() => { playSound('click'); setIsThemeModalOpen(true); }}
         >
           🎨
+        </button>
+        <button
+          className="top-icon-button"
+          title={uiTheme.dark ? tx("Modo diurno") : tx("Modo noturno")}
+          onClick={() => { playSound('click'); toggleDark(); }}
+        >
+          {uiTheme.dark ? '☀️' : '🌙'}
         </button>
         <button
           className="top-icon-button"
@@ -2183,37 +2251,18 @@ if (folderSortOrder === 'a-z') {
                   <strong style={{ fontSize: '0.85rem', color: '#f8fafc' }}>{tx("Apagar Histórico XP")}</strong>
                   <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>{tx("Limpa os logs de evolução.")}</p>
                 </div>
-                {confirmClearHistory ? (
-                  <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    <button
-                      type="button"
-                      className="confirm-yes-btn"
-                      onClick={() => {
-                        playSound('delete');
-                        setXpHistory([]);
-                        setConfirmClearHistory(false);
-                      }}
-                    >
-                      {tx("Sim")}
-                    </button>
-                    <button
-                      type="button"
-                      className="confirm-no-btn"
-                      onClick={() => setConfirmClearHistory(false)}
-                    >
-                      {tx("Não")}
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    className="delete-btn"
-                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
-                    onClick={() => setConfirmClearHistory(true)}
-                  >
-                    {tx("Limpar")}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="delete-btn"
+                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                  onClick={async () => {
+                    if (!(await ask({ title: tx("Apagar o histórico de XP?"), message: tx("Limpa os logs de evolução."), yes: tx("Apagar"), danger: true }))) return;
+                    playSound('delete');
+                    setXpHistory([]);
+                  }}
+                >
+                  {tx("Limpar")}
+                </button>
               </div>
 
               <div style={{ background: '#2d0808', padding: '0.8rem 1rem', borderRadius: '10px', border: '1px solid #7f1d1d', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2221,38 +2270,18 @@ if (folderSortOrder === 'a-z') {
                   <strong style={{ fontSize: '0.85rem', color: '#f87171' }}>{tx("Zerar Habilidades")}</strong>
                   <p style={{ fontSize: '0.75rem', color: '#fca5a5', margin: 0 }}>{tx("Exclui todas as skills.")}</p>
                 </div>
-                {confirmClearSkills ? (
-                  <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    <button
-                      type="button"
-                      className="confirm-yes-btn"
-                      style={{ background: '#dc2626' }}
-                      onClick={() => {
-                        playSound('delete');
-                        setSkills([]);
-                        setConfirmClearSkills(false);
-                      }}
-                    >
-                      {tx("EXCLUIR")}
-                    </button>
-                    <button
-                      type="button"
-                      className="confirm-no-btn"
-                      onClick={() => setConfirmClearSkills(false)}
-                    >
-                      {tx("Não")}
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    className="delete-btn"
-                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', background: '#dc2626' }}
-                    onClick={() => setConfirmClearSkills(true)}
-                  >
-                    {tx("Zerar TUDO")}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="delete-btn"
+                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', background: '#dc2626' }}
+                  onClick={async () => {
+                    if (!(await ask({ title: tx("Zerar todas as habilidades?"), message: tx("Exclui todas as skills."), yes: tx("Excluir tudo"), danger: true }))) return;
+                    playSound('delete');
+                    setSkills([]);
+                  }}
+                >
+                  {tx("Zerar TUDO")}
+                </button>
               </div>
             </div>
 
@@ -2313,7 +2342,7 @@ if (folderSortOrder === 'a-z') {
                   onClick={() => {
                     if (dailyRefreshesLeft <= 0) {
                       playSound('error');
-                      alert(tx("Você já atingiu o limite máximo de 2 sorteios hoje!"));
+                      inform({ title: tx("Sem sorteios"), message: tx("Você já atingiu o limite máximo de 2 sorteios hoje!") });
                       return;
                     }
 
@@ -2323,7 +2352,7 @@ if (folderSortOrder === 'a-z') {
                     } else {
                       playSound('error');
                       if (result.reason === 'limit_reached') {
-                        alert(tx("Você já atingiu o limite máximo de 2 sorteios hoje!"));
+                        inform({ title: tx("Sem sorteios"), message: tx("Você já atingiu o limite máximo de 2 sorteios hoje!") });
                       } else if (result.reason === 'no_uncompleted_available') {
                         
                       }
@@ -2471,7 +2500,6 @@ if (folderSortOrder === 'a-z') {
                 ) : (
 editingSkill.miniMissions.map((mm, idx) => {
   const isEditingThis = editingMiniIdx === idx;
-  const isConfirmingDelete = confirmDeleteMiniIdx === idx;
 
   return (
     <div
@@ -2521,7 +2549,6 @@ editingSkill.miniMissions.map((mm, idx) => {
             if (playSound) playSound('click');
             setEditingMiniIdx(idx);
             setTempMiniText(mm);
-            setConfirmDeleteMiniIdx(null);
           }}
           title={tx("Clique diretamente para editar esta mini missão")}
           style={{
@@ -2536,65 +2563,23 @@ editingSkill.miniMissions.map((mm, idx) => {
         </span>
       )}
 
-      {/* 2. CONFIRMAÇÃO DE EXCLUSÃO NA MESMA LINHA (SEM POPUP) */}
-      {isConfirmingDelete ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <span style={{ fontSize: '0.78rem', color: '#f87171', fontWeight: 'bold' }}>{tx("Certeza?")}</span>
-          <button
-            type="button"
-            style={{
-              padding: '0.25rem 0.55rem',
-              fontSize: '0.75rem',
-              fontWeight: 'bold',
-              background: '#ef4444',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-            onClick={() => {
-              if (playSound) playSound('delete');
-              deleteMiniMissionFromSkill(editingSkill.id, idx);
-              setEditingSkill((prev) => ({
-                ...prev,
-                miniMissions: (prev.miniMissions || []).filter((_, i) => i !== idx)
-              }));
-              setConfirmDeleteMiniIdx(null);
-            }}
-          >
-            {tx("Sim")}
-          </button>
-          <button
-            type="button"
-            style={{
-              padding: '0.25rem 0.55rem',
-              fontSize: '0.75rem',
-              fontWeight: 'bold',
-              background: 'rgba(255, 255, 255, 0.15)',
-              color: '#cbd5e1',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-            onClick={() => setConfirmDeleteMiniIdx(null)}
-          >
-            {tx("Não")}
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          className="editor-remove-btn"
-          onClick={() => {
-            if (playSound) playSound('click');
-            setConfirmDeleteMiniIdx(idx);
-            setEditingMiniIdx(null);
-          }}
-          title={tx("Excluir mini missão")}
-        >
-          ✕
-        </button>
-      )}
+      <button
+        type="button"
+        className="editor-remove-btn"
+        onClick={async () => {
+          setEditingMiniIdx(null);
+          if (!(await ask({ title: tx("Excluir mini missão?"), message: `"${mm}"`, yes: tx("Excluir"), danger: true }))) return;
+          if (playSound) playSound('delete');
+          deleteMiniMissionFromSkill(editingSkill.id, idx);
+          setEditingSkill((prev) => ({
+            ...prev,
+            miniMissions: (prev.miniMissions || []).filter((_, i) => i !== idx)
+          }));
+        }}
+        title={tx("Excluir mini missão")}
+      >
+        ✕
+      </button>
     </div>
   );
 })
@@ -3489,34 +3474,6 @@ editingSkill.miniMissions.map((mm, idx) => {
 
                       {profiles.length > 1 && (
                         <div className="profile-card-actions-right">
-                          {isConfirmingDelete ? (
-                            <div className="profile-delete-confirm-box" onClick={(e) => e.stopPropagation()}>
-                              <span className="confirm-delete-text">{tx("Tem certeza?")}</span>
-                              <button
-                                type="button"
-                                className="confirm-yes-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  playSound('delete');
-                                  deleteProfile(p.id);
-                                  setDeletingProfileId(null);
-                                }}
-                              >
-                                {tx("Sim")}
-                              </button>
-                              <button
-                                type="button"
-                                className="confirm-no-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  playSound('click');
-                                  setDeletingProfileId(null);
-                                }}
-                              >
-                                {tx("Não")}
-                              </button>
-                            </div>
-                          ) : (
                             <div className="profile-action-btns-row" onClick={(e) => e.stopPropagation()}>
                               <button
                                 type="button"
@@ -3538,18 +3495,25 @@ editingSkill.miniMissions.map((mm, idx) => {
                               <button
                                 type="button"
                                 className="editor-remove-btn"
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                   e.stopPropagation();
                                   playSound('click');
                                   setTransferSourceId(null);
-                                  setDeletingProfileId(p.id);
+                                  const ok = await ask({
+                                    title: tx('Excluir o perfil "{name}"?', { name: p.name }),
+                                    message: tx('Todos os dados desse perfil serão apagados.'),
+                                    yes: tx('Excluir'),
+                                    danger: true
+                                  });
+                                  if (!ok) return;
+                                  playSound('delete');
+                                  deleteProfile(p.id);
                                 }}
                                 title={tx("Excluir Perfil")}
                               >
                                 ✕
                               </button>
                             </div>
-                          )}
                         </div>
                       )}
                     </div>
@@ -3855,39 +3819,7 @@ editingSkill.miniMissions.map((mm, idx) => {
             style={{ top: contextMenu.y, left: contextMenu.x, zIndex: 99999 }}
             onClick={(e) => e.stopPropagation()}
           >
-            {contextMenu.confirmDelete ? (
-              <>
-                <div style={{ padding: '0.7rem 1rem', fontSize: '0.85rem', fontWeight: 'bold', color: '#f87171', borderBottom: '1px solid var(--theme-border, #334155)', textAlign: 'center' }}>
-                  {tx("Tem certeza?")}
-                </div>
-                <div style={{ display: 'flex' }}>
-                  <button
-                    type="button"
-                    className="context-menu-item delete-item"
-                    style={{ flex: 1, textAlign: 'center', justifyContent: 'center', borderRight: '1px solid var(--theme-border, #334155)' }}
-                    onClick={() => {
-                      playSound('delete');
-                      deleteSkill(contextMenu.skill.id);
-                      setContextMenu(null);
-                    }}
-                  >
-                    {tx("Sim")}
-                  </button>
-                  <button
-                    type="button"
-                    className="context-menu-item"
-                    style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
-                    onClick={() => {
-                      playSound('click');
-                      setContextMenu(null);
-                    }}
-                  >
-                    {tx("Não")}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
+            <>
                 <button
                   type="button"
                   className="context-menu-item"
@@ -3913,15 +3845,18 @@ editingSkill.miniMissions.map((mm, idx) => {
                 <button
                   type="button"
                   className="context-menu-item delete-item"
-                  onClick={() => {
+                  onClick={async () => {
                     playSound('click');
-                    setContextMenu((prev) => ({ ...prev, confirmDelete: true }));
+                    const skill = contextMenu.skill;
+                    setContextMenu(null);
+                    if (!(await ask({ title: tx("Excluir a habilidade?"), message: `"${skill.title}"`, yes: tx("Excluir"), danger: true }))) return;
+                    playSound('delete');
+                    deleteSkill(skill.id);
                   }}
                 >
                   {tx("Excluir Habilidade")}
                 </button>
-              </>
-            )}
+            </>
           </div>
         </>
       )}
@@ -3946,7 +3881,6 @@ editingSkill.miniMissions.map((mm, idx) => {
                   playSound('click');
                   setIsBatchSelectMode(!isBatchSelectMode);
                   setSelectedBatchIds([]);
-                  setBatchConfirmDelete(false);
                 }}
                 title={tx("Ativar seleção múltipla para exclusão")}
               >
@@ -3955,34 +3889,6 @@ editingSkill.miniMissions.map((mm, idx) => {
             </div>
 
             {isBatchSelectMode && selectedBatchIds.length > 0 && (
-              batchConfirmDelete ? (
-                <div className="batch-confirm-box">
-                  <span>{tx("Tem certeza que deseja excluir")}{' '}{selectedBatchIds.length} {selectedBatchIds.length === 1 ? 'habilidade' : 'habilidades'}?</span>
-                  <div className="batch-confirm-actions">
-                    <button
-                      type="button"
-                      className="batch-delete-btn"
-                      onClick={() => {
-                        playSound('delete');
-                        selectedBatchIds.forEach((id) => deleteSkill(id));
-                        setSelectedBatchIds([]);
-                        setBatchConfirmDelete(false);
-                        setIsBatchSelectMode(false);
-                      }}
-                    >
-                      {tx("Sim")}
-                    </button>
-                    <button
-                      type="button"
-                      className="cancel-button"
-                      style={{ padding: '0.3rem 0.8rem', fontSize: '0.85rem' }}
-                      onClick={() => { playSound('click'); setBatchConfirmDelete(false); }}
-                    >
-                      {tx("Não")}
-                    </button>
-                  </div>
-                </div>
-              ) : (
                 <div className="batch-actions-panel">
                   <span style={{ fontSize: '0.85rem', color: '#f1f5f9', fontWeight: 'bold' }}>
                     {selectedBatchIds.length} {selectedBatchIds.length === 1 ? 'selecionada' : 'selecionadas'}
@@ -3990,12 +3896,25 @@ editingSkill.miniMissions.map((mm, idx) => {
                   <button
                     type="button"
                     className="batch-delete-btn"
-                    onClick={() => { playSound('click'); setBatchConfirmDelete(true); }}
+                    onClick={async () => {
+                      playSound('click');
+                      const n = selectedBatchIds.length;
+                      const ok = await ask({
+                        title: tx('Excluir {n} habilidade(s)?', { n }),
+                        message: tx('As habilidades selecionadas serão apagadas.'),
+                        yes: tx('Excluir'),
+                        danger: true
+                      });
+                      if (!ok) return;
+                      playSound('delete');
+                      selectedBatchIds.forEach((id) => deleteSkill(id));
+                      setSelectedBatchIds([]);
+                      setIsBatchSelectMode(false);
+                    }}
                   >
                     {tx("Excluir Selecionadas")}
                   </button>
                 </div>
-              )
             )}
 
             <div className="editor-skills-scroll-container">
@@ -4986,45 +4905,7 @@ editingSkill.miniMissions.map((mm, idx) => {
         {/* Controles de Ação (Apenas para Módulos criados pelo utilizador) */}
         {editingSkill.activeModuleId && editingSkill.activeModuleId !== 'default' && (
           <>
-            {/* Confirmação Inline de Exclusão */}
-            {editingSkill.isConfirmingDeleteModule ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', padding: '0.2rem 0.5rem', borderRadius: '6px' }}>
-                <span style={{ fontSize: '0.78rem', color: '#f87171', fontWeight: 'bold' }}>{tx("Excluir Módulo?")}</span>
-                <button
-                  type="button"
-                  className="confirm-yes-btn"
-                  style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', background: '#dc2626' }}
-                  onClick={() => {
-                    if (playSound) playSound('delete');
-                    const deletedId = editingSkill.activeModuleId;
-                    const updatedMods = (editingSkill.modules || []).filter((m) => m.id !== deletedId);
-
-                    setEditingSkill({
-                      ...editingSkill,
-                      modules: updatedMods,
-                      activeModuleId: 'default',
-                      level: editingSkill.defaultLevel ?? 0,
-                      maxLevel: editingSkill.defaultMaxLevel ?? 10,
-                      levelDescriptions: editingSkill.defaultLevelDescriptions ?? {},
-                      levelTasks: editingSkill.defaultLevelTasks ?? {},
-                      levelInfos: editingSkill.defaultLevelInfos ?? {},
-                      isEditingModuleName: false,
-                      isConfirmingDeleteModule: false
-                    });
-                  }}
-                >
-                  {tx("Sim")}
-                </button>
-                <button
-                  type="button"
-                  className="confirm-no-btn"
-                  style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
-                  onClick={() => setEditingSkill({ ...editingSkill, isConfirmingDeleteModule: false })}
-                >
-                  {tx("Não")}
-                </button>
-              </div>
-            ) : !editingSkill.isEditingModuleName ? (
+            {!editingSkill.isEditingModuleName ? (
               /* Botões de Lápis (Renomear) e Lixeira (Excluir) ao lado esquerdo */
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                 <button
@@ -5040,7 +4921,25 @@ editingSkill.miniMissions.map((mm, idx) => {
                   type="button"
                   className="editor-remove-btn"
                   style={{ width: '30px', height: '30px', fontSize: '0.85rem' }}
-                  onClick={() => setEditingSkill({ ...editingSkill, isConfirmingDeleteModule: true, isEditingModuleName: false })}
+                  onClick={async () => {
+                    const mod = (editingSkill.modules || []).find((m) => m.id === editingSkill.activeModuleId);
+                    if (!(await ask({ title: tx("Excluir este módulo?"), message: mod ? `"${mod.name}"` : '', yes: tx("Excluir"), danger: true }))) return;
+                    if (playSound) playSound('delete');
+                    setEditingSkill((prev) => {
+                      const deletedId = prev.activeModuleId;
+                      return {
+                        ...prev,
+                        modules: (prev.modules || []).filter((m) => m.id !== deletedId),
+                        activeModuleId: 'default',
+                        level: prev.defaultLevel ?? 0,
+                        maxLevel: prev.defaultMaxLevel ?? 10,
+                        levelDescriptions: prev.defaultLevelDescriptions ?? {},
+                        levelTasks: prev.defaultLevelTasks ?? {},
+                        levelInfos: prev.defaultLevelInfos ?? {},
+                        isEditingModuleName: false
+                      };
+                    });
+                  }}
                   title={tx("Excluir este módulo")}
                 >
                   🗑️

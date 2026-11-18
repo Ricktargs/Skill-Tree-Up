@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { isSkillsMode } from '../modes/modeState.js';
 import { useUndoRestore } from './GlobalUndo.js';
 
 const STORAGE_KEY_TIME = 'pomodoro_saved_target_time';
@@ -708,8 +707,7 @@ export function usePomodoro() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Atalhos do SkillTree só valem no modo Skills
-      if (!isSkillsMode()) return;
+      // Ferramenta compartilhada: vale nos três modos
       const activeElem = document.activeElement;
       const isEditingText =
         activeElem &&

@@ -1,0 +1,141 @@
+/* =========================================================
+   ÁRVORE E NEURÔNIOS SEGUINDO O TEMA ESCOLHIDO
+   (os dois usam as variáveis da Árvore; aqui elas são trocadas)
+   ========================================================= */
+
+/* ---------- Nanquim: papel, tinta e aquarela do tema ---------- */
+html[data-ui-theme='nanquim'] .arvore-root {
+  --bg: var(--nq-bg);
+  --panel: var(--nq-paper);
+  --panel-2: var(--nq-paper-2);
+  --text: var(--nq-ink);
+  --text-strong: color-mix(in srgb, var(--nq-ink) 85%, var(--nq-bg) 0%);
+  --muted: var(--nq-muted);
+  --hover: var(--nq-paper-3);
+  --selected: color-mix(in srgb, var(--nq-paper-3), var(--nq-ink) 7%);
+  --border: color-mix(in srgb, var(--nq-paper-3), var(--nq-ink) 12%);
+  --border-soft: color-mix(in srgb, var(--nq-paper-3), var(--nq-ink) 5%);
+  --accent: var(--nq-accent);
+  --accent-soft: color-mix(in srgb, var(--nq-accent) 14%, transparent);
+  --title: var(--nq-title);
+  --foliage: var(--nq-foliage);
+  --foliage-2: var(--nq-foliage-2);
+  --foliage-active: var(--nq-foliage-active);
+  --foliage-edge: var(--nq-foliage-edge);
+  --leaf: var(--nq-foliage-2);
+  --tag: var(--nq-accent);
+  --ground-top: var(--nq-ground-top);
+  --ground-mid: var(--nq-ground-mid);
+  --ground-deep: var(--nq-ground-deep);
+  --surface: var(--nq-paper);
+  --surface-2: var(--nq-paper-2);
+  --surface-3: var(--nq-paper-3);
+  --input-bg: var(--nq-input);
+  --ink-soft: var(--nq-ink-soft);
+  --line: var(--nq-line);
+  --line-strong: var(--nq-line-strong);
+  --wash: color-mix(in srgb, var(--nq-accent) 8%, transparent);
+  --wash-strong: color-mix(in srgb, var(--nq-accent) 16%, transparent);
+  --focus: color-mix(in srgb, var(--nq-accent) 35%, transparent);
+}
+
+/* ---------- Gameficado: o visual de jogo do tema de cores ---------- */
+html[data-ui-theme='gamificado'] .arvore-root {
+  --bg: var(--g-modal);
+  --panel: var(--g-modal);
+  --panel-2: var(--g-box);
+  --text: #e2e8f0;
+  --text-strong: #ffffff;
+  --muted: #94a3b8;
+  --ink: #05070c;
+  --ink-line: color-mix(in srgb, var(--g-accent) 55%, transparent);
+  --ink-outline: color-mix(in srgb, var(--g-accent) 30%, transparent);
+  --tree: color-mix(in srgb, var(--g-accent) 14%, #05070c);
+  --branch: color-mix(in srgb, var(--g-accent) 55%, #94a3b8);
+  --hover: rgba(255, 255, 255, 0.06);
+  --selected: rgba(255, 255, 255, 0.1);
+  --border: var(--g-border);
+  --border-soft: var(--g-border);
+  --accent: var(--g-accent);
+  --accent-soft: color-mix(in srgb, var(--g-accent) 18%, transparent);
+  --danger-soft: rgba(239, 68, 68, 0.18);
+  --title: var(--g-accent);
+  --foliage: color-mix(in srgb, var(--g-accent) 62%, #0b1220);
+  --foliage-2: color-mix(in srgb, var(--g-accent) 76%, #0b1220);
+  --foliage-active: var(--g-accent);
+  --foliage-edge: color-mix(in srgb, var(--g-accent) 35%, #000000);
+  --foliage-text: #ffffff;
+  --leaf: var(--g-accent);
+  --ground-top: #03050a;
+  --ground-mid: color-mix(in srgb, var(--g-accent) 12%, #070b14);
+  --ground-deep: color-mix(in srgb, var(--g-accent) 30%, #070b14);
+  --ground-line: color-mix(in srgb, var(--g-accent) 70%, #ffffff);
+  --cloud: rgba(255, 255, 255, 0.05);
+  --cipo: color-mix(in srgb, var(--g-accent) 70%, #ffffff);
+  --tag: var(--g-accent);
+  --serif: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --shadow: 0 8px 25px rgba(0, 0, 0, 0.45);
+  --shadow-strong: 0 14px 36px rgba(0, 0, 0, 0.6);
+  --surface: var(--g-modal);
+  --surface-2: var(--g-box);
+  --surface-3: color-mix(in srgb, var(--g-box), #ffffff 6%);
+  --input-bg: rgba(0, 0, 0, 0.3);
+  --line: color-mix(in srgb, var(--g-border), transparent 30%);
+  --line-strong: var(--g-border);
+  --ink-soft: #cbd5e1;
+  --wash: color-mix(in srgb, var(--g-accent) 10%, transparent);
+  --wash-strong: color-mix(in srgb, var(--g-accent) 20%, transparent);
+  --focus: color-mix(in srgb, var(--g-accent) 40%, transparent);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --window-shadow: 0 0 0 1px var(--g-border), 0 18px 50px -10px rgba(0, 0, 0, 0.7), 0 0 24px color-mix(in srgb, var(--g-accent) 12%, transparent);
+  --grain: none;
+  --p-yellow: rgba(246, 231, 161, 0.18);
+  --p-blue: rgba(169, 216, 232, 0.18);
+  --p-green: rgba(184, 221, 181, 0.18);
+  --p-rose: rgba(234, 176, 171, 0.2);
+  --p-orange: rgba(242, 192, 143, 0.18);
+  --p-lilac: rgba(201, 184, 222, 0.2);
+  --p-sand: rgba(230, 220, 198, 0.12);
+  --p-ink: #e9e4d6;
+  color-scheme: dark;
+  /* fundo do tema (gradiente) no lugar do papel */
+  background: var(--g-bg) !important;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+html[data-ui-theme='gamificado'] .arvore-root .top-center h1 {
+  font-variant: normal;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--g-accent) 50%, transparent);
+}
+
+html[data-ui-theme='gamificado'] .arvore-root .nr-text h1,
+html[data-ui-theme='gamificado'] .arvore-root .nr-text h2,
+html[data-ui-theme='gamificado'] .arvore-root .nr-text h3 {
+  font-family: inherit;
+}
+
+html[data-ui-theme='gamificado'] .arvore-root .nr-dot {
+  filter: drop-shadow(0 0 6px var(--nr-c, var(--g-accent)));
+  stroke: rgba(255, 255, 255, 0.55);
+}
+
+html[data-ui-theme='gamificado'] .arvore-root .nr-link {
+  stroke: var(--g-accent);
+  stroke-opacity: 0.35;
+}
+
+/* Barra de troca de modo escura no Gameficado (em qualquer modo) */
+html[data-ui-theme='gamificado'] .mode-switcher {
+  background: color-mix(in srgb, var(--g-modal, #0a0e16) 82%, transparent) !important;
+  border-color: var(--g-border, rgba(255, 255, 255, 0.12)) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
+}
+
+html[data-ui-theme='gamificado'] .mode-switcher .mode-btn { color: #cbd5e1 !important; }
+html[data-ui-theme='gamificado'] .mode-switcher .mode-btn:hover { background: rgba(255, 255, 255, 0.1) !important; color: #fff !important; }
+html[data-ui-theme='gamificado'] .mode-switcher .mode-btn.active {
+  background: var(--g-accent, #38bdf8) !important;
+  color: var(--g-on-accent, #0b1220) !important;
+}

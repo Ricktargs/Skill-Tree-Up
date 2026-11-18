@@ -15,7 +15,6 @@ export const INITIAL_TREE = {
       id: "relacionamentos",
       name: "RELACIONAMENTOS",
       children: [
-        { id: "parceira", name: "PARCEIRA", children: [] },
         { id: "familia", name: "FAMÍLIA", children: [] },
         { id: "amigos", name: "AMIGOS", children: [] },
       ],

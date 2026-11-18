@@ -2,6 +2,9 @@ import React, { Suspense, lazy, useEffect } from 'react';
 import './ModeSwitcher.css';
 import App from '../App.jsx';
 import { MODES, setMode, useMode } from './modeState.js';
+import { DialogHost } from '../shared/Dialog.jsx';
+import { useActiveProfileId } from '../shared/activeProfile.js';
+import { tx, useLanguage } from '../i18n/index.jsx';
 
 // A Árvore só carrega quando for aberta (e sai da memória ao trocar de modo)
 const ArvoreApp = lazy(() => import('./arvore/App.jsx'));
@@ -12,6 +15,7 @@ const isTyping = (el) =>
 
 export default function ModeRoot() {
   const mode = useMode();
+  const profileId = useActiveProfileId();
 
   // Título da aba conforme o projeto aberto
   useEffect(() => {
@@ -35,30 +39,31 @@ export default function ModeRoot() {
 
   return (
     <>
-      {/* O SkillTree continua montado (Pomodoro e alarmes seguem rodando),
-          só fica escondido e com os atalhos desligados fora do modo Skills */}
-      <div style={{ display: mode === 'skills' ? 'contents' : 'none' }} aria-hidden={mode !== 'skills'}>
-        <App />
-      </div>
+      {/* As Habilidades são a "casca" do programa: fora do modo delas,
+          só as ferramentas (Perfil, Pomodoro, Tarefas, Flashcards,
+          Configurações e noturno) ficam por cima da Árvore/Neurônios */}
+      <App />
 
       {mode === 'arvore' && (
         <Suspense fallback={<div className="mode-loading" />}>
-          <ArvoreApp />
+          <ArvoreApp key={profileId} />
         </Suspense>
       )}
 
       {mode === 'neuronios' && (
         <Suspense fallback={<div className="mode-loading" />}>
-          <NeuroniosApp />
+          <NeuroniosApp key={profileId} />
         </Suspense>
       )}
 
       <ModeSwitcher mode={mode} />
+      <DialogHost />
     </>
   );
 }
 
 function ModeSwitcher({ mode }) {
+  useLanguage();
   return (
     <nav className={`mode-switcher on-${mode}`} aria-label="Trocar de projeto">
       {MODES.map((m, i) => (
@@ -68,9 +73,9 @@ function ModeSwitcher({ mode }) {
           className={`mode-btn ${mode === m.id ? 'active' : ''}`}
           aria-pressed={mode === m.id}
           onClick={() => setMode(m.id)}
-          title={`${m.title} (Alt+${i + 1})`}
+          title={`${tx(m.name)} (Alt+${i + 1})`}
         >
-          {m.name}
+          {tx(m.name)}
         </button>
       ))}
     </nav>

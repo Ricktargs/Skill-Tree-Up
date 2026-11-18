@@ -5,6 +5,7 @@ import { ROOT_ID } from "./constants";
 import { countDescendants, getAncestorIds } from "./tree";
 import { extractTags } from "./html";
 import { getEffectiveBranchId } from "./folders";
+import { planForest, treeGeometry, attachPoints } from "./growth";
 
 export const ROOT_POS = { x: 600, y: 620 };
 
@@ -37,28 +38,32 @@ function layoutChildren(parent, parentPos, isLeft, depth, nodes, links) {
   });
 }
 
-/** Layout base (sem deslocamentos manuais). */
-export function createLayout(tree) {
+/**
+ * Layout base (sem deslocamentos manuais).
+ * ctx = { info, growth }: notas/texto por galho e as permissões de crescimento
+ * (dividir o tronco, árvores novas). Ver lib/growth.js.
+ */
+export function createLayout(tree, ctx = {}) {
   const nodes = [{ branch: tree, ...ROOT_POS, depth: 0 }];
   const links = [];
-  const main = tree?.children || [];
-  const total = main.length;
-  const startY = 510;
-  const endY = 200;
-  const stepY = total > 1 ? (startY - endY) / (total - 1) : 0;
+  const forest = planForest(tree, ctx.info || new Map(), ctx.growth || {});
+  const trees = forest.trees.map((t) => ({ ...t, geo: treeGeometry(t) }));
 
-  main.forEach((node, index) => {
-    const isLeft = index % 2 === 1;
-    const trunkY = total === 1 ? 360 : startY - stepY * index;
-    const progress = total > 1 ? index / (total - 1) : 0.5;
-    const tilt = (progress - 0.5) * -0.25;
-    const angle = isLeft ? Math.PI - tilt : tilt;
-    const dist = 170 + (index % 3) * 10;
-    const pos = { x: 600 + Math.cos(angle) * dist, y: trunkY + Math.sin(angle) * dist };
-
-    links.push({ depth: 0, targetId: node.id, parentId: ROOT_ID, parent: { x: 600, y: trunkY }, child: pos });
-    nodes.push({ branch: node, ...pos, depth: 1 });
-    layoutChildren(node, pos, isLeft, 2, nodes, links);
+  trees.forEach((t) => {
+    const attach = attachPoints(t, t.geo);
+    t.branches.forEach((node, index) => {
+      const { point, isLeft } = attach[index];
+      const [ax, ay] = point;
+      // Os de cima apontam mais para o alto; os de baixo, mais para fora
+      const height = Math.max(0, Math.min(1, (t.baseY - ay) / t.H));
+      const tilt = 0.08 + height * 0.42;
+      const angle = isLeft ? Math.PI + tilt : -tilt;
+      const dist = (150 + (index % 3) * 14) * (t.index === 0 ? 1 : Math.max(0.75, t.scale + 0.15));
+      const pos = { x: ax + Math.cos(angle) * dist, y: ay + Math.sin(angle) * dist };
+      links.push({ depth: 0, targetId: node.id, parentId: ROOT_ID, parent: { x: ax, y: ay }, child: pos, treeIndex: t.index });
+      nodes.push({ branch: node, ...pos, depth: 1, treeIndex: t.index });
+      layoutChildren(node, pos, isLeft, 2, nodes, links);
+    });
   });
 
   const totalNodes = countDescendants(tree);
@@ -78,7 +83,13 @@ export function createLayout(tree) {
     }
   }
 
-  return { nodes, links, dims, transform: fitTransform(nodes) };
+  // A moldura inclui as pontas dos troncos e as árvores novas
+  const extents = trees.flatMap((t) => [
+    { x: t.x - t.baseHalf * 3, y: t.baseY },
+    { x: t.x + t.baseHalf * 3, y: t.baseY },
+    ...t.geo.limbs.map((l) => ({ x: l.curve[3][0], y: l.curve[3][1] })),
+  ]);
+  return { nodes, links, dims, trees, needs: forest.needs, transform: fitTransform([...nodes, ...extents.map((p) => ({ ...p, branch: {} }))]) };
 }
 
 function fitTransform(nodes) {
@@ -89,7 +100,7 @@ function fitTransform(nodes) {
     minY = Math.min(minY, n.y);
     maxY = Math.max(maxY, n.y);
   }
-  minY = Math.min(minY, 170);
+  minY = Math.min(minY, 120);
   maxY = Math.max(maxY, 630);
   const scale = Math.max(0.3, Math.min(1, 1100 / (maxX - minX + 180), 650 / (maxY - minY + 160)));
   const tx = 600 - ((minX + maxX) / 2) * scale;

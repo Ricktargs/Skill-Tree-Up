@@ -460,3 +460,142 @@
 }
 
 .th-menu button:hover { background: color-mix(in srgb, var(--theme-accent, #38bdf8) 18%, transparent); }
+
+/* ---------- Família: Nanquim / Gameficado ---------- */
+.th-family {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.th-family-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.7rem 0.9rem;
+  border-radius: 14px;
+  border: 1px solid var(--theme-border, #334155);
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.th-family-btn:hover { border-color: var(--theme-accent, #38bdf8); }
+
+.th-family-btn.active {
+  border-color: var(--theme-accent, #38bdf8);
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 14%, transparent);
+}
+
+.th-family-icon { font-size: 1.5rem; }
+
+.th-family-btn strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.th-family-btn small {
+  display: block;
+  font-size: 0.72rem;
+  opacity: 0.7;
+}
+
+.th-family-btn em {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-style: normal;
+  font-size: 0.62rem;
+  font-weight: 800;
+  background: var(--theme-accent, #38bdf8);
+  color: var(--theme-on-accent, #0b1220);
+}
+
+/* ---------- Temas do Nanquim ---------- */
+.th-nq {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.th-nq-note {
+  margin: 0;
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
+
+.th-nq-card .th-preview { position: relative; overflow: hidden; }
+
+.th-nq-card .th-preview-line.short { width: 40%; }
+
+.th-nq-blob {
+  position: absolute;
+  right: 14%;
+  bottom: 26%;
+  width: 34px;
+  height: 26px;
+  border-radius: 50% 46% 52% 44%;
+  border: 2px solid;
+}
+
+.th-nq-ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 18%;
+}
+
+.th-nq-desc {
+  display: block;
+  margin-top: -2px;
+  padding: 0 4px 6px;
+  font-size: 0.66rem;
+  opacity: 0.7;
+  line-height: 1.25;
+}
+
+.th-ink {
+  padding: 0.8rem;
+  border-radius: 14px;
+  border: 1px solid var(--theme-border, #334155);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.th-ink-head strong { display: block; font-size: 0.85rem; }
+.th-ink-head small { display: block; font-size: 0.72rem; opacity: 0.7; margin-bottom: 0.55rem; }
+
+.th-ink-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.th-ink-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.12s ease;
+}
+
+.th-ink-dot:hover { transform: scale(1.18); }
+
+.th-ink-dot.active {
+  outline: 2px solid var(--theme-accent, #38bdf8);
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .th-family { grid-template-columns: 1fr; }
+}

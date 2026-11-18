@@ -5,6 +5,8 @@
 // =========================================================
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sanitizeHtml } from '../arvore/lib/html.js';
+import { profileKey, readProfileRaw } from '../../atualizacao2_0/ProfileStorage.js';
+import { getActiveProfileId } from '../../shared/activeProfile.js';
 
 export const STORAGE_KEY = 'neuronios-v1';
 export const THEME_KEY = 'eu-sou-arvore-theme'; // mesmo tema da Árvore
@@ -56,7 +58,7 @@ export const cleanHtml = (html) => sanitizeHtml(html);
 // ---------- Neurônios de exemplo (primeira vez) ----------
 const starter = () => {
   const now = new Date().toISOString();
-  const ids = { boas: uid(), ligar: uid(), tags: uid(), editor: uid(), ideias: uid() };
+  const ids = { boas: uid(), calma: uid() };
   const link = (id, title) => `<a class="wikilink" data-id="${id}" contenteditable="false">${title}</a>`;
   const n = (id, title, tags, content, x, y) => ({ id, title, tags, content, createdAt: now, updatedAt: now, x, y });
   return [
@@ -64,41 +66,25 @@ const starter = () => {
       ids.boas,
       'Bem-vindo aos Neurônios',
       ['inicio'],
-      `<h2>Seu mapa de ideias</h2><p>Cada bolinha do mapa é um <b>neurônio</b>: uma nota que pode se ligar a outras.</p><ul><li>Veja como ${link(ids.ligar, 'Ligar neurônios')}</li><li>Organize com ${link(ids.tags, 'Tags e filtros')}</li><li>Conheça o ${link(ids.editor, 'Editor de texto')}</li></ul>`,
+      `<h2>Seu mapa de ideias</h2><p>Cada bolinha do mapa é um <b>neurônio</b>: uma nota que pode se ligar a outras.</p><ul><li>Clique em <b>+ Neurônio</b> para criar um novo.</li><li>Digite <code>[[</code> no texto para ligar um neurônio a outro. As ligações viram fios no mapa.</li><li>Adicione tags embaixo do título e use os filtros no topo do mapa.</li></ul><p>Comece por aqui: ${link(ids.calma, 'Acalmar a mente')}</p>`,
       0,
       0
     ),
     n(
-      ids.ligar,
-      'Ligar neurônios',
-      ['inicio', 'dica'],
-      `<p>Digite <code>[[</code> no texto e escolha um neurônio para criar uma ligação. Se ele ainda não existir, é criado na hora.</p><p>As ligações viram fios no mapa. Clique numa ligação para abrir o neurônio. Volte para ${link(ids.boas, 'Bem-vindo aos Neurônios')}.</p>`,
-      140,
-      -60
-    ),
-    n(
-      ids.tags,
-      'Tags e filtros',
-      ['inicio', 'dica'],
-      `<p>Adicione tags embaixo do título. No topo do mapa, clique nas tags para <b>filtrar</b> só os neurônios delas.</p><blockquote>Ative “Tags no mapa” para ver as tags como nós, igual ao Obsidian.</blockquote>`,
-      -150,
+      ids.calma,
+      'Acalmar a mente',
+      ['mente'],
+      `<h3>Tire os pensamentos da cabeça</h3><p>Quando a mente estiver cheia, escreva. Crie um neurônio de texto para cada pensamento que estiver girando aí dentro: uma preocupação, uma ideia, algo para lembrar.</p><ul class="checklist"><li data-checked="false">Criar um neurônio com o que está me preocupando</li><li data-checked="false">Criar um neurônio com uma ideia que não sai da cabeça</li><li data-checked="false">Ligar os dois com <code>[[</code></li></ul><blockquote>Colocar no papel já deixa a mente mais leve.</blockquote><p>Volte para ${link(ids.boas, 'Bem-vindo aos Neurônios')}.</p>`,
+      170,
       -40
-    ),
-    n(
-      ids.editor,
-      'Editor de texto',
-      ['dica'],
-      `<h3>Atalhos de escrita</h3><ul><li><code>#</code> + espaço → título</li><li><code>-</code> + espaço → lista</li><li><code>[]</code> + espaço → caixa de seleção</li><li><code>&gt;</code> + espaço → citação</li></ul><ul class="checklist"><li data-checked="true">Escrever a primeira ideia</li><li data-checked="false">Ligar duas ideias</li></ul>`,
-      40,
-      150
-    ),
-    n(ids.ideias, 'Ideias soltas', ['ideia'], `<p>Um neurônio sem ligações também tem seu lugar. Ligue-o a ${link(ids.boas, 'Bem-vindo aos Neurônios')} quando quiser.</p>`, -120, 140)
+    )
   ];
 };
 
+// Cada perfil tem os próprios neurônios ("neuronios-v1__<perfil>")
 const load = () => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = readProfileRaw(STORAGE_KEY, getActiveProfileId());
     if (!raw) return { notes: starter(), view: {} };
     const v = JSON.parse(raw);
     return {
@@ -117,16 +103,17 @@ export function useNeuronios() {
   const [data, setData] = useState(load);
   const [saveError, setSaveError] = useState(false);
   const first = useRef(true);
+  const keyRef = useRef(profileKey(STORAGE_KEY, getActiveProfileId()));
 
   // Salva (com um pequeno atraso para não gravar a cada tecla)
   useEffect(() => {
     if (first.current) {
       first.current = false;
-      if (localStorage.getItem(STORAGE_KEY)) return;
+      if (localStorage.getItem(keyRef.current)) return;
     }
     const t = setTimeout(() => {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        localStorage.setItem(keyRef.current, JSON.stringify(data));
         setSaveError(false);
       } catch (e) {
         setSaveError(true);
@@ -145,6 +132,8 @@ export function useNeuronios() {
       title: (fields.title || '').trim() || 'Novo neurônio',
       tags: fields.tags || [],
       content: fields.content || '',
+      // Cada neurônio novo nasce com uma cor aleatória da paleta
+      color: fields.color || TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)],
       createdAt: now,
       updatedAt: now,
       x: fields.x,
@@ -176,6 +165,25 @@ export function useNeuronios() {
       return { ...d, notes: d.notes.filter((n) => n.id !== id) };
     });
     return removed;
+  }, []);
+
+  // Exclui vários de uma vez (seleção no mapa); devolve os excluídos
+  const deleteNotes = useCallback((ids) => {
+    const set = new Set(ids);
+    let removed = [];
+    setData((d) => {
+      removed = d.notes.filter((n) => set.has(n.id));
+      return { ...d, notes: d.notes.filter((n) => !set.has(n.id)) };
+    });
+    return removed;
+  }, []);
+
+  const restoreNotes = useCallback((list) => {
+    if (!list || !list.length) return;
+    setData((d) => {
+      const have = new Set(d.notes.map((n) => n.id));
+      return { ...d, notes: [...d.notes, ...list.filter((n) => !have.has(n.id))] };
+    });
   }, []);
 
   const restoreNote = useCallback((note) => {
@@ -223,7 +231,9 @@ export function useNeuronios() {
     updateNote,
     savePositions,
     deleteNote,
+    deleteNotes,
     restoreNote,
+    restoreNotes,
     setView
   };
 }

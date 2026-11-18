@@ -333,3 +333,33 @@
   .st-row { flex-wrap: wrap; }
   .cm-item { grid-template-columns: 1fr; gap: 0.25rem; }
 }
+
+/* Abas dos atalhos (um por modo) */
+.cm-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 0 0.6rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--theme-border, #334155);
+}
+
+.cm-tabs button {
+  flex: 1;
+  padding: 0.45rem 0.4rem;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cm-tabs button.active {
+  background: var(--theme-accent, #38bdf8);
+  color: var(--theme-on-accent, #0b1220);
+}
+
+.st-range { width: 160px; accent-color: var(--theme-accent, #38bdf8); }

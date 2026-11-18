@@ -5,6 +5,7 @@
    e textura de papel granulado. Tudo gerado em SVG.
 ========================================================= */
 import { memo } from "react";
+import { limbGrains, limbOutline, pathOutline, runnerPath, treeRoots } from "../lib/growth";
 
 /* ---------------- utilidades ---------------- */
 function rand(seed) {
@@ -156,54 +157,89 @@ export const Ground = memo(function Ground() {
   );
 });
 
-/* ---------------- raízes, veios e nó do tronco ---------------- */
-export const TrunkDetails = memo(function TrunkDetails({ bonus, part }) {
-  const baseHalf = 28 + bonus * 0.85;
-  const topHalf = 9 + Math.min(4, bonus * 0.12);
-  const L = 600 - baseHalf;
-  const R = 600 + baseHalf;
-
-  if (part === "roots") {
-    const roots = [
-      `M ${L + 6} 596 C ${L - 18} 618, ${L - 70} 626, ${L - 135} 640 C ${L - 70} 638, ${L - 25} 640, ${600 - baseHalf * 0.2} 642 Z`,
-      `M ${L + 14} 612 C ${L - 4} 632, ${L - 30} 648, ${L - 62} 668 C ${L - 22} 656, ${L + 6} 646, ${600 - baseHalf * 0.1} 640 Z`,
-      `M ${R - 6} 596 C ${R + 22} 616, ${R + 80} 628, ${R + 150} 636 C ${R + 80} 640, ${R + 25} 641, ${600 + baseHalf * 0.2} 642 Z`,
-      `M ${R - 12} 614 C ${R + 6} 634, ${R + 28} 652, ${R + 54} 672 C ${R + 18} 658, ${R - 8} 648, ${600 + baseHalf * 0.1} 640 Z`,
-    ];
-    return (
-      <g className="roots" filter="url(#organic-branch)">
-        {roots.map((d, i) => (
-          <path key={i} className="ink-fill" d={d} />
-        ))}
-        <path className="ink-grain" d={`M ${L - 6} 616 C ${L - 40} 628, ${L - 80} 633, ${L - 118} 638`} />
-        <path className="ink-grain" d={`M ${R + 6} 616 C ${R + 44} 626, ${R + 90} 631, ${R + 132} 634`} />
-      </g>
-    );
-  }
-
-  const grains = [-0.66, -0.32, 0.04, 0.36, 0.68].map((k, i) => {
-    const xb = 600 + k * baseHalf * 0.72;
-    const xm = 600 + k * 15;
-    const xu = 600 + k * (topHalf + 3) * 0.7;
-    const xt = 600 + k * topHalf * 0.55;
-    return {
-      d: `M ${xb} 612 C ${xb + k * 2} 520, ${xm} 440, ${xm} 400 C ${xm} 350, ${xu} 320, ${xu} 290 L ${xt} ${180 + i * 6}`,
-      dash: `${60 + rand(i + 20) * 90} ${8 + rand(i + 21) * 18} ${20 + rand(i + 22) * 40} ${6 + rand(i + 23) * 10}`,
-    };
-  });
-
+/* ---------------- raízes (crescem com a árvore) ---------------- */
+export const ForestRoots = memo(function ForestRoots({ trees }) {
+  const main = trees[0];
   return (
-    <g className="trunk-details" style={{ pointerEvents: "none" }}>
-      {grains.map((g, i) => (
-        <path key={i} className="ink-grain" d={g.d} style={{ strokeDasharray: g.dash }} />
+    <g className="roots" filter="url(#organic-branch)">
+      {/* raiz rasteira que liga as árvores novas à principal */}
+      {trees.slice(1).map((t) => (
+        <path
+          key={`runner-${t.index}`}
+          className="root-runner"
+          d={runnerPath({ x: main.x + Math.sign(t.x - main.x) * main.baseHalf * 0.8 }, { x: t.x }, t.seed)}
+          style={{ strokeWidth: 3 + Math.min(4, t.weight * 0.05) }}
+        />
       ))}
-      {baseHalf > 30 && (
-        <g className="knot">
-          <ellipse cx={600 - baseHalf * 0.38} cy={572} rx={6 + bonus * 0.12} ry={10 + bonus * 0.2} />
-          <ellipse cx={600 - baseHalf * 0.38} cy={573} rx={2.5 + bonus * 0.05} ry={5 + bonus * 0.1} />
-        </g>
+      {trees.slice(1).map((t) => (
+        <path
+          key={`runner-line-${t.index}`}
+          className="root-runner-line"
+          d={runnerPath({ x: main.x + Math.sign(t.x - main.x) * main.baseHalf * 0.8 }, { x: t.x }, t.seed)}
+        />
+      ))}
+      {trees.map((t) =>
+        treeRoots(t).map((r, i) => (
+          <g key={`${t.index}-${i}`}>
+            <path className="ink-fill root-fill" d={r.d} />
+            {r.grains.map((g, j) => (
+              <path key={j} className="ink-grain" d={g.d} style={{ strokeDasharray: g.dash }} />
+            ))}
+          </g>
+        ))
       )}
     </g>
   );
 });
 
+/* ---------------- troncos: afinam até virar galho e podem se dividir ---------------- */
+export const ForestTrunks = memo(function ForestTrunks({ trees, selected, dimmed, events, onSideTreeMenu }) {
+  return (
+    <g className="forest-trunks">
+      {trees.map((t) => {
+        const limbs = t.geo.limbs.map((l) => ({ ...l, d: limbOutline(l.curve, l.half) }));
+        // gravetos do topo (o tronco se abre dentro da copa)
+        const twigs = (t.geo.twigs || []).map((tw) => pathOutline(tw.pts, tw.half));
+        const grains = t.geo.limbs.flatMap((l, li) =>
+          limbGrains(l.curve, l.half, l.role === "trunk" ? 5 : 3, t.seed + li * 31)
+        );
+        return (
+          <g
+            key={t.index}
+            style={{ opacity: dimmed ? 0.6 : 1 }}
+            onContextMenu={
+              t.index > 0 && onSideTreeMenu
+                ? (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onSideTreeMenu(t);
+                  }
+                : undefined
+            }
+          >
+            {twigs.map((d, i) => (
+              <path key={`tw${i}`} className={`trunk ${selected ? "selected" : ""}`} filter="url(#organic-branch)" d={d} {...events} />
+            ))}
+            {limbs.map((l, i) => (
+              <path key={i} className={`trunk ${selected ? "selected" : ""}`} filter="url(#organic-branch)" d={l.d} {...events} />
+            ))}
+            {limbs.map((l, i) => (
+              <path key={`g${i}`} d={l.d} fill="url(#grain-light)" opacity="0.22" style={{ pointerEvents: "none" }} />
+            ))}
+            <g style={{ pointerEvents: "none" }}>
+              {grains.map((g, i) => (
+                <path key={i} className="ink-grain" d={g.d} style={{ strokeDasharray: g.dash }} />
+              ))}
+              {t.baseHalf > 30 && (
+                <g className="knot">
+                  <ellipse cx={t.x - t.baseHalf * 0.38} cy={t.baseY - 48 * t.scale} rx={6 + t.baseHalf * 0.12} ry={10 + t.baseHalf * 0.2} />
+                  <ellipse cx={t.x - t.baseHalf * 0.38} cy={t.baseY - 47 * t.scale} rx={2.5 + t.baseHalf * 0.05} ry={5 + t.baseHalf * 0.1} />
+                </g>
+              )}
+            </g>
+          </g>
+        );
+      })}
+    </g>
+  );
+});

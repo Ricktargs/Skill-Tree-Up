@@ -2,6 +2,28 @@ import React, { useState, useEffect } from 'react';
 import './Themes.css';
 import { tx, useLanguage } from '../i18n/index.jsx';
 import { THEME_CATEGORIES, makeTheme, findCategoryOf, getThemeById } from './Themes.js';
+import { useUiTheme, setVisual, setNanquimTheme } from '../shared/uiTheme.js';
+import { NANQUIM_THEMES } from '../shared/nanquimThemes.js';
+
+// Prévia de um tema do Nanquim: papel, janela, tinta e uma "copa" de aquarela
+function NanquimCard({ theme, palette, accent, active, onClick }) {
+  return (
+    <button type="button" className={`th-card th-nq-card ${active ? 'active' : ''}`} onClick={onClick}>
+      <div className="th-preview" style={{ background: palette.bg }}>
+        <div className="th-preview-window" style={{ background: palette.paper, borderColor: `rgb(${palette.shade} / 0.3)` }}>
+          <span className="th-preview-bar" style={{ background: accent }} />
+          <span className="th-preview-line" style={{ background: palette.ink, opacity: 0.55 }} />
+          <span className="th-preview-line short" style={{ background: palette.muted, opacity: 0.6 }} />
+        </div>
+        <span className="th-nq-blob" style={{ background: palette.foliage, borderColor: palette.foliageEdge }} />
+        <span className="th-nq-ground" style={{ background: `linear-gradient(180deg, ${palette.groundMid}, ${palette.groundDeep})` }} />
+        {active && <span className="th-check">✓</span>}
+      </div>
+      <span className="th-name">{tx(theme.name)}</span>
+      <small className="th-nq-desc">{tx(theme.desc)}</small>
+    </button>
+  );
+}
 
 // Quantas categorias aparecem antes do botão "+"
 const VISIBLE_CATEGORIES = 3;
@@ -44,6 +66,8 @@ export function ThemeModal({
   setFavoriteThemes
 }) {
   useLanguage();
+  const ui = useUiTheme();
+  const [family, setFamily] = useState(ui.visual);
   const [category, setCategory] = useState(() => findCategoryOf(currentTheme, customThemes));
   const [expanded, setExpanded] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -65,6 +89,7 @@ export function ThemeModal({
   // Ao abrir, mostra a categoria do tema atual
   useEffect(() => {
     if (!isOpen) return;
+    setFamily(ui.visual);
     const cat = findCategoryOf(currentTheme, customThemes);
     setCategory(cat);
     const idx = THEME_CATEGORIES.findIndex((c) => c.id === cat);
@@ -154,10 +179,11 @@ export function ThemeModal({
         {/* Cabeçalho */}
         <div className="th-header">
           <div>
-            <h3>🎨 {tx('Tema visual')}</h3>
+            <h3>🎨 {tx('Temas')}</h3>
             <p>{tx('Perfil')}: {nickname}</p>
           </div>
           <div className="th-header-actions">
+            {family === 'gamificado' && (
             <button
               type="button"
               className={`th-icon-btn ${isEditMode ? 'is-on' : ''}`}
@@ -166,12 +192,95 @@ export function ThemeModal({
             >
               ✏️
             </button>
+            )}
             <button type="button" className="th-icon-btn close" onClick={close} title={tx('Fechar (Esc)')}>
               ✕
             </button>
           </div>
         </div>
 
+        {/* Família: Nanquim (papel e tinta) ou Gameficado (visual de jogo) */}
+        <div className="th-family" role="tablist">
+          {[
+            ['nanquim', '📜', 'Nanquim', 'Papel, tinta e aquarela'],
+            ['gamificado', '🎮', 'Gameficado', 'Visual de jogo, neon e escuro']
+          ].map(([id, icon, name, desc]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={family === id}
+              className={`th-family-btn ${family === id ? 'active' : ''}`}
+              onClick={() => {
+                click();
+                setFamily(id);
+                setIsEditMode(false);
+                setDraft(EMPTY_DRAFT);
+              }}
+            >
+              <span className="th-family-icon">{icon}</span>
+              <span>
+                <strong>{tx(name)}</strong>
+                <small>{tx(desc)}</small>
+              </span>
+              {ui.visual === id && <em>{tx('em uso')}</em>}
+            </button>
+          ))}
+        </div>
+
+        {family === 'nanquim' && (
+          <div className="th-nq">
+            <p className="th-nq-note">
+              {tx('Vale para Neurônios, Árvore e Habilidades. O modo noturno (🌙) escurece o papel de qualquer tema.')}
+            </p>
+            <div className="th-grid th-nq-grid">
+              {NANQUIM_THEMES.map((t) => {
+                const palette = ui.dark ? t.dark : t.light;
+                const accent = t.follow ? getThemeById(currentTheme, customThemes).color : palette.accent;
+                return (
+                  <NanquimCard
+                    key={t.id}
+                    theme={t}
+                    palette={palette}
+                    accent={accent}
+                    active={ui.visual === 'nanquim' && ui.nq === t.id}
+                    onClick={() => {
+                      click('train');
+                      setNanquimTheme(t.id);
+                    }}
+                  />
+                );
+              })}
+            </div>
+
+            {ui.visual === 'nanquim' && ui.nq === 'classico' && (
+              <div className="th-ink">
+                <div className="th-ink-head">
+                  <strong>{tx('Cor da tinta do Clássico')}</strong>
+                  <small>{tx('Escolha qualquer cor dos temas — o papel continua o da Árvore.')}</small>
+                </div>
+                <div className="th-ink-dots">
+                  {[...THEME_CATEGORIES.flatMap((c) => c.themes), ...customThemes].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className={`th-ink-dot ${currentTheme === t.id ? 'active' : ''}`}
+                      style={{ background: t.color }}
+                      title={t.custom ? t.name : tx(t.name)}
+                      onClick={() => {
+                        click();
+                        setCurrentTheme(t.id);
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {family === 'gamificado' && (
+        <>
         {/* Categorias */}
         <div className="th-tabs">
           {tabs.map((cat) => (
@@ -310,7 +419,7 @@ export function ThemeModal({
               <ThemeCard
                 key={theme.id}
                 theme={theme}
-                active={currentTheme === theme.id}
+                active={ui.visual === 'gamificado' && currentTheme === theme.id}
                 editing={isEditMode && theme.custom}
                 favorite={isFavorite(theme.id)}
                 onContextMenu={(e) => openMenu(e, theme)}
@@ -323,10 +432,14 @@ export function ThemeModal({
                   }
                   click('train');
                   setCurrentTheme(theme.id);
+                  setVisual('gamificado');
                 }}
               />
             ))}
           </div>
+        )}
+
+        </>
         )}
 
         {/* Menu do botão direito: favoritar / aplicar */}
@@ -348,6 +461,7 @@ export function ThemeModal({
                 onClick={() => {
                   click('train');
                   setCurrentTheme(menu.theme.id);
+                  setVisual('gamificado');
                   setMenu(null);
                 }}
               >

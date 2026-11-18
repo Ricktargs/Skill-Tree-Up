@@ -3,12 +3,13 @@ import { useArvore } from "../state/contexts";
 import { ROOT_ID } from "../lib/constants";
 import { canSwapNodes, countDescendants, findBranch, getAncestorIds, isDescendant, swapNodes } from "../lib/tree";
 import { getEffectiveBranchId, moveRecordsToLevel } from "../lib/folders";
-import { applyOffsets, createBranchPath, createCipoPath, createLayout, createTrunkPath, extractCipos, ROOT_POS } from "../lib/layout";
+import { applyOffsets, createBranchPath, createCipoPath, createLayout, extractCipos, ROOT_POS } from "../lib/layout";
 import { hashString } from "../lib/ids";
 import { getDraggedNoteId, isNoteDrag } from "../lib/dnd";
 import { sfx } from "../lib/sound";
 import { canopyCircles } from "../lib/canopy";
-import { TreeDefs, Ground, TrunkDetails } from "./TreeArt";
+import { TreeDefs, Ground, ForestRoots, ForestTrunks } from "./TreeArt";
+import { refuseExtraTrees, useGrowthPermissions } from "../lib/growthPermissions";
 
 const HOLD_MS = 1500;
 const DRAG_THRESHOLD = 6;
@@ -65,7 +66,20 @@ export default function TreeCanvas({ activeIds, onNodeClick, onOpenBranch }) {
   const lastSpace = useRef(0);
 
   /* ---------------- layout ---------------- */
-  const base = useMemo(() => createLayout(tree), [tree]);
+  // Notas e texto por galho: é o que faz a árvore (e as raízes) crescerem
+  const info = useMemo(() => {
+    const map = new Map();
+    for (const r of records) {
+      const id = getEffectiveBranchId(tree, foldersMap, r);
+      const cur = map.get(id) || { notes: 0, chars: 0 };
+      cur.notes += 1;
+      cur.chars += String(r.text || "").replace(/<[^>]+>/g, "").length + String(r.title || "").length;
+      map.set(id, cur);
+    }
+    return map;
+  }, [records, tree, foldersMap]);
+  const [growth] = useGrowthPermissions();
+  const base = useMemo(() => createLayout(tree, { info, growth }), [tree, info, growth]);
   const placed = useMemo(() => applyOffsets(base, tree, offsets, drag), [base, tree, offsets, drag]);
   const noteCounts = useMemo(() => {
     const map = new Map();
@@ -76,7 +90,6 @@ export default function TreeCanvas({ activeIds, onNodeClick, onOpenBranch }) {
     return map;
   }, [records, tree, foldersMap]);
   const cipos = useMemo(() => extractCipos(records, tree, foldersMap), [records, tree, foldersMap]);
-  const trunk = useMemo(() => createTrunkPath(countDescendants(tree)), [tree]);
 
   const showBadge = useCallback(() => {
     setBadgeVisible(true);
@@ -320,7 +333,7 @@ export default function TreeCanvas({ activeIds, onNodeClick, onOpenBranch }) {
                 tree={tree}
                 placed={placed}
                 dims={base.dims}
-                trunkPath={trunk.d}
+                trees={base.trees}
                 noteCounts={noteCounts}
                 cipos={cipos}
                 hoveredId={hoveredId}
@@ -336,16 +349,6 @@ export default function TreeCanvas({ activeIds, onNodeClick, onOpenBranch }) {
       </div>
 
       <div className={`zoom-badge ${badgeVisible ? "visible" : ""}`}>{Math.round(view.zoom * 100)}%</div>
-      <button
-        type="button"
-        className="recenter-button"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={resetView}
-        title="Centralizar (Espaço 2x)"
-        hidden={view.zoom === 1 && view.x === 0 && view.y === 0}
-      >
-        ⌖
-      </button>
     </div>
   );
 }
@@ -376,7 +379,7 @@ const TreeScene = memo(function TreeScene({
   tree,
   placed,
   dims,
-  trunkPath,
+  trees,
   noteCounts,
   cipos,
   hoveredId,
@@ -424,11 +427,12 @@ const TreeScene = memo(function TreeScene({
     onDragLeave: handlers.dragLeave,
     onDrop: (e) => handlers.drop(id, e),
   });
+  const trunkEvents = nodeEvents(ROOT_ID);
 
   return (
     <>
       <Ground />
-      <TrunkDetails bonus={trunkBonus} part="roots" />
+      <ForestRoots trees={trees} />
 
       {placed.links.map((link) => {
         const stroke =
@@ -488,6 +492,14 @@ const TreeScene = memo(function TreeScene({
       })}
 
       <g className="canopy fx" filter="url(#watercolor)">
+        {/* copa do topo de cada tronco */}
+        {trees.map((t) => (
+          <g key={`crown-${t.index}`} className="blob is-sub crown" style={{ opacity: hoveredId && hoveredId !== ROOT_ID ? 0.45 : 1 }}>
+            {(t.geo.crowns || []).map((c, i) => (
+              <circle key={i} cx={c.cx} cy={c.cy} r={c.r} />
+            ))}
+          </g>
+        ))}
         {placed.nodes
           .filter((n) => n.branch.id !== ROOT_ID)
           .map((node) => {
@@ -506,15 +518,7 @@ const TreeScene = memo(function TreeScene({
           })}
       </g>
 
-      <path
-        className={`trunk ${activeIds.has(ROOT_ID) ? "selected" : ""}`}
-        filter="url(#organic-branch)"
-        d={trunkPath}
-        style={{ opacity: hoveredId && hoveredId !== ROOT_ID ? 0.6 : 1 }}
-        {...nodeEvents(ROOT_ID)}
-      />
-      <path d={trunkPath} fill="url(#grain-light)" opacity="0.22" style={{ pointerEvents: "none" }} />
-      <TrunkDetails bonus={trunkBonus} />
+      <ForestTrunks trees={trees} selected={activeIds.has(ROOT_ID)} dimmed={Boolean(hoveredId && hoveredId !== ROOT_ID)} events={trunkEvents} onSideTreeMenu={() => refuseExtraTrees()} />
       <g className={`tree-node root-node ${activeIds.has(ROOT_ID) ? "selected" : ""} ${shakingId === ROOT_ID ? "shaking" : ""}`} style={{ opacity: nodeOpacity(ROOT_ID) }} {...nodeEvents(ROOT_ID)}>
         <circle className="main-circle" cx={ROOT_POS.x} cy={ROOT_POS.y} r={rootDims.rx} />
         <text className="main-text" x={ROOT_POS.x} y={ROOT_POS.y + 6} textAnchor="middle">

@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ask } from '../../shared/Dialog.jsx';
 import { cleanHtml, escapeHtml, linksIn, normalizeTag, plainText, tagColor, wikilinkHtml } from './store.js';
 
 // =========================================================
@@ -96,7 +97,6 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
   const [active, setActive] = useState({});
   const [suggest, setSuggest] = useState(null); // { query, x, y, index }
   const [linkBox, setLinkBox] = useState(null); // { url, range }
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [, setTick] = useState(0);
 
   // Carrega o texto uma vez por neurônio (preserva o cursor ao digitar)
@@ -454,21 +454,22 @@ function NeuronEditor({ note, store, onOpen, onDelete }) {
           }}
         />
         <div className="nr-note-actions">
-          {confirmDelete ? (
-            <>
-              <span className="small">Excluir este neurônio?</span>
-              <button type="button" className="tool danger" onClick={() => onDelete(note)}>
-                Excluir
-              </button>
-              <button type="button" className="tool" onClick={() => setConfirmDelete(false)}>
-                Cancelar
-              </button>
-            </>
-          ) : (
-            <button type="button" className="tool danger" onClick={() => setConfirmDelete(true)} title="Excluir neurônio">
-              🗑
-            </button>
-          )}
+          <button
+            type="button"
+            className="tool danger"
+            onClick={async () => {
+              const ok = await ask({
+                title: 'Excluir este neurônio?',
+                message: `“${note.title || 'Sem título'}” será apagado. As ligações para ele ficam marcadas como quebradas.`,
+                yes: 'Excluir',
+                danger: true
+              });
+              if (ok) onDelete(note);
+            }}
+            title="Excluir neurônio"
+          >
+            🗑
+          </button>
         </div>
       </div>
 
