@@ -16,7 +16,8 @@ export const PER_PROFILE_KEYS = [
   'rpg_deleted_folders_v1', // pastas excluídas
   'selected_folder_filters_v1', // filtros de pastas
   'rpg_favorite_themes_v1', // temas favoritos
-  'rpg_hero_v1' // personagem (classe e cores)
+  'rpg_hero_v1', // personagem (classe e cores)
+  'rpg_flashcards_v1' // decks, cartas e progresso dos flashcards
 ];
 
 // Dados do app inteiro que também vão no backup

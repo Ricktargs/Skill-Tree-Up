@@ -32,6 +32,12 @@ export const STAT_DEFS = [
   { id: 'hp', icon: '❤️', name: 'Vida', desc: 'Pontos de vida' }
 ];
 
+// Os 5 atributos de um personagem, com nomes/ícones próprios quando ele tiver
+// (ex.: o Guerreiro troca Magia por Espada). Os ids continuam os mesmos,
+// então o progresso salvo não se perde.
+export const statsFor = (heroClass) =>
+  STAT_DEFS.map((st) => ({ ...st, ...((heroClass && heroClass.statOverrides && heroClass.statOverrides[st.id]) || {}) }));
+
 // Custo do próximo nível: nível N custa N diamantes
 export const upgradeCost = (currentLevel) => currentLevel + 1;
 
@@ -108,6 +114,7 @@ export const HERO_CLASSES = [
     id: 'wizard',
     base: { atk: 3, def: 2, agi: 3, mag: 9, hp: 4 },
     name: 'Mago',
+    headgear: true,
     nameF: 'Maga',
     skin: '#f1c193',
     hair: '#e5e7eb',
@@ -129,10 +136,10 @@ export const HERO_CLASSES = [
       [5, 96, 5, 31, 14, 6, 'W'],
       [12, 12, 12, 31, -40, 6, 'T', { cls: 'vx-gem' }],
       [30, 30, 30, 0, -12, 0, 'S', { face: true }],
-      [26, 10, 6, 0, 6, 14, 'H', { only: 'm' }],
-      [32, 34, 6, 0, -8, -14, 'H', { only: 'f' }],
-      [3, 22, 30, -15.5, -12, 0, 'H', { only: 'f' }],
-      [3, 22, 30, 15.5, -12, 0, 'H', { only: 'f' }],
+      [26, 10, 6, 0, 6, 14, 'H', { only: 'm', beard: true }],
+      [32, 34, 6, 0, -8, -14, 'H', { only: 'f', hair: true }],
+      [3, 22, 30, -15.5, -12, 0, 'H', { only: 'f', hair: true }],
+      [3, 22, 30, 15.5, -12, 0, 'H', { only: 'f', hair: true }],
       [42, 5, 42, 0, -29, 0, 'OD'],
       [30, 11, 30, 0, -37, 0, 'O'],
       [21, 11, 21, 1, -48, 0, 'O'],
@@ -145,6 +152,9 @@ export const HERO_CLASSES = [
     id: 'warrior',
     base: { atk: 8, def: 8, agi: 3, mag: 1, hp: 7 },
     name: 'Guerreiro',
+    headgear: true,
+    statOverrides: { mag: { icon: '🗡️', name: 'Espada', desc: 'Domínio da espada' } },
+    hasArmor: true,
     nameF: 'Guerreira',
     skin: '#e8b48a',
     hair: '#3f2a1d',
@@ -157,13 +167,13 @@ export const HERO_CLASSES = [
       [12, 14, 12, -8, 46, 0, 'OD'],
       [12, 14, 12, 8, 46, 0, 'OD'],
       [32, 30, 18, 0, 24, 0, 'O'],
-      [34, 16, 20, 0, 16, 0, 'M'],
-      [11, 8, 5, -7, 14, 11.5, 'M', { only: 'f' }],
-      [11, 8, 5, 7, 14, 11.5, 'M', { only: 'f' }],
+      [34, 16, 20, 0, 16, 0, 'M', { armor: true }],
+      [11, 8, 5, -7, 14, 11.5, 'M', { only: 'f', armor: true }],
+      [11, 8, 5, 7, 14, 11.5, 'M', { only: 'f', armor: true }],
       [33, 4, 19, 0, 32, 0, BELT],
       [5, 5, 2, 0, 16, 10.5, 'T'],
-      [14, 7, 14, -21, 8, 0, 'M'],
-      [14, 7, 14, 21, 8, 0, 'M'],
+      [14, 7, 14, -21, 8, 0, 'M', { armor: true }],
+      [14, 7, 14, 21, 8, 0, 'M', { armor: true }],
       [10, 26, 10, -21, 22, 0, 'O'],
       [10, 26, 10, 21, 22, 0, 'O'],
       [9, 7, 9, -21, 38, 0, 'S'],
@@ -175,7 +185,7 @@ export const HERO_CLASSES = [
       [34, 22, 4, 0, -12, -16, 'M'],
       [4, 10, 3, 0, -14, 16, 'M'],
       [4, 12, 18, 0, -37, 0, 'T'],
-      [10, 26, 5, 0, 6, -19, 'H', { only: 'f' }],
+      [10, 26, 5, 0, 6, -19, 'H', { only: 'f', hair: true }],
       // Espada
       [4, 10, 4, 21, 42, 9, 'W'],
       [14, 3, 5, 21, 36, 9, 'M'],
@@ -212,10 +222,10 @@ export const HERO_CLASSES = [
       [8, 7, 8, -19, 37, 0, 'S'],
       [8, 7, 8, 19, 37, 0, 'S'],
       [30, 30, 30, 0, -12, 0, 'S', { face: true }],
-      [32, 8, 32, 0, -28, 0, 'H'],
-      [32, 32, 6, 0, -10, -14, 'H'],
-      [3, 16, 30, -15.5, -18, 0, 'H'],
-      [3, 16, 30, 15.5, -18, 0, 'H'],
+      [32, 8, 32, 0, -28, 0, 'H', { hair: true }],
+      [32, 32, 6, 0, -10, -14, 'H', { hair: true }],
+      [3, 16, 30, -15.5, -18, 0, 'H', { hair: true }],
+      [3, 16, 30, 15.5, -18, 0, 'H', { hair: true }],
       [12, 5, 4, -20, -12, 0, 'S', { rz: 20 }],
       [12, 5, 4, 20, -12, 0, 'S', { rz: -20 }],
       [33, 3, 33, 0, -23, 0, 'T'],
@@ -229,31 +239,42 @@ export const HERO_CLASSES = [
     id: 'fairy',
     base: { atk: 2, def: 2, agi: 9, mag: 8, hp: 3 },
     name: 'Fada',
+    statOverrides: { agi: { icon: '🪽', name: 'Asas', desc: 'Voo e leveza' } },
     skin: '#fde2cf',
     hair: '#f9a8d4',
     eye: '#7c3aed',
     gender: 'f',
+    hairStyleM: 'short_curly',
     face: 'fairy',
     faceM: 'fairy_m',
     lift: -10,
     scale: 0.9,
     blocks: [
-      [8, 14, 8, -5, 48, 0, 'S'],
-      [8, 14, 8, 5, 48, 0, 'S'],
+      [8, 14, 8, -5, 48, 0, 'S', { only: 'f' }],
+      [8, 14, 8, 5, 48, 0, 'S', { only: 'f' }],
+      // Fado: calça, túnica com cinto e gola de folhas
+      [9, 16, 9, -5, 47, 0, 'OD', { only: 'm' }],
+      [9, 16, 9, 5, 47, 0, 'OD', { only: 'm' }],
+      [26, 12, 16, 0, 35, 0, 'O', { only: 'm' }],
+      [27, 3, 17, 0, 31, 0, BELT, { only: 'm' }],
+      [5, 4, 2, 0, 31, 9, 'T', { only: 'm' }],
+      [28, 4, 17, 0, 14, 0, 'T', { only: 'm' }],
+      [6, 6, 2, -8, 17, 9.5, 'T', { only: 'm', rz: 45 }],
+      [6, 6, 2, 8, 17, 9.5, 'T', { only: 'm', rz: 45 }],
       [9, 6, 10, -5, 57, 1, 'T'],
       [9, 6, 10, 5, 57, 1, 'T'],
       [24, 18, 14, 0, 22, 0, 'O'],
       [8, 6, 4, -5, 17, 8, 'O', { only: 'f' }],
       [8, 6, 4, 5, 17, 8, 'O', { only: 'f' }],
-      [34, 14, 26, 0, 37, 0, 'O'],
-      [36, 3, 28, 0, 44, 0, 'T'],
+      [34, 14, 26, 0, 37, 0, 'O', { only: 'f' }],
+      [36, 3, 28, 0, 44, 0, 'T', { only: 'f' }],
       [7, 24, 7, -16, 24, 0, 'S'],
       [7, 24, 7, 16, 24, 0, 'S'],
       [30, 30, 30, 0, -12, 0, 'S', { face: true }],
-      [32, 8, 32, 0, -28, 0, 'H'],
-      [32, 36, 6, 0, -8, -14, 'H', { only: 'f' }],
-      [3, 20, 30, -15.5, -16, 0, 'H', { only: 'f' }],
-      [3, 20, 30, 15.5, -16, 0, 'H', { only: 'f' }],
+      [32, 8, 32, 0, -28, 0, 'H', { hair: true }],
+      [32, 36, 6, 0, -8, -14, 'H', { only: 'f', hair: true }],
+      [3, 20, 30, -15.5, -16, 0, 'H', { only: 'f', hair: true }],
+      [3, 20, 30, 15.5, -16, 0, 'H', { only: 'f', hair: true }],
       // Asas
       [2, 32, 24, -12, 6, -16, 'T', { ry: -40, rz: 18, cls: 'vx-wing' }],
       [2, 32, 24, 12, 6, -16, 'T', { ry: 40, rz: -18, cls: 'vx-wing' }],
@@ -268,6 +289,8 @@ export const HERO_CLASSES = [
     id: 'dwarf',
     base: { atk: 7, def: 9, agi: 2, mag: 2, hp: 8 },
     name: 'Anão',
+    statOverrides: { mag: { icon: '⛏️', name: 'Picareta', desc: 'Mineração e forja' } },
+    hasHelm: true,
     nameF: 'Anã',
     skin: '#6b4226',
     hair: '#c2410c',
@@ -289,15 +312,15 @@ export const HERO_CLASSES = [
       [11, 8, 11, -25, 44, 0, 'S'],
       [11, 8, 11, 25, 44, 0, 'S'],
       [30, 30, 30, 0, 6, 0, 'S', { face: true }],
-      [32, 22, 6, 0, 22, 14, 'H', { only: 'm' }],
-      [6, 22, 6, -17, 24, 12, 'H', { only: 'f' }],
-      [6, 22, 6, 17, 24, 12, 'H', { only: 'f' }],
-      [5, 4, 5, -17, 36, 12, 'T', { only: 'f' }],
-      [5, 4, 5, 17, 36, 12, 'T', { only: 'f' }],
-      [34, 10, 34, 0, -12, 0, 'M'],
-      [36, 3, 36, 0, -7, 0, 'MD'],
-      [6, 14, 6, -20, -18, 0, '#e5e7eb', { rz: 25 }],
-      [6, 14, 6, 20, -18, 0, '#e5e7eb', { rz: -25 }],
+      [32, 22, 6, 0, 22, 14, 'H', { only: 'm', beard: true }],
+      [6, 22, 6, -17, 24, 12, 'H', { only: 'f', hair: true }],
+      [6, 22, 6, 17, 24, 12, 'H', { only: 'f', hair: true }],
+      [5, 4, 5, -17, 36, 12, 'T', { only: 'f', hair: true }],
+      [5, 4, 5, 17, 36, 12, 'T', { only: 'f', hair: true }],
+      [34, 10, 34, 0, -12, 0, 'M', { helm: true }],
+      [36, 3, 36, 0, -7, 0, 'MD', { helm: true }],
+      [6, 14, 6, -20, -18, 0, '#e5e7eb', { rz: 25, helm: true }],
+      [6, 14, 6, 20, -18, 0, '#e5e7eb', { rz: -25, helm: true }],
       // Machado
       [4, 46, 4, 25, 28, 9, 'W'],
       [4, 16, 14, 25, 8, 15, 'M'],
@@ -308,6 +331,9 @@ export const HERO_CLASSES = [
     id: 'archer',
     base: { atk: 8, def: 3, agi: 7, mag: 2, hp: 5 },
     name: 'Arqueiro',
+    headgear: true,
+    statOverrides: { mag: { icon: '🏹', name: 'Arco', desc: 'Precisão dos disparos' } },
+    hasArmor: true,
     nameF: 'Arqueira',
     skin: '#e8b48a',
     hair: '#3f2a1d',
@@ -334,8 +360,8 @@ export const HERO_CLASSES = [
       [4, 30, 32, -17, -12, 0, 'O'],
       [4, 30, 32, 17, -12, 0, 'O'],
       [14, 8, 14, 0, -32, -8, 'OD'],
-      [4, 18, 3, -11, 4, 16, 'H', { only: 'f' }],
-      [4, 18, 3, 11, 4, 16, 'H', { only: 'f' }],
+      [4, 18, 3, -11, 4, 16, 'H', { only: 'f', hair: true }],
+      [4, 18, 3, 11, 4, 16, 'H', { only: 'f', hair: true }],
       // Aljava com flechas
       [10, 26, 8, 8, 16, -13, 'W', { rz: 15 }],
       [3, 9, 3, 6, -1, -13, 'T', { rz: 15 }],
@@ -353,6 +379,7 @@ export const HERO_CLASSES = [
     id: 'dragon',
     base: { atk: 9, def: 6, agi: 5, mag: 7, hp: 9 },
     name: 'Dragão',
+    statOverrides: { agi: { icon: '🪽', name: 'Asas', desc: 'Voo e rajadas de vento' } },
     skin: 'O',
     hair: 'T',
     eye: '#facc15',
@@ -424,6 +451,7 @@ export const HERO_CLASSES = [
     id: 'zombie',
     base: { atk: 6, def: 5, agi: 2, mag: 3, hp: 9 },
     name: 'Morto-Vivo',
+    statOverrides: { mag: { icon: '🧠', name: 'Inteligência', desc: 'Astúcia e estratégia' } },
     nameF: 'Morta-Viva',
     skin: '#7aa05a',
     hair: '#3f3f46',
@@ -447,8 +475,8 @@ export const HERO_CLASSES = [
       [10, 26, 10, -22, 24, 0, 'O', { rz: 8 }],
       [9, 7, 9, -24, 39, 0, 'S'],
       [30, 30, 30, 0, -12, 0, 'S', { face: true, rz: 8 }],
-      [30, 4, 30, -1, -28, 0, 'H', { rz: 8 }],
-      [30, 24, 4, 1, 0, -16, 'H', { rz: 8, only: 'f' }]
+      [30, 4, 30, -1, -28, 0, 'H', { rz: 8, hair: true }],
+      [30, 24, 4, 1, 0, -16, 'H', { rz: 8, only: 'f', hair: true }]
     ]
   }
 ];
@@ -510,9 +538,45 @@ export const heroNameFor = (heroClass, gender) => (gender === 'f' && heroClass.n
 export const faceFor = (heroClass, gender) =>
   (gender === 'f' ? heroClass.faceF : heroClass.faceM) || heroClass.face;
 
-export const SKIN_COLORS = ['#fde2cf', '#f5d0b0', '#f1c193', '#e8b48a', '#c68642', '#8d5524', '#6b4226', '#3d2314', '#a7e3a1', '#7aa05a', '#93c5fd', '#c4b5fd'];
-export const EYE_COLORS = ['#1e293b', '#78350f', '#1d4ed8', '#0891b2', '#15803d', '#7c3aed', '#be123c', '#facc15'];
-export const HAIR_COLORS = ['#111827', '#3f2a1d', '#78350f', '#c2410c', '#fde68a', '#e5e7eb', '#f9a8d4', '#60a5fa', '#a78bfa', '#34d399'];
+export const SKIN_COLORS = [
+  { hex: '#fde2cf', name: 'Porcelana' },
+  { hex: '#f5d0b0', name: 'Marfim' },
+  { hex: '#f1c193', name: 'Bege' },
+  { hex: '#e8b48a', name: 'Pêssego' },
+  { hex: '#c68642', name: 'Caramelo' },
+  { hex: '#8d5524', name: 'Canela' },
+  { hex: '#6b4226', name: 'Café' },
+  { hex: '#3d2314', name: 'Ébano' },
+  { hex: '#a7e3a1', name: 'Verde-claro' },
+  { hex: '#7aa05a', name: 'Verde-musgo' },
+  { hex: '#93c5fd', name: 'Azul-gelo' },
+  { hex: '#c4b5fd', name: 'Lilás' }
+];
+export const EYE_COLORS = [
+  { hex: '#1e293b', name: 'Preto' },
+  { hex: '#78350f', name: 'Castanho' },
+  { hex: '#111827', name: 'Preto-azeviche' },
+  { hex: '#1e3a8a', name: 'Azul-marinho' },
+  { hex: '#1d4ed8', name: 'Azul' },
+  { hex: '#0891b2', name: 'Turquesa' },
+  { hex: '#15803d', name: 'Verde' },
+  { hex: '#7c3aed', name: 'Violeta' },
+  { hex: '#be123c', name: 'Vermelho' },
+  { hex: '#facc15', name: 'Dourado' }
+];
+export const HAIR_COLORS = [
+  { hex: '#111827', name: 'Preto' },
+  { hex: '#3f3f46', name: 'Cinza-escuro' },
+  { hex: '#3f2a1d', name: 'Castanho-escuro' },
+  { hex: '#78350f', name: 'Castanho' },
+  { hex: '#c2410c', name: 'Ruivo' },
+  { hex: '#fde68a', name: 'Loiro' },
+  { hex: '#e5e7eb', name: 'Grisalho' },
+  { hex: '#f9a8d4', name: 'Rosa' },
+  { hex: '#60a5fa', name: 'Azul' },
+  { hex: '#a78bfa', name: 'Lilás' },
+  { hex: '#34d399', name: 'Verde-menta' }
+];
 
 export const FACE_PATTERNS = FACES;
 export const FACE_PIXEL_COLORS = FACE_COLORS;

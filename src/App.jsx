@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { isSkillsMode } from './modes/modeState.js';
 import { tx } from './i18n/index.jsx';
 import { useGameData, PRESET_DECKS, getXpNeededForLevel, getGameDayKey } from './hooks/useGameData';
 import EmojiPicker from 'emoji-picker-react';
@@ -18,6 +19,9 @@ import { useCustomThemes, getThemeById, onAccentColor } from './atualizacao2_0/T
 import { useProfileStoredState, collectBackupExtras, applyBackupExtras } from './atualizacao2_0/ProfileStorage.js';
 import { globalUndo, globalRedo } from './atualizacao2_0/GlobalUndo.js';
 import UndoToast from './atualizacao2_0/UndoToast.jsx';
+import ColorDeckModal from './atualizacao2_0/ColorDeck.jsx';
+import { useFlashcards } from './atualizacao2_0/Flashcards.js';
+import { FlashcardsModal } from './atualizacao2_0/Flashcards.jsx';
 import { TaskModal, TaskAlert, TaskBadge } from './atualizacao2_0/TaskUpdate.jsx';
 import { DiamondHistoryModal, MissionHistoryModal } from './atualizacao2_0/DiamondHistory.jsx';
 
@@ -161,6 +165,7 @@ export default function App() {
     linkSkillsByCategory,
     setLinkSkillsByCategory,
     extraXp,
+    grantBonusXp,
     setExtraXp,
     xpHistory,
     setXpHistory,
@@ -217,6 +222,10 @@ export default function App() {
 
   // Checklists de cada perfil (antes eram os mesmos para todos)
   const taskState = useTaskUpdate(activeProfileId);
+  // Flashcards: sessões de estudo rendem XP (na categoria da habilidade ligada ao deck)
+  const flashcards = useFlashcards(activeProfileId, {
+    onReward: (xp, deckName, skill) => grantBonusXp(xp, `🎴 Flashcards: ${deckName}`, skill?.category || 'Flashcards')
+  });
   // Temas favoritos (botão direito num tema), salvos por perfil
   const [favoriteThemes, setFavoriteThemes] = useProfileStoredState('rpg_favorite_themes_v1', activeProfileId, []);
   // Personagem (classe e cores), salvo por perfil
@@ -741,6 +750,8 @@ const handleSaveMiniEdit = (idx, oldText) => {
   
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Atalhos do SkillTree só valem no modo Skills
+      if (!isSkillsMode()) return;
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
       const keyLower = e.key ? e.key.toLowerCase() : '';
 
@@ -1133,12 +1144,6 @@ const handleSaveEdit = (e) => {
     setIsCustomColorModalOpen(false);
   };
 
-  const handleSaveColorToDeckAndApply = () => {
-    playSound('click');
-    addCustomColorToDeck(newColorName || 'Nova Cor', pickedColorHex);
-    handleApplyCustomColorDirectly(pickedColorHex);
-  };
-
   const handleExportData = () => {
     playSound('click');
     const baseExport = exportAllData();
@@ -1447,6 +1452,23 @@ if (folderSortOrder === 'a-z') {
           >
             📋
             <TaskBadge taskState={taskState} />
+          </button>
+
+          <button
+            className="top-icon-button"
+            title={tx("Flashcards (F)")}
+            onClick={() => {
+              playSound('click');
+              flashcards.toggleModal();
+            }}
+            style={{ position: 'relative' }}
+          >
+            🎴
+            {flashcards.badgeDue > 0 && (
+              <span className="subtle-mission-badge" title={tx('{n} carta(s) para estudar hoje', { n: flashcards.badgeDue })}>
+                {flashcards.badgeDue}
+              </span>
+            )}
           </button>
         </div>
 
@@ -4341,148 +4363,23 @@ editingSkill.miniMissions.map((mm, idx) => {
         </div>
       )}
 
-      {isCustomColorModalOpen && (
-        <div className="modal-backdrop high-z-backdrop" onClick={() => { playSound('click'); setIsCustomColorModalOpen(false); }}>
-          <div className="modal-window color-picker-modal high-z-window" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header-row">
-              <h3>{tx("Personalizar Cor e Decks")}</h3>
-              <button className="close-popup-btn" onClick={() => { playSound('click'); setIsCustomColorModalOpen(false); }}>×</button>
-            </div>
-
-            <div className="color-custom-card-compact">
-              <span className="card-section-label">{tx("Escolher / Criar Cor Única:")}</span>
-
-              <div className="compact-color-controls">
-                <input
-                  type="color"
-                  value={pickedColorHex}
-                  onChange={(e) => setPickedColorHex(e.target.value)}
-                  className="picker-square-compact"
-                  title={tx("Escolher cor visualmente")}
-                />
-                <input
-                  type="text"
-                  placeholder={tx("Nome (opcional)")}
-                  value={newColorName}
-                  onChange={(e) => setNewColorName(e.target.value)}
-                  className="color-name-compact"
-                />
-                <input
-                  type="text"
-                  value={pickedColorHex}
-                  onChange={(e) => setPickedColorHex(e.target.value)}
-                  className="color-hex-compact"
-                  maxLength={7}
-                />
-              </div>
-
-              <div className="compact-buttons-row">
-                <button
-                  type="button"
-                  className="compact-btn use-btn"
-                  style={{ backgroundColor: pickedColorHex }}
-                  onClick={() => handleApplyCustomColorDirectly(pickedColorHex)}
-                >
-                  {tx("Usar Esta Cor")}
-                </button>
-                <button
-                  type="button"
-                  className="compact-btn save-btn"
-                  onClick={handleSaveColorToDeckAndApply}
-                >
-                  {tx("+ Salvar no Meu Deck")}
-                </button>
-              </div>
-            </div>
-
-            <div className="decks-list-scroll-area">
-              <span className="card-section-label">{tx("Decks de Cores Disponíveis:")}</span>
-
-              <div className="decks-stack">
-                {PRESET_DECKS.map((deck) => {
-                  const isActive = activeDeckId === deck.id;
-                  return (
-                    <div key={deck.id} className={`deck-row-card ${isActive ? 'is-active-deck' : ''}`}>
-                      <div className="deck-row-header">
-                        <span className="deck-title">{tx(deck.name)}</span>
-                        <button
-                          type="button"
-                          className={`deck-status-btn ${isActive ? 'active' : ''}`}
-                          onClick={() => { playSound('click'); setActiveDeckId(deck.id); }}
-                        >
-                          {isActive ? tx("Deck Padrão") : tx("Definir como Deck Padrão")}
-                        </button>
-                      </div>
-
-                      <div className="deck-chips-flex">
-                        {deck.colors.map((c) => (
-                          <button
-                            key={c.hex}
-                            type="button"
-                            className="color-chip-btn"
-                            onClick={() => handleApplyCustomColorDirectly(c.hex)}
-                            title={`${c.name} (${c.hex})`}
-                          >
-                            <span className="chip-color-dot" style={{ backgroundColor: c.hex }} />
-                            <span className="chip-color-name">{c.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                <div className={`deck-row-card ${activeDeckId === 'deck_custom' ? 'is-active-deck' : ''}`}>
-                  <div className="deck-row-header">
-                    <span className="deck-title">{tx("Meu Deck Personalizado")}</span>
-                    <button
-                      type="button"
-                      className={`deck-status-btn ${activeDeckId === 'deck_custom' ? 'active' : ''}`}
-                      onClick={() => { playSound('click'); setActiveDeckId('deck_custom'); }}
-                    >
-                      {activeDeckId === 'deck_custom' ? tx("Deck Padrão") : tx("Definir como Deck Padrão")}
-                    </button>
-                  </div>
-
-                  {customColorDeck.length === 0 ? (
-                    <p className="no-colors-msg">{tx("Nenhuma cor salva no seu deck personalizado.")}</p>
-                  ) : (
-                    <div className="deck-chips-flex">
-                      {customColorDeck.map((item) => (
-                        <div key={item.id} className="custom-chip-wrapper">
-                          <button
-                            type="button"
-                            className="color-chip-btn"
-                            onClick={() => handleApplyCustomColorDirectly(item.hex)}
-                            title={`${item.name} (${item.hex})`}
-                          >
-                            <span className="chip-color-dot" style={{ backgroundColor: item.hex }} />
-                            <span className="chip-color-name">{item.name}</span>
-                          </button>
-                          <button
-                            type="button"
-                            className="delete-color-x"
-                            onClick={() => { playSound('delete'); removeCustomColorFromDeck(item.id); }}
-                            title={tx("Remover cor do deck")}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-actions-bar">
-              <button className="confirm-button" onClick={() => { playSound('click'); setIsCustomColorModalOpen(false); }}>
-                {tx("Fechar")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ColorDeckModal
+        isOpen={isCustomColorModalOpen}
+        onClose={() => setIsCustomColorModalOpen(false)}
+        playSound={playSound}
+        pickedColor={pickedColorHex}
+        setPickedColor={setPickedColorHex}
+        colorName={newColorName}
+        setColorName={setNewColorName}
+        currentColor={colorPickerTarget === 'editing' ? editingSkill?.color : newColor}
+        presetDecks={PRESET_DECKS}
+        activeDeckId={activeDeckId}
+        setActiveDeckId={setActiveDeckId}
+        customDeck={customColorDeck}
+        onAddCustom={addCustomColorToDeck}
+        onRemoveCustom={removeCustomColorFromDeck}
+        onApply={handleApplyCustomColorDirectly}
+      />
 
       <ThemeModal
         isOpen={isThemeModalOpen}
@@ -5507,6 +5404,7 @@ editingSkill.miniMissions.map((mm, idx) => {
       <PomodoroModal pomodoro={pomodoro} playSound={playSound} />
       <PomodoroWidget pomodoro={pomodoro} playSound={playSound} />
       <TaskModal taskState={taskState} playSound={playSound} />
+      <FlashcardsModal fc={flashcards} skills={skills} playSound={playSound} />
 {/* ... outros modais do final do App.jsx ... */}
 
       <EditMissionsModal

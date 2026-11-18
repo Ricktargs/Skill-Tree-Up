@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { isSkillsMode } from '../modes/modeState.js';
 import { globalUndo, globalRedo, useGlobalUndo, useUndoRestore } from './GlobalUndo.js';
 import { tx } from '../i18n/index.jsx';
 import { readProfileValue, writeProfileValue, useProfileStoredState } from './ProfileStorage.js';
@@ -241,6 +242,8 @@ export function useTaskUpdate(profileId) {
   // "consumir" teclas enquanto o modal está aberto (stopImmediatePropagation).
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Atalhos do SkillTree só valem no modo Skills
+      if (!isSkillsMode()) return;
       const el = document.activeElement;
       const isEditingText =
         el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
@@ -397,6 +400,28 @@ export function useTaskUpdate(profileId) {
     });
   };
 
+  // Arrastar uma tarefa para outra lista (entra no topo da lista de destino)
+  const moveTaskToList = (taskId, targetListId, fields = null) => {
+    if (!currentList || !taskId || !targetListId || targetListId === currentList.id) return false;
+    const task = currentList.tasks.find((t) => t.id === taskId);
+    const target = taskLists.find((l) => l.id === targetListId);
+    if (!task || !target) return false;
+    const sourceId = currentList.id;
+    const nowIso = new Date().toISOString();
+    applyChange((prev) =>
+      prev.map((l) => {
+        if (l.id === sourceId) return { ...l, tasks: l.tasks.filter((t) => t.id !== taskId) };
+        if (l.id === targetListId) {
+          const moved = fields ? normalizeTask({ ...task, ...fields, updatedAt: nowIso }) : { ...task, updatedAt: nowIso };
+          return { ...l, tasks: [moved, ...l.tasks] };
+        }
+        return l;
+      })
+    );
+    showToast(tx('Tarefa “{name}” movida para {list}', { name: task.title, list: tx(target.title) }));
+    return true;
+  };
+
   // ---------- Resumo para o alerta e o badge ----------
   const tasksDue = useMemo(() => {
     let overdueCount = 0;
@@ -438,6 +463,7 @@ export function useTaskUpdate(profileId) {
     removeTask,
     clearCompleted,
     moveTask,
+    moveTaskToList,
     undo,
     redo,
     canUndo,

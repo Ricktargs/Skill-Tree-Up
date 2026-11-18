@@ -993,6 +993,23 @@ const trainSkill = (skillId) => {
     recordState(null, newHidden);
   };
 
+  // XP bônus vindo de outras atividades (ex.: sessões de Flashcards)
+  const grantBonusXp = (amount, title, category = 'Geral') => {
+    const value = Math.round(Number(amount) || 0);
+    if (value <= 0) return;
+    setExtraXp((prev) => (Number(prev) || 0) + value);
+    setXpHistory((prev) => [
+      {
+        id: `xplog_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
+        title,
+        category: category || 'Geral',
+        amount: value,
+        date: new Date().toLocaleString('pt-BR')
+      },
+      ...prev
+    ]);
+  };
+
   const addCustomColorToDeck = (name, hex) => {
     const newItem = { id: `col_${Date.now()}`, name: name || 'Custom', hex };
     setCustomColorDeck((prev) => [...prev, newItem]);
@@ -1185,6 +1202,7 @@ const trainSkill = (skillId) => {
     setLinkSkillsByCategory,
     extraXp,
     setExtraXp,
+    grantBonusXp,
     xpHistory,
     setXpHistory,
     folders,

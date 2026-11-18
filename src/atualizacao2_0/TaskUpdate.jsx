@@ -138,6 +138,7 @@ const sortTasks = (tasks, sort) => {
 // LINHA DE TAREFA
 // =========================================================
 function TaskRow({ task, todayKey, draggable, dragState, onToggle, onEdit, onDelete, onMove, playSound }) {
+  // `draggable` = pode reordenar; arrastar para outra lista funciona sempre
   const done = isTaskDone(task, todayKey);
   // Pendente: prazo em relação a agora. Concluída: prazo congelado na conclusão.
   const info = task.isRecurring || done ? null : getDueInfo(task, todayKey);
@@ -150,9 +151,14 @@ function TaskRow({ task, todayKey, draggable, dragState, onToggle, onEdit, onDel
   return (
     <div
       className={`ck-task ${done ? 'done' : ''} ${info?.status === 'overdue' && !done ? 'overdue' : ''} ${notToday ? 'dim' : ''} ${isDragOver ? 'drag-over' : ''}`}
-      draggable={draggable}
+      draggable
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = 'move';
+        try {
+          e.dataTransfer.setData('text/plain', task.title);
+        } catch (err) {
+          // alguns navegadores não aceitam dados no arraste
+        }
         dragState.setDraggingId(task.id);
       }}
       onDragOver={(e) => {
@@ -175,7 +181,7 @@ function TaskRow({ task, todayKey, draggable, dragState, onToggle, onEdit, onDel
         onEdit(task);
       }}
     >
-      {draggable && <span className="ck-handle" title={tx("Arraste para reordenar")}>⠿</span>}
+      <span className="ck-handle" title={draggable ? tx('Arraste para reordenar ou solte numa lista para mover') : tx('Arraste até uma lista para mover')}>⠿</span>
 
       <button
         type="button"
@@ -231,7 +237,8 @@ function TaskRow({ task, todayKey, draggable, dragState, onToggle, onEdit, onDel
 // =========================================================
 // EDITOR DE TAREFA (criar com detalhes ou editar)
 // =========================================================
-function TaskEditor({ initial, isNew, todayKey, onSave, onDelete, onClose, playSound }) {
+function TaskEditor({ initial, isNew, todayKey, onSave, onDelete, onClose, playSound, lists = [], listId = null }) {
+  const [targetListId, setTargetListId] = useState(listId);
   const [draft, setDraft] = useState(() => ({
     title: '',
     description: '',
@@ -266,7 +273,8 @@ function TaskEditor({ initial, isNew, todayKey, onSave, onDelete, onClose, playS
       isRecurring: draft.isRecurring,
       recurrenceType: draft.recurrenceType,
       recurrenceCount: Math.max(1, parseInt(draft.recurrenceCount, 10) || 1),
-      recurrenceDays: draft.recurrenceType === 'daily' ? [] : draft.recurrenceDays
+      recurrenceDays: draft.recurrenceType === 'daily' ? [] : draft.recurrenceDays,
+      listId: targetListId
     });
   };
 
@@ -341,6 +349,27 @@ function TaskEditor({ initial, isNew, todayKey, onSave, onDelete, onClose, playS
             value={draft.description || ''}
             onChange={(e) => set({ description: e.target.value })}
           />
+
+          {/* Mover para outra lista (também dá para arrastar a tarefa até a lista) */}
+          {!isNew && lists.length > 1 && (
+            <div className="ck-field">
+              <span className="ck-label">{tx('Lista')}</span>
+              <select
+                className="ck-input"
+                value={targetListId || ''}
+                onChange={(e) => {
+                  click();
+                  setTargetListId(e.target.value);
+                }}
+              >
+                {lists.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {tx(l.title)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Repetição */}
           <div className="ck-field">
@@ -525,10 +554,8 @@ export function TaskModal({ taskState, playSound }) {
     removeTask,
     clearCompleted,
     moveTask,
+    moveTaskToList,
     undo,
-    redo,
-    canUndo,
-    canRedo,
     toast,
     dismissToast,
     view,
@@ -546,6 +573,7 @@ export function TaskModal({ taskState, playSound }) {
   const [draggingId, setDraggingId] = useState(null);
   const [overId, setOverId] = useState(null);
   const [draggingListId, setDraggingListId] = useState(null);
+  const [taskDropListId, setTaskDropListId] = useState(null);
 
   // Esc fecha primeiro o editor (se aberto) e só depois o modal
   const { escapeRef } = taskState;
@@ -645,12 +673,6 @@ export function TaskModal({ taskState, playSound }) {
           <div className="ck-header">
             <h3>{tx("📋 Checklists")}</h3>
             <div className="ck-header-actions">
-              <button type="button" className="ck-icon-btn" onClick={undo} disabled={!canUndo} title={tx("Desfazer (Ctrl+Z)")}>
-                ↶
-              </button>
-              <button type="button" className="ck-icon-btn" onClick={redo} disabled={!canRedo} title={tx("Refazer (Ctrl+Y)")}>
-                ↷
-              </button>
               <button type="button" className="ck-icon-btn close" onClick={close} title={tx("Fechar (T)")}>
                 ✕
               </button>
@@ -665,15 +687,30 @@ export function TaskModal({ taskState, playSound }) {
                 {taskLists.map((list) => {
                   const stats = listStats(list);
                   const active = list.id === activeListId;
+                  const isTaskTarget = Boolean(draggingId) && !active;
                   return (
                     <div
                       key={list.id}
-                      className={`ck-list-item ${active ? 'active' : ''}`}
+                      className={`ck-list-item ${active ? 'active' : ''} ${isTaskTarget ? 'task-target' : ''} ${
+                        isTaskTarget && taskDropListId === list.id ? 'task-drop' : ''
+                      }`}
                       draggable
                       onDragStart={() => setDraggingListId(list.id)}
-                      onDragOver={(e) => e.preventDefault()}
+                      onDragOver={(e) => {
+                        if (draggingId && active) return; // a tarefa já está nesta lista
+                        e.preventDefault();
+                        if (draggingId) setTaskDropListId(list.id);
+                      }}
+                      onDragLeave={() => setTaskDropListId((cur) => (cur === list.id ? null : cur))}
                       onDrop={(e) => {
                         e.preventDefault();
+                        if (draggingId) {
+                          if (moveTaskToList(draggingId, list.id)) click('train');
+                          setDraggingId(null);
+                          setOverId(null);
+                          setTaskDropListId(null);
+                          return;
+                        }
                         moveList(draggingListId, list.id);
                         setDraggingListId(null);
                       }}
@@ -919,9 +956,12 @@ export function TaskModal({ taskState, playSound }) {
           isNew={editor.isNew}
           todayKey={todayKey}
           playSound={playSound}
+          lists={taskLists}
+          listId={currentList?.id}
           onClose={() => setEditor(null)}
-          onSave={(fields) => {
+          onSave={({ listId, ...fields }) => {
             if (editor.isNew) addTask(fields.title, fields);
+            else if (listId && listId !== currentList?.id) moveTaskToList(editor.task.id, listId, fields);
             else updateTask(editor.task.id, fields);
             setEditor(null);
           }}

@@ -203,6 +203,7 @@ const COMMAND_GROUPS = [
       { keys: ['A'], text: 'Emoji do avatar.' },
       { keys: ['M'], text: 'Missões diárias e diamantes.' },
       { keys: ['T'], text: 'Checklists (tarefas).' },
+      { keys: ['F'], text: 'Flashcards.' },
       { keys: ['R'], text: 'Pomodoro.' },
       { keys: ['G'], text: 'Pastas e filtros.' },
       { keys: ['O'], text: 'Habilidades e ocultas.' },
@@ -226,6 +227,16 @@ const COMMAND_GROUPS = [
       { keys: ['Ctrl', 'Enter'], text: 'Salva a tarefa no editor.' },
       { keys: ['Clique duplo'], text: 'No nome da lista: renomear.' },
       { keys: ['Botão direito'], text: 'Numa tarefa: abrir o editor.' }
+    ]
+  },
+  {
+    title: 'Flashcards',
+    items: [
+      { keys: ['Espaço'], text: 'Vira a carta e mostra a resposta.' },
+      { keys: ['1', '2', '3', '4'], text: 'Avalia a resposta: Errei, Difícil, Bom ou Fácil.' },
+      { keys: ['Ctrl', 'Enter'], text: 'Adiciona a carta digitada no editor do deck.' },
+      { keys: ['Clique duplo'], text: 'Numa carta da lista: editar.' },
+      { keys: ['Botão direito'], text: 'Num deck: editar, adicionar cartas, excluir ou ligar/desligar a notificação.' }
     ]
   },
   {

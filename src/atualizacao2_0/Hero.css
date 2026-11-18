@@ -1054,3 +1054,71 @@
   .up-node-icon { width: 26px; height: 26px; font-size: 0.9rem; }
   .hm-body.is-upgrades .hm-preview { min-height: 380px; }
 }
+
+/* Nome da cor (passar o mouse / escolhida) */
+.hm-swatch-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.hm-swatch-caption {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.hm-swatch-caption-dot {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.hm-swatch-caption-dot.theme {
+  background: conic-gradient(from 0deg, var(--hm-accent), #1e293b, var(--hm-accent));
+}
+
+/* Escolhas de estilo (cabelo, barba, armadura, elmo) */
+.hm-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0.38rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.hm-chip:hover { border-color: var(--hm-border); color: #fff; }
+
+.hm-chip.active {
+  border-color: transparent;
+  background: var(--hm-accent);
+  color: var(--theme-on-accent, #fff);
+}
+
+.hm-hint.hm-hint-gap { margin: 0.75rem 0 0.4rem; }
+
+/* Cota de malha: trama de anéis */
+.vx-chain .vx-face {
+  background-image:
+    radial-gradient(circle at 50% 50%, transparent 1.2px, rgba(0, 0, 0, 0.28) 1.6px, transparent 2.2px);
+  background-size: 4px 4px;
+}

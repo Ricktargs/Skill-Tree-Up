@@ -956,3 +956,20 @@ textarea.ck-input { resize: vertical; min-height: 60px; }
 
   .ck-quick-details { padding: 0.4rem 0.5rem; }
 }
+
+/* Arrastar tarefa para outra lista */
+.ck-list-item.task-target {
+  outline: 1px dashed color-mix(in srgb, var(--ck-accent) 55%, transparent);
+  outline-offset: -1px;
+}
+
+.ck-list-item.task-drop {
+  background: color-mix(in srgb, var(--ck-accent) 28%, transparent);
+  color: #fff;
+  outline: 2px solid var(--ck-accent);
+  transform: translateX(3px);
+}
+
+.ck-list-item.task-drop .ck-list-name::after {
+  content: ' ⤵';
+}

@@ -21,7 +21,10 @@ const IGNORED = [
   /^last_daily_missions_reset_day$/,
   /__claimed_by/,
   /^task_update_view_v1/,
-  /^debug/i
+  /^debug/i,
+  /^app_active_mode/,
+  /^eu-sou-arvore/,
+  /^neuronios/
 ];
 
 // Timers extras: só a configuração conta (iniciar/pausar/tocar não entra no histórico)
