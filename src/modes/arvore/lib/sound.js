@@ -6,11 +6,23 @@
 import { useSyncExternalStore } from "react";
 
 const KEY = "eu-sou-arvore-sound";
-const DEFAULTS = { enabled: true, ambient: false, volume: 0.6 };
+// Todos os sons (efeitos e ambiente) vêm ligados de padrão
+const DEFAULTS = { enabled: true, ambient: true, volume: 0.6 };
 
 function loadSettings() {
   try {
-    return { ...DEFAULTS, ...(JSON.parse(localStorage.getItem(KEY)) || {}) };
+    const saved = JSON.parse(localStorage.getItem(KEY)) || {};
+    // v2.0.5: o ambiente passou a vir ligado — liga uma vez para quem tinha o padrão antigo
+    if (!saved.ambientDefaultV2) {
+      saved.ambient = true;
+      saved.ambientDefaultV2 = true;
+      try {
+        localStorage.setItem(KEY, JSON.stringify({ ...DEFAULTS, ...saved }));
+      } catch {
+        /* sem armazenamento */
+      }
+    }
+    return { ...DEFAULTS, ...saved };
   } catch {
     return { ...DEFAULTS };
   }

@@ -467,3 +467,46 @@ html.is-touch .tree-page .sanc-panel-body {
   width: min(270px, calc(100vw - 24px));
   box-sizing: border-box;
 }
+
+/* =========================================================
+   BOTÕES SEM SOBREPOSIÇÃO NO CELULAR
+   ========================================================= */
+@media (max-width: 760px) and (orientation: portrait) {
+  /* topo: 5 ferramentas à esquerda + 3/4 à direita cabem lado a lado */
+  html .top-left-nav-buttons,
+  html .top-left-nav-buttons > div,
+  html .top-nav-buttons { gap: 4px !important; }
+  html .top-left-nav-buttons { left: calc(8px + env(safe-area-inset-left, 0px)) !important; top: calc(8px + env(safe-area-inset-top, 0px)) !important; }
+  html .top-nav-buttons { right: calc(8px + env(safe-area-inset-right, 0px)) !important; top: calc(8px + env(safe-area-inset-top, 0px)) !important; }
+  html .top-left-nav-buttons .top-icon-button,
+  html .top-nav-buttons .top-icon-button {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    font-size: 16px !important;
+    padding: 0 !important;
+  }
+  /* título do modo sai da barra (a troca de modos embaixo já mostra onde você está) */
+  html .tree-page .top-bar .top-center h1,
+  html .tree-page .top-bar .nr-stats { visibility: hidden; }
+
+  /* ✒️ acima da troca de modos */
+  html .top-icon-button.notes-fab {
+    left: calc(12px + env(safe-area-inset-left, 0px)) !important;
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
+    width: 40px !important;
+    height: 40px !important;
+  }
+  /* controle do Santuário acima do ✒️ */
+  html .sanc-pad { bottom: calc(124px + env(safe-area-inset-bottom, 0px)) !important; }
+
+  /* fim da lista de habilidades não fica atrás da barra de modos */
+  html .skills-panel { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important; }
+}
+@media (max-width: 380px) and (orientation: portrait) {
+  html .top-left-nav-buttons .top-icon-button,
+  html .top-nav-buttons .top-icon-button { width: 33px !important; height: 33px !important; min-width: 33px !important; font-size: 15px !important; }
+  html .top-left-nav-buttons,
+  html .top-left-nav-buttons > div,
+  html .top-nav-buttons { gap: 3px !important; }
+}
