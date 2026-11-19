@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { deleteMedia } from '../shared/mediaStore.js';
 import { useProfileStoredState } from './ProfileStorage.js';
 
 // =========================================================
@@ -262,6 +263,19 @@ const sanitize = (raw) => {
 // =========================================================
 // HOOK
 // =========================================================
+// ---------- Mídia das cartas ----------
+export const MEDIA_FIELDS = ['frontImg', 'backImg', 'frontAudio', 'backAudio', 'frontVoice', 'backVoice', 'frontLang', 'backLang'];
+export const cleanMedia = (m = {}) => {
+  const out = {};
+  MEDIA_FIELDS.forEach((k) => {
+    if (m[k]) out[k] = m[k];
+  });
+  return out;
+};
+export const cardMediaIds = (c) => (c ? [c.frontImg, c.backImg, c.frontAudio, c.backAudio].filter(Boolean) : []);
+// um lado vale se tiver texto, imagem ou áudio
+export const sideHasContent = (c, side) => Boolean(String((c && c[side]) || '').trim() || (c && (c[`${side}Img`] || c[`${side}Audio`])));
+
 export function useFlashcards(profileId, { onReward } = {}) {
   const [rawData, setRawData] = useProfileStoredState(STORAGE_KEY_FLASH, profileId, EMPTY);
   const data = useMemo(() => sanitize(rawData), [rawData]);
@@ -426,14 +440,20 @@ export function useFlashcards(profileId, { onReward } = {}) {
   };
 
   const deleteDeck = (deckId) =>
-    update((d) => ({ ...d, decks: d.decks.filter((x) => x.id !== deckId), cards: d.cards.filter((c) => c.deckId !== deckId) }));
+    update((d) => {
+      deleteMedia(d.cards.filter((c) => c.deckId === deckId).flatMap(cardMediaIds));
+      return { ...d, decks: d.decks.filter((x) => x.id !== deckId), cards: d.cards.filter((c) => c.deckId !== deckId) };
+    });
 
   // ---------- Cartas ----------
-  const newCard = (deckId, { front, back }) => ({
+  // Cada lado pode ter: texto, imagem (frontImg/backImg), áudio (frontAudio/
+  // backAudio) e voz que lê o texto (frontVoice/backVoice = 'f'|'m', + idioma).
+  const newCard = (deckId, { front, back, ...media }) => ({
     id: uid('card'),
     deckId,
     front: String(front || '').trim(),
     back: String(back || '').trim(),
+    ...cleanMedia(media),
     createdAt: new Date().toISOString(),
     due: '',
     interval: 0,
@@ -444,7 +464,7 @@ export function useFlashcards(profileId, { onReward } = {}) {
   });
 
   const addCards = (deckId, list) => {
-    const clean = (list || []).filter((c) => String(c.front || '').trim() && String(c.back || '').trim());
+    const clean = (list || []).filter((c) => sideHasContent(c, 'front') && sideHasContent(c, 'back'));
     if (clean.length === 0) return 0;
     update((d) => ({ ...d, cards: [...d.cards, ...clean.map((c) => newCard(deckId, c))] }));
     return clean.length;
@@ -453,7 +473,11 @@ export function useFlashcards(profileId, { onReward } = {}) {
   const updateCard = (cardId, fields) =>
     update((d) => ({ ...d, cards: d.cards.map((c) => (c.id === cardId ? { ...c, ...fields } : c)) }));
 
-  const deleteCard = (cardId) => update((d) => ({ ...d, cards: d.cards.filter((c) => c.id !== cardId) }));
+  const deleteCard = (cardId) =>
+    update((d) => {
+      deleteMedia(cardMediaIds(d.cards.find((c) => c.id === cardId)));
+      return { ...d, cards: d.cards.filter((c) => c.id !== cardId) };
+    });
 
   const resetDeckProgress = (deckId) =>
     update((d) => ({

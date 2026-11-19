@@ -2012,6 +2012,50 @@ html[data-ui-theme='nanquim'] .fc-iv-growth i {
 html[data-ui-theme='nanquim'] .fc-iv-growth i + i::before {
     color: var(--nq-muted)
 }
+html[data-ui-theme='nanquim'] .fcm-label {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fcm-tool {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.126);
+    background: rgb(var(--nq-shade-rgb) / 0.036)
+}
+html[data-ui-theme='nanquim'] .fcm-tool:hover:not(:disabled) {
+    border-color: var(--fc-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .fcm-tool.rec {
+    border-color: rgb(239, 68, 68);
+    color: color-mix(in srgb, rgb(252, 165, 165) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fcm-voice select {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.126);
+    background: rgb(var(--nq-shade-rgb) / 0.045)
+}
+html[data-ui-theme='nanquim'] .fcm-thumb img {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.135)
+}
+html[data-ui-theme='nanquim'] .fcm-thumb button, html[data-ui-theme='nanquim'] .fcm-x {
+    background: rgb(var(--nq-shade-rgb) / 0.12);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fcm-chip {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.126)
+}
+html[data-ui-theme='nanquim'] .fcm-error {
+    color: color-mix(in srgb, rgb(252, 165, 165) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fcm-row-thumb {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.108)
+}
+html[data-ui-theme='nanquim'] .fcm-study-img {
+    box-shadow: 0 6px 18px rgb(var(--nq-shade-rgb) / 0.088)
+}
+html[data-ui-theme='nanquim'] .fcm-play {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.18);
+    background: rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .fcm-play:hover {
+    border-color: var(--fc-accent, rgb(56, 189, 248))
+}
 
 /* ===== src/atualizacao2_0/Hero.css ===== */
 html[data-ui-theme='nanquim'] .vx-face {

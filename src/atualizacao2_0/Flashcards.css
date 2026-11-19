@@ -1365,3 +1365,89 @@ select.fc-input { resize: none; cursor: pointer; }
   .fc-iv-row { grid-template-columns: 1fr 1fr; }
   .fc-iv-label, .fc-iv-result { grid-column: 1 / -1; }
 }
+
+/* =========================================================
+   CARTAS COM IMAGEM, ÁUDIO E VOZ
+   ========================================================= */
+.fcm-face { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.fcm-label { font-size: 0.72rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+.fcm-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.fcm-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.fcm-tool:hover:not(:disabled) { border-color: var(--fc-accent, #38bdf8); }
+.fcm-tool:disabled { opacity: 0.45; cursor: default; }
+.fcm-tool.rec { border-color: #ef4444; color: #fca5a5; animation: fcm-rec 1s ease-in-out infinite; }
+@keyframes fcm-rec { 50% { background: rgba(239, 68, 68, 0.18); } }
+.fcm-voice { display: inline-flex; align-items: center; gap: 4px; font-size: 0.9rem; }
+.fcm-voice select {
+  padding: 3px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+  font: inherit;
+  font-size: 0.75rem;
+}
+.fcm-attached { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.fcm-thumb { position: relative; display: inline-block; }
+.fcm-thumb img { display: block; max-width: 140px; max-height: 90px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.15); object-fit: cover; }
+.fcm-thumb button,
+.fcm-x {
+  border: none;
+  background: rgba(15, 23, 42, 0.85);
+  color: #fff;
+  border-radius: 999px;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+  line-height: 20px;
+  padding: 0;
+  cursor: pointer;
+}
+.fcm-thumb button { position: absolute; top: -6px; right: -6px; }
+.fcm-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 3px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.14); }
+.fcm-chip > button:first-child { border: none; background: none; color: inherit; font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 2px 6px; }
+.fcm-error { color: #fca5a5; font-size: 0.72rem; }
+
+/* lista de cartas */
+.fcm-row-thumb { width: 38px; height: 38px; flex-shrink: 0; border-radius: 7px; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.12); }
+.fcm-badges { flex-shrink: 0; font-size: 0.8rem; opacity: 0.85; }
+
+/* estudo */
+.fcm-study-img {
+  display: block;
+  max-width: 100%;
+  max-height: min(34vh, 260px);
+  margin: 6px auto;
+  border-radius: 12px;
+  object-fit: contain;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+.fcm-study-sound { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 4px 0 6px; }
+.fcm-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.fcm-play:hover { border-color: var(--fc-accent, #38bdf8); }
+html.is-touch .fcm-tool,
+html.is-touch .fcm-play { min-height: 34px; }

@@ -7,15 +7,19 @@ import { useSyncExternalStore } from "react";
 
 const KEY = "eu-sou-arvore-sound";
 // Todos os sons (efeitos e ambiente) vêm ligados de padrão
-const DEFAULTS = { enabled: true, ambient: true, volume: 0.6 };
+const DEFAULTS = { enabled: true, ambient: true, volume: 1 };
 
 function loadSettings() {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY)) || {};
-    // v2.0.5: o ambiente passou a vir ligado — liga uma vez para quem tinha o padrão antigo
-    if (!saved.ambientDefaultV2) {
+    // v2.0.8: som ligado, músicas (ambiente) ligadas e volume no máximo —
+    // aplicado uma vez em todos os aparelhos; depois vale o que a pessoa escolher
+    if (!saved.soundDefaultV3) {
+      saved.enabled = true;
       saved.ambient = true;
+      saved.volume = 1;
       saved.ambientDefaultV2 = true;
+      saved.soundDefaultV3 = true;
       try {
         localStorage.setItem(KEY, JSON.stringify({ ...DEFAULTS, ...saved }));
       } catch {

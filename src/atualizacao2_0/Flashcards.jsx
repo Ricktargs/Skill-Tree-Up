@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ask } from '../shared/Dialog.jsx';
 import { createPortal } from 'react-dom';
 import './Flashcards.css';
+import { CardThumb, EMPTY_MEDIA, FaceEditor, FaceMedia, MediaBadges, mediaToFields, sideMedia, stopCardSound } from './FlashcardMedia.jsx';
+import { deleteMedia } from '../shared/mediaStore.js';
 import { tx, useLanguage } from '../i18n/index.jsx';
 import {
   cardStatus,
@@ -696,6 +698,19 @@ function SkillPicker({ fc, skills, click, onBack, onCreated }) {
 function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStudy, focusAdd }) {
   const [front, setFront] = useState('');
   const [back, setBack] = useState('');
+  // imagem / áudio / voz de cada lado da carta nova
+  const [frontMedia, setFrontMedia] = useState(EMPTY_MEDIA);
+  const [backMedia, setBackMedia] = useState(EMPTY_MEDIA);
+  const createdMedia = useRef(new Set()); // arquivos novos ainda não salvos numa carta
+  useEffect(
+    () => () => {
+      // saiu sem adicionar: apaga os arquivos que ficaram soltos
+      deleteMedia([...createdMedia.current]);
+    },
+    []
+  );
+  const frontOk = Boolean(front.trim() || frontMedia.img || frontMedia.audio);
+  const backOk = Boolean(back.trim() || backMedia.img || backMedia.audio);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulk, setBulk] = useState('');
   const [query, setQuery] = useState('');
@@ -796,11 +811,15 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
   };
 
   const add = () => {
-    if (!front.trim() || !back.trim()) return;
+    if (!frontOk || !backOk) return;
     click('train');
-    fc.addCards(deck.id, [{ front, back }]);
+    fc.addCards(deck.id, [{ front, back, ...mediaToFields('front', frontMedia), ...mediaToFields('back', backMedia) }]);
+    createdMedia.current.clear(); // agora pertencem à carta
     setFront('');
     setBack('');
+    // mantém a escolha de voz para a próxima carta; imagem e áudio recomeçam
+    setFrontMedia((m) => ({ ...EMPTY_MEDIA, voice: m.voice, lang: m.lang }));
+    setBackMedia((m) => ({ ...EMPTY_MEDIA, voice: m.voice, lang: m.lang }));
     frontRef.current?.focus();
   };
 
@@ -977,28 +996,30 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
         {/* Cartas */}
         <section className="fc-cards">
           <div className="fc-add">
-            <textarea
-              ref={frontRef}
-              className="fc-input"
-              rows={2}
+            <FaceEditor
+              inputRef={frontRef}
               placeholder={tx('Frente (pergunta)')}
-              value={front}
-              onChange={(e) => setFront(e.target.value)}
+              text={front}
+              onText={setFront}
+              media={frontMedia}
+              onMedia={setFrontMedia}
+              created={createdMedia}
               onKeyDown={(e) => (e.ctrlKey || e.metaKey) && e.key === 'Enter' && add()}
             />
-            <textarea
-              className="fc-input"
-              rows={2}
+            <FaceEditor
               placeholder={tx('Verso (resposta)')}
-              value={back}
-              onChange={(e) => setBack(e.target.value)}
+              text={back}
+              onText={setBack}
+              media={backMedia}
+              onMedia={setBackMedia}
+              created={createdMedia}
               onKeyDown={(e) => (e.ctrlKey || e.metaKey) && e.key === 'Enter' && add()}
             />
             <div className="fc-add-actions">
               <button type="button" className="fc-btn ghost small" onClick={() => setBulkOpen((v) => !v)}>
                 📥 {tx('Importar em lote')}
               </button>
-              <button type="button" className="fc-btn primary small" disabled={!front.trim() || !back.trim()} onClick={add}>
+              <button type="button" className="fc-btn primary small" disabled={!frontOk || !backOk} onClick={add}>
                 ＋ {tx('Adicionar carta')} <kbd>Ctrl+Enter</kbd>
               </button>
             </div>
@@ -1211,10 +1232,12 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
                   onDoubleClick={selecting ? undefined : () => setEditingId(c.id)}
                 >
                   {selecting && <span className={`fc-check ${selected.has(c.id) ? 'on' : ''}`}>{selected.has(c.id) ? '✓' : ''}</span>}
+                  <CardThumb card={c} />
                   <div className="fc-card-text">
-                    <strong>{c.front}</strong>
-                    <span>{c.back}</span>
+                    <strong>{c.front || (c.frontImg ? `🖼 ${tx('Imagem')}` : `🎵 ${tx('Áudio')}`)}</strong>
+                    <span>{c.back || (c.backImg ? `🖼 ${tx('Imagem')}` : `🎵 ${tx('Áudio')}`)}</span>
                   </div>
+                  <MediaBadges card={c} />
                   {filterKey === 'all' && groupKey(c) !== NO_GROUP && <span className="fc-group-tag">{groupName(c.groupId)}</span>}
                   <span className={`fc-status ${cardStatus(c, fc.today, fc.now)}`} title={c.due ? tx('Próxima revisão: {d}', { d: c.due }) : ''}>
                     {tx(STATUS_LABEL[cardStatus(c, fc.today, fc.now)])}
@@ -1250,19 +1273,36 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
 function CardEditRow({ card, onSave, onCancel }) {
   const [front, setFront] = useState(card.front);
   const [back, setBack] = useState(card.back);
-  const save = () => front.trim() && back.trim() && onSave({ front: front.trim(), back: back.trim() });
+  const [frontMedia, setFrontMedia] = useState(() => sideMedia(card, 'front'));
+  const [backMedia, setBackMedia] = useState(() => sideMedia(card, 'back'));
+  const created = useRef(new Set());
+  const frontOk = Boolean(front.trim() || frontMedia.img || frontMedia.audio);
+  const backOk = Boolean(back.trim() || backMedia.img || backMedia.audio);
+  const save = () => {
+    if (!frontOk || !backOk) return;
+    // arquivos antigos que foram trocados/tirados saem do aparelho
+    const kept = new Set([frontMedia.img, frontMedia.audio, backMedia.img, backMedia.audio].filter(Boolean));
+    deleteMedia([card.frontImg, card.frontAudio, card.backImg, card.backAudio].filter((id) => id && !kept.has(id)));
+    created.current.clear();
+    onSave({ front: front.trim(), back: back.trim(), ...mediaToFields('front', frontMedia), ...mediaToFields('back', backMedia) });
+  };
+  const cancel = () => {
+    deleteMedia([...created.current]);
+    created.current.clear();
+    onCancel();
+  };
   const onKey = (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') save();
   };
   return (
     <div className="fc-card-row editing">
-      <textarea className="fc-input" rows={2} value={front} onChange={(e) => setFront(e.target.value)} onKeyDown={onKey} autoFocus />
-      <textarea className="fc-input" rows={2} value={back} onChange={(e) => setBack(e.target.value)} onKeyDown={onKey} />
+      <FaceEditor label={tx('Pergunta')} text={front} onText={setFront} media={frontMedia} onMedia={setFrontMedia} created={created} onKeyDown={onKey} autoFocus />
+      <FaceEditor label={tx('Resposta')} text={back} onText={setBack} media={backMedia} onMedia={setBackMedia} created={created} onKeyDown={onKey} />
       <div className="fc-add-actions">
-        <button type="button" className="fc-btn small" onClick={onCancel}>
+        <button type="button" className="fc-btn small" onClick={cancel}>
           {tx('Cancelar')}
         </button>
-        <button type="button" className="fc-btn primary small" onClick={save}>
+        <button type="button" className="fc-btn primary small" onClick={save} disabled={!frontOk || !backOk}>
           {tx('Salvar')}
         </button>
       </div>
@@ -1603,6 +1643,8 @@ function StudySession({ fc, deck, skill, queue: initialQueue, color, click, onEx
   const cardId = queue[pos];
   const card = fc.cards.find((c) => c.id === cardId);
   const done = !summary && (pos >= queue.length || !card);
+  // trocar de carta (ou sair) para o áudio/voz que estava tocando
+  useEffect(() => stopCardSound, [cardId]);
 
   // Fim da sessão: calcula o XP uma única vez
   useEffect(() => {
@@ -1750,12 +1792,14 @@ function StudySession({ fc, deck, skill, queue: initialQueue, color, click, onEx
         <span className="fc-flip-inner">
           <span className="fc-face front">
             <small>{tx('Pergunta')}</small>
+            <FaceMedia card={card} side="front" active={!flipped} />
             <span className="fc-face-text">{card.front}</span>
             <em>{tx('Clique ou aperte Espaço para ver a resposta')}</em>
           </span>
           <span className="fc-face back">
             <small>{tx('Resposta')}</small>
             <span className="fc-face-q">{card.front}</span>
+            <FaceMedia card={card} side="back" active={flipped} />
             <span className="fc-face-text">{card.back}</span>
           </span>
         </span>
