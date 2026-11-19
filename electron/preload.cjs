@@ -7,5 +7,15 @@ contextBridge.exposeInMainWorld('orbeDesktop', {
   // { closeToTray, openAtLogin }
   getSettings: () => ipcRenderer.invoke('orbe:get-settings'),
   setSettings: (patch) => ipcRenderer.invoke('orbe:set-settings', patch),
-  openExternal: (url) => ipcRenderer.invoke('orbe:open-external', url)
+  openExternal: (url) => ipcRenderer.invoke('orbe:open-external', url),
+  platform: process.platform, // 'win32' | 'darwin' | 'linux'
+  getInfo: () => ipcRenderer.invoke('orbe:info'),
+  // Atualização (Windows: baixa e instala sozinho)
+  checkUpdate: () => ipcRenderer.invoke('orbe:update-check'),
+  installUpdate: () => ipcRenderer.invoke('orbe:update-install'),
+  onUpdateState: (cb) => {
+    const h = (_e, state) => cb(state);
+    ipcRenderer.on('orbe:update-state', h);
+    return () => ipcRenderer.removeListener('orbe:update-state', h);
+  }
 });

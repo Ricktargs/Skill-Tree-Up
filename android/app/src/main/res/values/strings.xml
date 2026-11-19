@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ORBE-G</string>
+    <string name="title_activity_main">ORBE-G</string>
+    <string name="package_name">com.orbeg.app</string>
+    <string name="custom_url_scheme">com.orbeg.app</string>
+</resources>

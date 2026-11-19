@@ -20,6 +20,8 @@ installNanquimInline()
 import { LanguageProvider } from './atualizacao2_0/UpIdioma.jsx'
 import Splash from './shared/Splash.jsx'
 import Onboarding from './shared/Onboarding.jsx'
+import { startUpdateWatch } from './shared/updater.js'
+startUpdateWatch()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

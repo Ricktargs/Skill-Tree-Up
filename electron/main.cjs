@@ -194,6 +194,67 @@ ipcMain.handle('orbe:open-external', (_e, url) => {
   if (typeof url === 'string' && /^https:\/\//i.test(url)) shell.openExternal(url);
 });
 
+// ---------- Atualização automática (Windows) ----------
+// Procura a versão nova nos Releases do GitHub; ao clicar em "Atualizar"
+// baixa, fecha e reinstala sozinho. No Mac (app sem assinatura da Apple)
+// a página baixa o instalador novo pelo navegador.
+let updater = null;
+let updateState = { status: 'idle' };
+const sendUpdate = (patch) => {
+  updateState = { ...updateState, ...patch };
+  if (win && !win.isDestroyed()) win.webContents.send('orbe:update-state', updateState);
+};
+const canSelfUpdate = () => app.isPackaged && process.platform === 'win32';
+function setupUpdater() {
+  if (!canSelfUpdate()) return;
+  try {
+    ({ autoUpdater: updater } = require('electron-updater'));
+  } catch {
+    updater = null;
+    return;
+  }
+  updater.autoDownload = false;
+  updater.autoInstallOnAppQuit = true;
+  updater.on('checking-for-update', () => sendUpdate({ status: 'checking' }));
+  updater.on('update-available', (info) => sendUpdate({ status: 'available', version: info.version }));
+  updater.on('update-not-available', () => sendUpdate({ status: 'none' }));
+  updater.on('download-progress', (p) => sendUpdate({ status: 'downloading', progress: Math.round(p.percent || 0) }));
+  updater.on('update-downloaded', (info) => {
+    sendUpdate({ status: 'ready', version: info.version });
+    if (updateState.installNow) {
+      setTimeout(() => {
+        quitting = true;
+        updater.quitAndInstall(false, true);
+      }, 600);
+    }
+  });
+  updater.on('error', (err) => sendUpdate({ status: 'error', error: String((err && err.message) || err).slice(0, 200) }));
+  const check = () => updater.checkForUpdates().catch(() => {});
+  setTimeout(check, 8000);
+  setInterval(check, 6 * 60 * 60 * 1000);
+}
+ipcMain.handle('orbe:info', () => ({ version: app.getVersion(), platform: process.platform, packaged: app.isPackaged, selfUpdate: canSelfUpdate() }));
+ipcMain.handle('orbe:update-check', async () => {
+  if (!updater) return { status: 'unsupported' };
+  try {
+    await updater.checkForUpdates();
+  } catch {
+    /* o estado de erro já foi enviado */
+  }
+  return updateState;
+});
+ipcMain.handle('orbe:update-install', async () => {
+  if (!updater) return { status: 'unsupported' };
+  if (updateState.status === 'ready') {
+    quitting = true;
+    updater.quitAndInstall(false, true);
+    return updateState;
+  }
+  sendUpdate({ status: 'downloading', progress: 0, installNow: true });
+  updater.downloadUpdate().catch(() => {});
+  return updateState;
+});
+
 app.on('second-instance', showWindow);
 app.on('before-quit', () => {
   quitting = true;
@@ -202,6 +263,7 @@ app.on('before-quit', () => {
 app.whenReady().then(() => {
   loadSettings();
   createTray();
+  setupUpdater();
   // Iniciou junto com o PC: fica quietinho na bandeja (a janela — e a
   // abertura com som — só aparece quando clicar no ícone)
   if (!STARTED_HIDDEN) createWindow(true);

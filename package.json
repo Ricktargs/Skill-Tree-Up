@@ -1,7 +1,7 @@
 {
   "name": "skill-tree-rpg",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,23 +10,30 @@
     "preview": "vite preview",
     "nanquim": "node scripts/build-nanquim.mjs",
     "app": "vite build && electron .",
-    "app:instalador": "vite build && electron-builder --win nsis"
+    "app:instalador": "vite build && electron-builder --win nsis --publish never",
+    "app:mac": "vite build && electron-builder --mac dmg --universal --publish never",
+    "android:sync": "vite build && cap sync android"
   },
   "dependencies": {
-    "build": "^0.1.4",
-    "canvas-confetti": "^1.9.4",
-    "emoji-picker-react": "^4.22.3",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "run": "^2.1.7"
+    "electron-updater": "^6.8.11"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/assets": "^4.0.0",
+    "@capacitor/cli": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "build": "^0.1.4",
+    "canvas-confetti": "^1.9.4",
     "electron": "^45.4.1",
     "electron-builder": "^26.18.0",
+    "emoji-picker-react": "^4.22.3",
     "oxlint": "^1.81.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "run": "^2.1.7",
     "vite": "^8.3.0",
     "vite-plugin-singlefile": "^2.3.3"
   },
@@ -43,14 +50,14 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "package.json",
-      "!node_modules/**/*"
+      "package.json"
     ],
     "win": {
       "target": [
         "nsis"
       ],
-      "icon": "public/favicon.ico"
+      "icon": "public/favicon.ico",
+      "artifactName": "ORBE-G-Instalador.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -60,8 +67,32 @@
       "createStartMenuShortcut": true,
       "shortcutName": "ORBE-G",
       "installerIcon": "public/favicon.ico",
-      "uninstallerIcon": "public/favicon.ico",
-      "artifactName": "ORBE-G-Instalador.${ext}"
+      "uninstallerIcon": "public/favicon.ico"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Ricktargs",
+        "repo": "Skill-Tree-Up",
+        "releaseType": "release"
+      }
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.productivity",
+      "identity": null,
+      "artifactName": "ORBE-G-Mac.${ext}"
+    },
+    "dmg": {
+      "title": "ORBE-G"
     }
   }
 }

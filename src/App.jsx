@@ -22,6 +22,7 @@ import { useProfileStoredState, collectBackupExtras, applyBackupExtras, collectF
 import { sfx } from './modes/arvore/lib/sound.js';
 import { createPortal } from 'react-dom';
 import { toggleNotesPanel, useNotesPanelOpen } from './shared/notesPanel.js';
+import { hasUpdate, useUpdate } from './shared/updater.js';
 import { globalUndo, globalRedo } from './atualizacao2_0/GlobalUndo.js';
 import UndoToast from './atualizacao2_0/UndoToast.jsx';
 import ColorDeckModal from './atualizacao2_0/ColorDeck.jsx';
@@ -230,6 +231,7 @@ export default function App() {
   // Checklists de cada perfil (antes eram os mesmos para todos)
   // Tarefas rendem 2 XP; completar uma lista inteira rende 1 diamante
   const notesPanelOpen = useNotesPanelOpen();
+  const updateAvailable = hasUpdate(useUpdate());
   const taskState = useTaskUpdate(activeProfileId, {
     onTaskXp: (xp, title) => grantBonusXp(xp, `✅ Tarefa: ${title}`, 'Tarefas'),
     onListComplete: (listTitle) => {
@@ -1665,11 +1667,12 @@ if (folderSortOrder === 'a-z') {
           {uiTheme.dark ? '☀️' : '🌙'}
         </button>
         <button
-          className="top-icon-button"
-          title={tx("Configurações (Esc)")}
+          className={`top-icon-button ${updateAvailable ? 'has-update' : ''}`}
+          title={updateAvailable ? `${tx("Configurações (Esc)")} · ${tx('Atualização disponível!')}` : tx("Configurações (Esc)")}
           onClick={() => { playSound('click'); setIsSettingsModalOpen(true); }}
         >
           ⚙
+          {updateAvailable && <span className="update-dot" aria-label={tx('Atualização disponível!')} />}
         </button>
       </div>
 

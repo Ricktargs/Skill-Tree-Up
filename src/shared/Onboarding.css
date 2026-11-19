@@ -106,5 +106,8 @@ html[data-ui-theme='gamificado'] .ob-welcome-logo { font-family: inherit; font-w
 .ob-download .ui-dialog-btn { flex: 0 0 auto; }
 
 @media (max-width: 520px) {
-  .ob-download { flex-direction: column; align-items: stretch; text-align: center; }
+  .ob-download { text-align: center; }
 }
+.ob-download { flex-wrap: wrap; }
+.ob-download-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: 100%; }
+.ob-download-btns .ui-dialog-btn { flex: 1 1 0; min-width: 90px; padding: 8px 10px; font-size: 13px; }

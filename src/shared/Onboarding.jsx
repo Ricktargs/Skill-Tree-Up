@@ -11,7 +11,7 @@ import { getMode, setMode } from '../modes/modeState.js';
 import { setNotesPanelOpen } from './notesPanel.js';
 import { isNewUser, markWelcomeDone } from './firstRun.js';
 import { startTutorial, stopTutorial, useTutorialOpen } from './tutorial.js';
-import { DOWNLOAD_URL, isDesktopApp, openLink } from './desktop.js';
+import { DOWNLOADS, PLATFORM, openDownload, visitorSystem } from './updater.js';
 import { tx, useLanguage } from '../i18n/index.jsx';
 import { sfx } from '../modes/arvore/lib/sound.js';
 
@@ -327,22 +327,27 @@ function Welcome({ onTutorial, onSkip }) {
             ▶ {tx('Ver tutorial')}
           </button>
         </div>
-        {!isDesktopApp && (
+        {PLATFORM === 'web' && (
           <div className="ob-download">
             <div>
-              <strong>💻 {tx('ORBE-G para PC')}</strong>
-              <span>{tx('Instale no Windows: ícone na área de trabalho, fica na bandeja e pode iniciar junto com o PC.')}</span>
+              <strong>⬇ {tx('Baixar o app')}</strong>
+              <span>{tx('Use o ORBE-G como programa no PC ou no celular.')}</span>
             </div>
-            <button
-              type="button"
-              className="ui-dialog-btn"
-              onClick={() => {
-                sfx.play('tick');
-                openLink(DOWNLOAD_URL);
-              }}
-            >
-              ⬇ {tx('Baixar o app')}
-            </button>
+            <div className="ob-download-btns">
+              {Object.entries(DOWNLOADS).map(([id, d]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`ui-dialog-btn ${visitorSystem === id ? 'primary' : ''}`}
+                  onClick={() => {
+                    sfx.play('tick');
+                    openDownload(d.url);
+                  }}
+                >
+                  {d.icon} {d.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>

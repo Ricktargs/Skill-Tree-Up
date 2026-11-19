@@ -5,7 +5,8 @@ import { useMode, MODES } from '../modes/modeState.js';
 import { useUiTheme, setVisual, setDark, VISUAL_THEMES } from '../shared/uiTheme.js';
 import { useModeActions } from '../shared/modeBridge.js';
 import { useSoundSettings, setSoundSettings, sfx } from '../modes/arvore/lib/sound.js';
-import { DOWNLOAD_URL, RELEASES_URL, isDesktopApp, openLink, useDesktopSettings } from '../shared/desktop.js';
+import { isDesktopApp, useDesktopSettings } from '../shared/desktop.js';
+import { APP_VERSION, DOWNLOADS, PLATFORM, PLATFORM_LABEL, RELEASES_PAGE, checkForUpdate, hasUpdate, installUpdate, openDownload, useUpdate, visitorSystem } from '../shared/updater.js';
 import { startTutorial } from '../shared/tutorial.js';
 
 // Interruptor no padrão das Configurações
@@ -51,6 +52,7 @@ export function SettingsModal({
   const neuronios = useModeActions('neuronios');
   const sound = useSoundSettings();
   const [desk, setDesk] = useDesktopSettings();
+  const upd = useUpdate();
   if (!isOpen) return null;
   const modeName = (MODES.find((m) => m.id === mode) || {}).name;
 
@@ -124,34 +126,80 @@ export function SettingsModal({
                 />
               </>
             )}
-            <div className="st-row">
+            {/* Atualização: pisca quando tem versão nova */}
+            <div className={`st-row st-update ${hasUpdate(upd) ? 'has-update' : ''}`}>
               <div className="st-row-text">
-                <strong>{isDesktopApp ? tx('Baixar a versão mais nova') : tx('Baixar o ORBE-G para PC')}</strong>
-                <span>{tx('Instalador para Windows, com ícone na área de trabalho')}</span>
+                <strong>
+                  {tx('Atualização')}
+                  {hasUpdate(upd) && <span className="st-update-tag">{tx('Nova versão!')}</span>}
+                </strong>
+                <span>
+                  {tx(PLATFORM_LABEL)} · v{APP_VERSION}
+                  {upd.status === 'none' && ` · ${tx('Você está na versão mais recente')}`}
+                  {upd.status === 'checking' && ` · ${tx('Procurando…')}`}
+                  {upd.status === 'error' && ` · ${tx('Não deu para verificar agora')}`}
+                  {hasUpdate(upd) && upd.version && upd.version !== 'nova' && ` → v${upd.version}`}
+                  {upd.status === 'downloading' && ` · ${tx('Baixando')} ${upd.progress || 0}%`}
+                </span>
               </div>
-              <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {hasUpdate(upd) ? (
+                <button
+                  type="button"
+                  className="st-btn primary st-update-btn"
+                  onClick={() => {
+                    click('train');
+                    installUpdate();
+                  }}
+                  title={PLATFORM === 'windows' ? tx('Baixa, fecha e reinstala sozinho') : PLATFORM === 'web' ? tx('Recarrega com a versão nova') : tx('Baixa o instalador da versão nova')}
+                >
+                  ⟳ {tx('Atualizar')}
+                </button>
+              ) : (
                 <button
                   type="button"
                   className="st-btn"
+                  disabled={upd.status === 'checking' || upd.status === 'downloading'}
                   onClick={() => {
                     click();
-                    openLink(DOWNLOAD_URL);
+                    checkForUpdate();
                   }}
                 >
-                  ⬇ {tx('Baixar')}
+                  {upd.status === 'downloading' ? `⬇ ${upd.progress || 0}%` : `🔄 ${tx('Procurar')}`}
                 </button>
-                <button
-                  type="button"
-                  className="st-btn"
-                  title={RELEASES_URL}
-                  onClick={() => {
-                    click();
-                    openLink(RELEASES_URL);
-                  }}
-                >
-                  🔗 {tx('Página')}
-                </button>
-              </span>
+              )}
+            </div>
+
+            {/* Downloads (centralizados) */}
+            <div className="st-downloads">
+              <strong>⬇ {tx('Baixar o ORBE-G')}</strong>
+              <div className="st-download-btns">
+                {Object.entries(DOWNLOADS).map(([id, d]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`st-download ${visitorSystem === id ? 'mine' : ''}`}
+                    title={d.file}
+                    onClick={() => {
+                      click();
+                      openDownload(d.url);
+                    }}
+                  >
+                    <span className="st-download-ico">{d.icon}</span>
+                    <span>{d.label}</span>
+                    {visitorSystem === id && <small>{PLATFORM === id ? tx('este app') : tx('seu sistema')}</small>}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="st-download-page"
+                onClick={() => {
+                  click();
+                  openDownload(RELEASES_PAGE);
+                }}
+              >
+                🔗 {tx('Página de downloads e novidades')}
+              </button>
             </div>
             <div className="st-row">
               <div className="st-row-text">
