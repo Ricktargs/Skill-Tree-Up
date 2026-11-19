@@ -8,20 +8,38 @@
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
 
 export const VOICE_LANGS = [
-  { code: 'pt-BR', label: 'Português' },
-  { code: 'en-US', label: 'English' },
-  { code: 'es-ES', label: 'Español' },
-  { code: 'it-IT', label: 'Italiano' },
+  { code: 'pt-BR', label: 'Português (Brasil)' },
+  { code: 'pt-PT', label: 'Português (Portugal)' },
+  { code: 'en-US', label: 'English (US)' },
+  { code: 'en-GB', label: 'English (UK)' },
+  { code: 'es-ES', label: 'Español (España)' },
+  { code: 'es-MX', label: 'Español (México)' },
   { code: 'fr-FR', label: 'Français' },
+  { code: 'it-IT', label: 'Italiano' },
   { code: 'de-DE', label: 'Deutsch' },
+  { code: 'nl-NL', label: 'Nederlands' },
+  { code: 'sv-SE', label: 'Svenska' },
+  { code: 'pl-PL', label: 'Polski' },
+  { code: 'ru-RU', label: 'Русский' },
+  { code: 'uk-UA', label: 'Українська' },
+  { code: 'tr-TR', label: 'Türkçe' },
+  { code: 'el-GR', label: 'Ελληνικά' },
+  { code: 'ar-SA', label: 'العربية' },
+  { code: 'he-IL', label: 'עברית' },
+  { code: 'hi-IN', label: 'हिन्दी' },
+  { code: 'id-ID', label: 'Bahasa Indonesia' },
+  { code: 'th-TH', label: 'ไทย' },
+  { code: 'vi-VN', label: 'Tiếng Việt' },
+  { code: 'ko-KR', label: '한국어' },
   { code: 'ja-JP', label: '日本語' },
-  { code: 'zh-CN', label: '中文' }
+  { code: 'zh-CN', label: '中文 (普通话)' },
+  { code: 'zh-TW', label: '中文 (台灣)' }
 ];
 
 // idioma padrão = o do programa
 export const defaultVoiceLang = () => {
   const l = (typeof document !== 'undefined' && document.documentElement.lang) || 'pt-BR';
-  const hit = VOICE_LANGS.find((v) => v.code.toLowerCase() === l.toLowerCase() || v.code.slice(0, 2) === l.slice(0, 2));
+  const hit = VOICE_LANGS.find((v) => v.code.toLowerCase() === l.toLowerCase()) || VOICE_LANGS.find((v) => v.code.slice(0, 2) === l.slice(0, 2));
   return hit ? hit.code : 'pt-BR';
 };
 

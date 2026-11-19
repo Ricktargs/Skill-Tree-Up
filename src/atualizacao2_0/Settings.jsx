@@ -37,7 +37,6 @@ export function SettingsModal({
   linkSkillsByCategory,
   setLinkSkillsByCategory,
   onOpenTheme,
-  onOpenManageSkills,
   onOpenLayoutEditor,
   onOpenFolders,
   onOpenCommands,
@@ -445,11 +444,8 @@ export function SettingsModal({
               <span className="st-switch" />
             </label>
             <div className="st-actions list">
-              <button type="button" className="st-btn wide" onClick={open(onOpenManageSkills)}>
-                <span>👁️ {tx('Habilidades e ocultas')}</span> <kbd>O</kbd>
-              </button>
               <button type="button" className="st-btn wide" onClick={open(onOpenLayoutEditor)}>
-                <span>↕️ {tx('Editor de layout')}</span> <kbd>E</kbd>
+                <span>{tx('Organizar habilidades (ordem, ocultas e pastas)')}</span> <kbd>L</kbd>
               </button>
               <button type="button" className="st-btn wide" onClick={open(onOpenFolders)}>
                 <span>🗂️ {tx('Pastas')}</span> <kbd>G</kbd>
@@ -590,9 +586,9 @@ const COMMAND_GROUPS = [
     items: [
       { keys: ['A'], text: 'Emoji do avatar.' },
       { keys: ['G'], text: 'Pastas e filtros.' },
-      { keys: ['O'], text: 'Habilidades e ocultas.' },
+      { keys: ['O'], text: 'Organizar habilidades (mesma janela do L).' },
       { keys: ['E'], text: 'Editor de notas (em qualquer modo).' },
-      { keys: ['L'], text: 'Editor de layout (ordem das habilidades).' }
+      { keys: ['L'], text: 'Organizar habilidades: ordem, ocultas, pastas e edição.' }
     ]
   },
   {

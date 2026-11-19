@@ -313,3 +313,316 @@ export function CardThumb({ card }) {
   const url = useMediaUrl(card.frontImg || card.backImg);
   return url ? <img className="fcm-row-thumb" src={url} alt="" /> : null;
 }
+
+// =========================================================
+// IMPORTAR EM LOTE COM IMAGENS E ÁUDIOS
+// No texto, [nome.jpg] (ou só nome.jpg) põe o arquivo naquele lado da carta.
+// Arquivos que o texto não cita viram cartas sozinhos:
+//   gato.jpg + gato.mp3 → pergunta: imagem · resposta: "gato" + áudio
+//   só gato.mp3          → pergunta: áudio  · resposta: "gato"
+// =========================================================
+const isImg = (f) => /^image\//.test(f.type) || /\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i.test(f.name);
+const isAudio = (f) => /^audio\//.test(f.type) || /\.(mp3|wav|ogg|oga|m4a|aac|webm|opus|flac)$/i.test(f.name);
+export const isMediaFile = (f) => Boolean(f) && (isImg(f) || isAudio(f));
+export const isImageFile = (f) => Boolean(f) && isImg(f);
+const baseName = (name) => String(name).replace(/\.[^.]+$/, '');
+const prettyName = (name) => baseName(name).replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const fileCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
+// Junta o texto já reconhecido (parseBulk) com os arquivos — sem salvar nada ainda
+export function planBulk(parsed, files) {
+  const list = [...files];
+  const used = new Set();
+  const take = (text) => {
+    let out = String(text || '');
+    const found = { img: null, audio: null };
+    list.forEach((f) => {
+      const name = escRe(f.name);
+      const re = new RegExp(`\\[\\s*${name}\\s*\\]|(^|[\\s(])${name}(?=$|[\\s),.;!?])`, 'gi');
+      if (!re.test(out)) return;
+      re.lastIndex = 0;
+      out = out.replace(re, (m, pre) => (pre && !m.startsWith('[') ? pre : ' '));
+      const kind = isImg(f) ? 'img' : 'audio';
+      if (!found[kind]) found[kind] = f;
+      used.add(f);
+    });
+    return { text: out.replace(/[ \t]+\n/g, '\n').replace(/[ \t]{2,}/g, ' ').trim(), ...found };
+  };
+  const cards = parsed.map((c) => {
+    const f = take(c.front);
+    const b = take(c.back);
+    return { front: f.text, back: b.text, frontFile: f.img, frontAudioFile: f.audio, backFile: b.img, backAudioFile: b.audio };
+  });
+  // os que sobraram: agrupa por nome (gato.jpg + gato.mp3)
+  const groups = new Map();
+  list
+    .filter((f) => !used.has(f))
+    .sort((a, b) => fileCollator.compare(a.name, b.name))
+    .forEach((f) => {
+      const k = baseName(f.name).toLowerCase();
+      if (!groups.has(k)) groups.set(k, { name: f.name, img: null, audio: null });
+      const g = groups.get(k);
+      if (isImg(f) && !g.img) g.img = f;
+      else if (isAudio(f) && !g.audio) g.audio = f;
+    });
+  groups.forEach((g) => {
+    if (g.img) cards.push({ front: '', back: prettyName(g.name), frontFile: g.img, frontAudioFile: null, backFile: null, backAudioFile: g.audio });
+    else if (g.audio) cards.push({ front: '', back: prettyName(g.name), frontFile: null, frontAudioFile: g.audio, backFile: null, backAudioFile: null });
+  });
+  const ok = (text, img, audio) => Boolean(String(text || '').trim() || img || audio);
+  return {
+    cards: cards.filter((c) => ok(c.front, c.frontFile, c.frontAudioFile) && ok(c.back, c.backFile, c.backAudioFile)),
+    used
+  };
+}
+
+// Salva os arquivos no aparelho e devolve as cartas prontas para addCards
+export async function materializeBulk(plan, voice = {}) {
+  const save = async (f) => (f ? putMedia(isImg(f) ? await shrinkImage(f) : f) : null);
+  const out = [];
+  for (const c of plan.cards) {
+    out.push({
+      front: c.front,
+      back: c.back,
+      frontImg: await save(c.frontFile),
+      frontAudio: await save(c.frontAudioFile),
+      backImg: await save(c.backFile),
+      backAudio: await save(c.backAudioFile),
+      ...(voice.front ? { frontVoice: voice.front, frontLang: voice.frontLang || defaultVoiceLang() } : null),
+      ...(voice.back ? { backVoice: voice.back, backLang: voice.backLang || defaultVoiceLang() } : null)
+    });
+  }
+  return out;
+}
+
+// Seletor de voz + idioma (reaproveitado no lote e na seleção)
+export function VoicePicker({ voice, lang, onChange }) {
+  return (
+    <span className="fcm-voice">
+      <select value={voice || ''} onChange={(e) => onChange({ voice: e.target.value, lang: lang || defaultVoiceLang() })}>
+        <option value="">{tx('Sem voz')}</option>
+        <option value="f">{tx('Voz feminina')}</option>
+        <option value="m">{tx('Voz masculina')}</option>
+      </select>
+      {voice && (
+        <select value={lang || defaultVoiceLang()} onChange={(e) => onChange({ voice, lang: e.target.value })} title={tx('Idioma da voz')}>
+          {VOICE_LANGS.map((l) => (
+            <option key={l.code} value={l.code}>
+              {l.label}
+            </option>
+          ))}
+        </select>
+      )}
+    </span>
+  );
+}
+
+// =========================================================
+// MÍDIA NAS CARTAS SELECIONADAS ("Selecionar etapas")
+// voz (com idioma), áudio para todas, um áudio por carta, gravar em sequência
+// =========================================================
+export function SelectionMedia({ cards, onUpdate, click, flash }) {
+  const [side, setSide] = useState('front');
+  const [voice, setVoice] = useState({ voice: 'f', lang: defaultVoiceLang() });
+  const [busy, setBusy] = useState(false);
+  const [seq, setSeq] = useState(null); // índice da carta na gravação em sequência
+  const fileRef = useRef(null);
+  const cardsRef = useRef(cards);
+  cardsRef.current = cards;
+  const n = cards.length;
+  const sideName = side === 'front' ? tx('Pergunta') : tx('Resposta');
+  const A = `${side}Audio`;
+  const say = (m) => flash && flash(m);
+  const sound = (k) => click && click(k);
+
+  // troca o áudio de uma carta (o antigo sai do aparelho)
+  const setAudio = async (card, blob) => {
+    const id = blob ? await putMedia(blob) : null;
+    if (card[A]) deleteMedia(card[A]);
+    onUpdate(card.id, { [A]: id });
+  };
+
+  const applyVoice = () => {
+    if (!n) return;
+    sound('train');
+    cards.forEach((c) => onUpdate(c.id, { [`${side}Voice`]: voice.voice || null, [`${side}Lang`]: voice.voice ? voice.lang || defaultVoiceLang() : null }));
+    say(voice.voice ? tx('Voz aplicada em {n} carta(s) ({s})', { s: sideName, n }) : tx('Voz tirada de {n} carta(s)', { n }));
+  };
+  const testVoice = () => {
+    const c = cards.find((x) => String(x[side] || '').trim());
+    speak(c ? c[side] : sideName, { gender: voice.voice || 'f', lang: voice.lang || defaultVoiceLang() });
+  };
+
+  const onFiles = async (files) => {
+    const list = [...(files || [])].filter(isAudio).sort((a, b) => fileCollator.compare(a.name, b.name));
+    if (!list.length || !n) return;
+    if (list.some((f) => f.size > MAX_AUDIO_MB * 1024 * 1024)) {
+      say(tx('Áudio grande demais (máx. {n} MB).', { n: MAX_AUDIO_MB }));
+      return;
+    }
+    setBusy(true);
+    try {
+      if (list.length === 1) {
+        for (const c of cards) await setAudio(c, list[0]);
+        say(tx('Áudio posto em {n} carta(s) ({s})', { s: sideName, n }));
+      } else {
+        const m = Math.min(list.length, n);
+        for (let i = 0; i < m; i += 1) await setAudio(cards[i], list[i]);
+        say(tx('{m} áudio(s) postos um por carta, na ordem', { m }));
+      }
+      sound('train');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const oneForAll = useRecorder(async (blob) => {
+    setBusy(true);
+    try {
+      const list = cardsRef.current;
+      for (const c of list) await setAudio(c, blob);
+      sound('train');
+      say(tx('Gravação posta em {n} carta(s) ({s})', { s: sideName, n: list.length }));
+    } finally {
+      setBusy(false);
+    }
+  });
+  const removeAudio = () => {
+    const list = cards.filter((c) => c[A]);
+    if (!list.length) return;
+    list.forEach((c) => {
+      deleteMedia(c[A]);
+      onUpdate(c.id, { [A]: null });
+    });
+    sound('click');
+    say(tx('Áudio tirado de {n} carta(s)', { n: list.length }));
+  };
+  const withAudio = cards.filter((c) => c[A]).length;
+  const withVoice = cards.filter((c) => c[`${side}Voice`]).length;
+
+  return (
+    <div className="fcm-sel">
+      <div className="fcm-sel-row">
+        <b>{tx('Mídia nas selecionadas')}</b>
+        <span className="fcm-seg">
+          {[
+            ['front', tx('Pergunta')],
+            ['back', tx('Resposta')]
+          ].map(([k, label]) => (
+            <button key={k} type="button" className={side === k ? 'on' : ''} onClick={() => setSide(k)}>
+              {label}
+            </button>
+          ))}
+        </span>
+        <small className="fcm-sel-info">{tx('{a} com áudio · {v} com voz', { a: withAudio, v: withVoice })}</small>
+      </div>
+      <div className="fcm-sel-row">
+        <span className="fcm-sel-label">🗣 {tx('Voz')}</span>
+        <VoicePicker voice={voice.voice} lang={voice.lang} onChange={setVoice} />
+        <button type="button" className="fcm-tool" onClick={testVoice} title={tx('Ouvir a voz')}>
+          ▶
+        </button>
+        <button type="button" className="fc-btn small" disabled={!n} onClick={applyVoice}>
+          {voice.voice ? tx('Aplicar voz em {n}', { n }) : tx('Tirar voz de {n}', { n })}
+        </button>
+      </div>
+      <div className="fcm-sel-row">
+        <span className="fcm-sel-label">🎵 {tx('Áudio')}</span>
+        <button type="button" className="fcm-tool" disabled={!n || busy} onClick={() => fileRef.current?.click()} title={tx('1 arquivo = o mesmo em todas · vários = um por carta, na ordem')}>
+          📎 {tx('Enviar áudio(s)')}
+        </button>
+        {oneForAll.rec ? (
+          <button type="button" className="fcm-tool rec" onClick={oneForAll.stop}>
+            ⏺ {tx('Parar')} {oneForAll.secs}s
+          </button>
+        ) : (
+          <button type="button" className="fcm-tool" disabled={!n || busy} onClick={oneForAll.start} title={tx('Uma gravação só, posta em todas as selecionadas')}>
+            🎤 {tx('Gravar para todas')}
+          </button>
+        )}
+        <button type="button" className="fcm-tool" disabled={!n || busy} onClick={() => (sound('click'), setSeq(0))} title={tx('Grava uma carta depois da outra')}>
+          🎙 {tx('Gravar uma a uma')}
+        </button>
+        <button type="button" className="fcm-tool" disabled={!withAudio} onClick={removeAudio}>
+          ✕ {tx('Tirar áudio')}
+        </button>
+        <input ref={fileRef} type="file" accept="audio/*" multiple hidden onChange={(e) => (onFiles(e.target.files), (e.target.value = ''))} />
+      </div>
+      {oneForAll.error && <small className="fcm-error">{oneForAll.error}</small>}
+      {seq !== null && cards[seq] && (
+        <SequenceRecorder cards={cards} index={seq} side={side} onIndex={setSeq} onSave={setAudio} onClose={() => setSeq(null)} click={click} />
+      )}
+    </div>
+  );
+}
+
+// Grava carta por carta: mostra o texto, grava, salva e pula para a próxima
+function SequenceRecorder({ cards, index, side, onIndex, onSave, onClose, click }) {
+  const card = cards[index];
+  const cardRef = useRef(card);
+  cardRef.current = card;
+  const idxRef = useRef(index);
+  idxRef.current = index;
+  const [saving, setSaving] = useState(false);
+  const rec = useRecorder(async (blob) => {
+    setSaving(true);
+    await onSave(cardRef.current, blob);
+    setSaving(false);
+    if (click) click('train');
+    // vai sozinho para a próxima
+    if (idxRef.current < cards.length - 1) setTimeout(() => onIndex(idxRef.current + 1), 350);
+  });
+  const audioUrl = useMediaUrl(card[`${side}Audio`]);
+  const imgUrl = useMediaUrl(card[`${side}Img`]);
+  const text = String(card[side] || '').trim();
+  const go = (d) => {
+    if (rec.rec) rec.stop();
+    onIndex(Math.max(0, Math.min(cards.length - 1, index + d)));
+  };
+  const done = cards.filter((c) => c[`${side}Audio`]).length;
+  return (
+    <div className="fcm-seq">
+      <div className="fcm-seq-top">
+        <b>
+          🎙 {tx('Carta {i} de {n}', { i: index + 1, n: cards.length })} · {side === 'front' ? tx('Pergunta') : tx('Resposta')}
+        </b>
+        <small>{tx('{d} de {n} com áudio', { d: done, n: cards.length })}</small>
+        <button
+          type="button"
+          className="fcm-tool"
+          onClick={() => {
+            if (rec.rec) rec.stop();
+            onClose();
+          }}
+        >
+          {tx('Fechar')}
+        </button>
+      </div>
+      <div className="fcm-seq-card">
+        {imgUrl && <img src={imgUrl} alt="" />}
+        <span>{text || (side === 'front' ? card.back : card.front) || '—'}</span>
+      </div>
+      <div className="fcm-seq-actions">
+        <button type="button" className="fcm-tool" disabled={index === 0} onClick={() => go(-1)}>
+          ◀ {tx('Anterior')}
+        </button>
+        {rec.rec ? (
+          <button type="button" className="fc-btn small fcm-rec-big rec" onClick={rec.stop}>
+            ⏹ {tx('Parar e salvar')} {rec.secs}s
+          </button>
+        ) : (
+          <button type="button" className="fc-btn primary small fcm-rec-big" disabled={saving} onClick={rec.start}>
+            ⏺ {card[`${side}Audio`] ? tx('Gravar de novo') : tx('Gravar')}
+          </button>
+        )}
+        <button type="button" className="fcm-tool" disabled={!audioUrl || rec.rec} onClick={() => playUrl(audioUrl)}>
+          ▶ {tx('Ouvir')}
+        </button>
+        <button type="button" className="fcm-tool" disabled={index === cards.length - 1} onClick={() => go(1)}>
+          {tx('Próxima')} ▶
+        </button>
+      </div>
+      {rec.error && <small className="fcm-error">{rec.error}</small>}
+    </div>
+  );
+}

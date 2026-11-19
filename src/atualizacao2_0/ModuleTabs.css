@@ -1,0 +1,199 @@
+/* Módulos / cursos no Editar Habilidade: abas simples */
+.mt-bar {
+  --mt-accent: var(--theme-accent, #38bdf8);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1.1rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid var(--theme-border, #334155);
+  background: rgba(0, 0, 0, 0.18);
+}
+.mt-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+.mt-head h3 {
+  margin: 0 !important;
+}
+.mt-hint {
+  font-size: 0.72rem;
+  opacity: 0.55;
+}
+.mt-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.mt-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 34px;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--theme-border, #334155);
+  background: rgba(255, 255, 255, 0.03);
+  color: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  overflow: hidden;
+  isolation: isolate;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+/* barrinha de progresso no fundo da aba */
+.mt-tab::before {
+  content: '';
+  position: absolute;
+  inset: auto auto 0 0;
+  width: var(--mt-pct, 0%);
+  height: 3px;
+  background: var(--mt-accent);
+  opacity: 0.55;
+  z-index: -1;
+  transition: width 0.3s ease;
+}
+.mt-tab:hover {
+  border-color: color-mix(in srgb, var(--mt-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--mt-accent) 8%, transparent);
+}
+.mt-tab:active {
+  transform: scale(0.97);
+}
+.mt-tab:focus-visible {
+  outline: 2px solid var(--mt-accent);
+  outline-offset: 2px;
+}
+.mt-tab.on {
+  border-color: var(--mt-accent);
+  background: color-mix(in srgb, var(--mt-accent) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mt-accent) 14%, transparent);
+  cursor: text;
+}
+.mt-tab.on::before {
+  opacity: 1;
+}
+.mt-name {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mt-lv {
+  font-size: 0.7rem;
+  font-weight: 600;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+.mt-pen {
+  font-size: 0.8rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.mt-tab.on:hover .mt-pen {
+  opacity: 0.8;
+}
+.mt-x {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-right: -0.35rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 0.7rem;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+}
+.mt-tab:hover .mt-x,
+.mt-tab.on .mt-x {
+  opacity: 0.55;
+}
+.mt-x:hover {
+  opacity: 1 !important;
+  background: rgba(239, 68, 68, 0.35);
+}
+
+/* editando o nome: a própria aba vira o campo */
+.mt-tab.editing {
+  cursor: text;
+  border-color: var(--mt-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--mt-accent) 12%, transparent);
+  padding: 0 0.6rem;
+  animation: mt-pop 0.16s ease;
+}
+.mt-tab.editing.new {
+  border-style: dashed;
+}
+@keyframes mt-pop {
+  from { transform: scale(0.94); opacity: 0.6; }
+  to { transform: scale(1); opacity: 1; }
+}
+/* campo que cresce com o texto */
+.mt-input-wrap {
+  display: inline-grid;
+  min-width: 70px;
+  max-width: 260px;
+}
+.mt-input-wrap::after,
+.mt-input {
+  grid-area: 1 / 1;
+  font: inherit;
+  font-weight: 700;
+  padding: 0 2px;
+}
+.mt-input-wrap::after {
+  content: attr(data-value) ' ';
+  visibility: hidden;
+  white-space: pre;
+  overflow: hidden;
+}
+.mt-input {
+  width: 100%;
+  min-width: 0;
+  border: 0 !important;
+  outline: none !important;
+  background: transparent !important;
+  color: inherit;
+  box-shadow: none !important;
+  height: auto !important;
+}
+
+.mt-add {
+  height: 34px;
+  padding: 0 0.8rem;
+  border-radius: 999px;
+  border: 1px dashed color-mix(in srgb, var(--mt-accent) 55%, transparent);
+  background: transparent;
+  color: var(--mt-accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.mt-add:hover {
+  background: color-mix(in srgb, var(--mt-accent) 12%, transparent);
+  border-style: solid;
+}
+
+@media (max-width: 760px) {
+  .mt-hint { display: none; }
+  .mt-tab, .mt-add { height: 38px; }
+  .mt-x { opacity: 0.55; width: 24px; height: 24px; }
+  .mt-name { max-width: 150px; }
+  .mt-input { font-size: 16px; }
+}

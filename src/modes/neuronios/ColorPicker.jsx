@@ -62,7 +62,10 @@ export default function ColorPicker({ x, y, value, colors = PICK_COLORS, title, 
             className={`nr-color-sw ${value && value.toLowerCase() === c.toLowerCase() ? 'on' : ''}`}
             style={{ background: c, opacity: Math.max(0.35, alpha) }}
             title={c}
-            onClick={() => onPick(c)}
+            onClick={() => {
+              onPick(c);
+              onClose(); // escolheu: a paleta fecha
+            }}
           />
         ))}
       </div>

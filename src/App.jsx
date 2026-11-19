@@ -14,6 +14,8 @@ import { usePomodoro, PomodoroModal, PomodoroWidget } from './atualizacao2_0/Upd
 import { useTaskUpdate } from './atualizacao2_0/TaskUpdate.js';
 import { useLanguage } from './atualizacao2_0/UpIdioma.jsx';
 import { SettingsModal, CommandsModal } from './atualizacao2_0/Settings.jsx';
+import SkillsManager from './atualizacao2_0/SkillsManager.jsx';
+import ModuleTabs from './atualizacao2_0/ModuleTabs.jsx';
 import { ThemeModal } from './atualizacao2_0/Themes.jsx';
 import { HeroStage, HeroMenu } from './atualizacao2_0/Hero.jsx';
 import { DEFAULT_HERO } from './atualizacao2_0/HeroModels.js';
@@ -193,6 +195,7 @@ export default function App() {
     removeCustomColorFromDeck,
     hiddenSkillIds,
     toggleHideSkill,
+    applySkillLayout,
     playerLevel,
     totalXp,
     currentXpProgress,
@@ -300,7 +303,6 @@ export default function App() {
   const [isSkillSettingsModalOpen, setIsSkillSettingsModalOpen] = useState(false);
   const [isCommandsModalOpen, setIsCommandsModalOpen] = useState(false);
   const [isCustomColorModalOpen, setIsCustomColorModalOpen] = useState(false);
-  const [isManageSkillsModalOpen, setIsManageSkillsModalOpen] = useState(false);
   const [isLayoutEditorOpen, setIsLayoutEditorOpen] = useState(false);
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -431,8 +433,6 @@ const [tempMiniText, setTempMiniText] = useState('');
   const [folderSortOrder, setFolderSortOrder] = useState('default');
   const [folderCardContextMenu, setFolderCardContextMenu] = useState(null);
 
-  const [draggedLayoutIdx, setDraggedLayoutIdx] = useState(null);
-  const [dragOverLayoutIdx, setDragOverLayoutIdx] = useState(null);
 
   const [folderSearchQuery, setFolderSearchQuery] = useState('');
   const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
@@ -663,8 +663,6 @@ const handleSaveMiniEdit = (idx, oldText) => {
   const [contextMenu, setContextMenu] = useState(null);
   const [globalContextMenu, setGlobalContextMenu] = useState(null);
 
-  const [isBatchSelectMode, setIsBatchSelectMode] = useState(false);
-  const [selectedBatchIds, setSelectedBatchIds] = useState([]);
 
   const fileInputRef = useRef(null);
   const holdIntervalRef = useRef(null);
@@ -700,7 +698,6 @@ const handleSaveMiniEdit = (idx, oldText) => {
       isAddModalOpen ||
       editingSkill ||
       isLayoutEditorOpen ||
-      isManageSkillsModalOpen ||
       contextMenu ||
       folderCardContextMenu ||
       globalContextMenu
@@ -734,7 +731,6 @@ const handleSaveMiniEdit = (idx, oldText) => {
     setIsAddModalOpen(false);
     setEditingSkill(null);
     setIsLayoutEditorOpen(false);
-    setIsManageSkillsModalOpen(false);
     setContextMenu(null);
     setFolderCardContextMenu(null);
     setGlobalContextMenu(null);
@@ -896,7 +892,7 @@ const handleSaveMiniEdit = (idx, oldText) => {
       } else if (keyLower === 'o') {
         e.preventDefault();
         playSound('click');
-        setIsManageSkillsModalOpen((prev) => !prev);
+        setIsLayoutEditorOpen((prev) => !prev);
       } else if (keyLower === 'a') {
         e.preventDefault();
         playSound('click');
@@ -937,6 +933,8 @@ const handleSaveMiniEdit = (idx, oldText) => {
     html.setProperty('--g-modal', activeThemePreset.modalBg);
     html.setProperty('--g-border', activeThemePreset.border);
     html.setProperty('--g-accent', activeThemePreset.color);
+    // cor crua do tema também no <html>: o Nanquim Clássico pinta a tinta dos 3 modos com ela
+    html.setProperty('--theme-accent-src', activeThemePreset.color);
     html.setProperty('--g-box', activeThemePreset.boxBg || activeThemePreset.modalBg);
     html.setProperty('--g-on-accent', onAccentColor(activeThemePreset.color));
   }, [activeThemePreset]);
@@ -1445,7 +1443,6 @@ const handleSaveEdit = (e) => {
   });
 
   const visibleSkills = getOrderedSkills(rawVisibleSkills);
-  const hiddenSkills = skills.filter((s) => hiddenSkillIds.includes(s.id));
 
   const RANK_MILESTONES = [
     { level: 1, rank: 'Aprendiz I' },
@@ -1571,35 +1568,6 @@ if (folderSortOrder === 'a-z') {
             ⏱️
           </button>
 
-          <button
-            className="top-icon-button"
-            title={tx("Tarefas (T)")}
-            onClick={() => {
-              playSound('click');
-              taskState.toggleModal();
-            }}
-            style={{ position: 'relative' }}
-          >
-            📋
-            <TaskBadge taskState={taskState} />
-          </button>
-
-          <button
-            className="top-icon-button"
-            title={tx("Flashcards (F)")}
-            onClick={() => {
-              playSound('click');
-              flashcards.toggleModal();
-            }}
-            style={{ position: 'relative' }}
-          >
-            🎴
-            {flashcards.badgeDue > 0 && (
-              <span className="subtle-mission-badge" title={tx('{n} carta(s) para estudar hoje', { n: flashcards.badgeDue })}>
-                {flashcards.badgeDue}
-              </span>
-            )}
-          </button>
         </div>
 
         {(
@@ -1620,20 +1588,56 @@ if (folderSortOrder === 'a-z') {
 
         <TaskAlert taskState={taskState} />
 
-        {/* Editor de notas: canto inferior esquerdo, em qualquer modo
-            (no <body>, para ficar por cima do painel de notas) */}
-        {createPortal(<button
-          type="button"
-          className={`top-icon-button notes-fab ${notesPanelOpen ? 'is-on' : ''}`}
-          title={tx('Editor de notas (E)')}
-          aria-label={tx('Editor de notas (E)')}
-          onClick={() => {
-            playSound('click');
-            toggleNotesPanel();
-          }}
-        >
-          ✒️
-        </button>, document.body)}
+        {/* Canto inferior esquerdo, em qualquer modo (no <body>, para ficar por
+            cima do painel de notas): Tarefas em cima do ✒️ Editor de notas e
+            Flashcards do lado direito dele */}
+        {createPortal(
+          <div className="notes-dock">
+            <button
+              type="button"
+              className="top-icon-button dock-tasks"
+              title={tx("Tarefas (T)")}
+              onClick={() => {
+                playSound('click');
+                taskState.toggleModal();
+              }}
+              style={{ position: 'relative' }}
+            >
+              📋
+              <TaskBadge taskState={taskState} />
+            </button>
+            <button
+              type="button"
+              className={`top-icon-button notes-fab ${notesPanelOpen ? 'is-on' : ''}`}
+              title={tx('Editor de notas (E)')}
+              aria-label={tx('Editor de notas (E)')}
+              onClick={() => {
+                playSound('click');
+                toggleNotesPanel();
+              }}
+            >
+              ✒️
+            </button>
+            <button
+              type="button"
+              className="top-icon-button dock-flash"
+              title={tx("Flashcards (F)")}
+              onClick={() => {
+                playSound('click');
+                flashcards.toggleModal();
+              }}
+              style={{ position: 'relative' }}
+            >
+              🎴
+              {flashcards.badgeDue > 0 && (
+                <span className="subtle-mission-badge" title={tx('{n} carta(s) para estudar hoje', { n: flashcards.badgeDue })}>
+                  {flashcards.badgeDue}
+                </span>
+              )}
+            </button>
+          </div>,
+          document.body
+        )}
 
         {inSkills && pendingTransfers && pendingTransfers.length > 0 && (
           <button
@@ -1652,7 +1656,7 @@ if (folderSortOrder === 'a-z') {
         {inSkills && (
           <button
             className="top-icon-button"
-            title={tx("Editor de Layouts / Habilidades (L)")}
+            title={tx("Organizar habilidades (L)")}
             onClick={() => { playSound('click'); setIsLayoutEditorOpen(true); }}
           >
             ✏️
@@ -1660,26 +1664,29 @@ if (folderSortOrder === 'a-z') {
         )}
         <button
           className="top-icon-button"
-          title={tx("Customizar Tema (C)")}
-          onClick={() => { playSound('click'); setIsThemeModalOpen(true); }}
-        >
-          🎨
-        </button>
-        <button
-          className="top-icon-button"
           title={uiTheme.dark ? tx("Modo diurno") : tx("Modo noturno")}
           onClick={() => { playSound('click'); toggleDark(); }}
         >
           {uiTheme.dark ? '☀️' : '🌙'}
         </button>
-        <button
-          className={`top-icon-button ${updateAvailable ? 'has-update' : ''}`}
-          title={updateAvailable ? `${tx("Configurações (Esc)")} · ${tx('Atualização disponível!')}` : tx("Configurações (Esc)")}
-          onClick={() => { playSound('click'); setIsSettingsModalOpen(true); }}
-        >
-          ⚙
-          {updateAvailable && <span className="update-dot" aria-label={tx('Atualização disponível!')} />}
-        </button>
+        {/* ⚙️ com o 🎨 Customizar Tema logo embaixo */}
+        <div className="top-nav-stack">
+          <button
+            className={`top-icon-button ${updateAvailable ? 'has-update' : ''}`}
+            title={updateAvailable ? `${tx("Configurações (Esc)")} · ${tx('Atualização disponível!')}` : tx("Configurações (Esc)")}
+            onClick={() => { playSound('click'); setIsSettingsModalOpen(true); }}
+          >
+            ⚙
+            {updateAvailable && <span className="update-dot" aria-label={tx('Atualização disponível!')} />}
+          </button>
+          <button
+            className="top-icon-button"
+            title={tx("Customizar Tema (C)")}
+            onClick={() => { playSound('click'); setIsThemeModalOpen(true); }}
+          >
+            🎨
+          </button>
+        </div>
       </div>
 
       <div className="dashboard-container">
@@ -1811,7 +1818,7 @@ if (folderSortOrder === 'a-z') {
 
         <main className="skills-panel">
           <div className="skills-header-container">
-            <h1 className="panel-title">{tx("Skills Upgrades")}</h1>
+            <h1 className="panel-title">{tx("Habilidades")}</h1>
             <div className="header-action-row-right">
               <button
                 type="button"
@@ -1847,16 +1854,10 @@ if (folderSortOrder === 'a-z') {
               const isBlockedByChecklist = !isMax && pendingTasks.length > 0;
               const isShaking = shakingSkillId === skill.id;
 
-              const nextSkill = visibleSkills[index + 1];
-              const isSameCategoryWithNext =
-                nextSkill &&
-                (skill.category || 'Geral').trim().toLowerCase() ===
-                  (nextSkill.category || 'Geral').trim().toLowerCase();
-
               return (
                 <div
                   key={skill.id}
-                  className={`skill-card-wrapper ${isSameCategoryWithNext ? 'has-next-same-cat' : ''}`}
+                  className="skill-card-wrapper"
                 >
                   <div
                     onContextMenu={(e) => handleContextMenu(e, skill)}
@@ -1893,7 +1894,8 @@ if (folderSortOrder === 'a-z') {
   {/* Nome do Módulo Ativo acima da Meta do Nível */}
   {(() => {
     const activeMod = (skill.modules || []).find((m) => m.id === skill.activeModuleId);
-    const modName = activeMod ? activeMod.name : null;
+    // o "Geral" renomeado também aparece no cartão
+    const modName = activeMod ? activeMod.name : skill.defaultModuleName && (skill.modules || []).length ? skill.defaultModuleName : null;
     return modName ? (
       <span style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.1rem' }}>
         {modName}
@@ -1955,12 +1957,6 @@ if (folderSortOrder === 'a-z') {
                     </div>
                   </div>
 
-                  {isSameCategoryWithNext && (
-                    <div
-                      className="category-connector-line"
-                      style={{ '--category-line-color': skillColor }}
-                    />
-                  )}
                 </div>
               );
             })}
@@ -1974,15 +1970,6 @@ if (folderSortOrder === 'a-z') {
           </div>
         </main>
 
-        <div
-          className="subtle-side-rail"
-          onClick={() => { playSound('click'); setIsManageSkillsModalOpen(true); }}
-          title={tx("Editar habilidades atuais e ver escondidas (O)")}
-        >
-          <div className="rail-line-glow" />
-          <div className="rail-plus-badge">+</div>
-          <span className="rail-tooltip">{tx("Editar / Ocultas (")}{hiddenSkills.length})</span>
-        </div>
       </div>
 
       {/* JANELA DE BUSCA (BUSCAR+) */}
@@ -1999,7 +1986,6 @@ if (folderSortOrder === 'a-z') {
         linkSkillsByCategory={linkSkillsByCategory}
         setLinkSkillsByCategory={setLinkSkillsByCategory}
         onOpenTheme={() => setIsThemeModalOpen(true)}
-        onOpenManageSkills={() => setIsManageSkillsModalOpen(true)}
         onOpenLayoutEditor={() => setIsLayoutEditorOpen(true)}
         onOpenFolders={() => setIsCategoryFilterModalOpen(true)}
         onOpenCommands={() => setIsCommandsModalOpen(true)}
@@ -3372,11 +3358,11 @@ editingSkill.miniMissions.map((mm, idx) => {
               className="context-menu-item"
               onClick={() => {
                 playSound('click');
-                setIsManageSkillsModalOpen(true);
+                setIsLayoutEditorOpen(true);
                 setGlobalContextMenu(null);
               }}
             >
-              {tx("Painel de Habilidades e Ocultas")}
+              {tx("Organizar Habilidades e Ocultas")}
             </button>
             <button
               type="button"
@@ -3950,425 +3936,23 @@ editingSkill.miniMissions.map((mm, idx) => {
         </>
       )}
 
-      {/* EDITOR DE LAYOUT E REORDENAÇÃO */}
+      {/* ORGANIZAR HABILIDADES (antigos "Editor de layout" + "Habilidades e ocultas") */}
       {isLayoutEditorOpen && (
-        <div className="modal-backdrop" onClick={() => { playSound('click'); setIsLayoutEditorOpen(false); }}>
-          <div className="modal-window layout-editor-modal-large" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header-row">
-              <h3>{tx("Editor de Layout e Ordem das Habilidades")}</h3>
-              <button className="close-popup-btn" onClick={() => { playSound('click'); setIsLayoutEditorOpen(false); }}>×</button>
-            </div>
-
-            <div className="editor-toolbar-row">
-              <p className="settings-description" style={{ margin: 0 }}>
-                {tx("Arraste qualquer habilidade com o botão esquerdo para reordenar. Ative o seletor (")}<strong>`☑` / `☐`</strong>{tx(") para selecionar clicando em qualquer lugar da carta.")}
-              </p>
-              <button
-                type="button"
-                className={`batch-toggle-square ${isBatchSelectMode ? 'active' : ''}`}
-                onClick={() => {
-                  playSound('click');
-                  setIsBatchSelectMode(!isBatchSelectMode);
-                  setSelectedBatchIds([]);
-                }}
-                title={tx("Ativar seleção múltipla para exclusão")}
-              >
-                {isBatchSelectMode ? '☑' : '☐'}
-              </button>
-            </div>
-
-            {isBatchSelectMode && selectedBatchIds.length > 0 && (
-                <div className="batch-actions-panel">
-                  <span style={{ fontSize: '0.85rem', color: '#f1f5f9', fontWeight: 'bold' }}>
-                    {selectedBatchIds.length} {selectedBatchIds.length === 1 ? 'selecionada' : 'selecionadas'}
-                  </span>
-                  <button
-                    type="button"
-                    className="batch-delete-btn"
-                    onClick={async () => {
-                      playSound('click');
-                      const n = selectedBatchIds.length;
-                      const ok = await ask({
-                        title: tx('Excluir {n} habilidade(s)?', { n }),
-                        message: tx('As habilidades selecionadas serão apagadas.'),
-                        yes: tx('Excluir'),
-                        danger: true
-                      });
-                      if (!ok) return;
-                      playSound('delete');
-                      selectedBatchIds.forEach((id) => deleteSkill(id));
-                      setSelectedBatchIds([]);
-                      setIsBatchSelectMode(false);
-                    }}
-                  >
-                    {tx("Excluir Selecionadas")}
-                  </button>
-                </div>
-            )}
-
-            <div className="editor-skills-scroll-container">
-              {visibleSkills.map((skill, idx) => {
-                const isMax = skill.level >= skill.maxLevel;
-                const skillColor = skill.color || '#3b82f6';
-                const nextLevelNumber = skill.level + 1;
-                const nextGoalText = skill.levelDescriptions?.[nextLevelNumber] || tx('Meta do Nível {n}', { n: nextLevelNumber });
-
-                const getRealIndex = (targetVisibleIdx) => {
-                  const targetSkill = visibleSkills[targetVisibleIdx];
-                  return skills.findIndex((s) => s.id === targetSkill.id);
-                };
-
-                const currentRealIdx = skills.findIndex((s) => s.id === skill.id);
-
-                const nextSkill = visibleSkills[idx + 1];
-                const isSameCategoryWithNext =
-                  nextSkill &&
-                  (skill.category || 'Geral').trim().toLowerCase() ===
-                    (nextSkill.category || 'Geral').trim().toLowerCase();
-
-                const isCheckedBatch = selectedBatchIds.includes(skill.id);
-                const isBeingDragged = draggedLayoutIdx === idx;
-                const isDragTarget = dragOverLayoutIdx === idx && !isBeingDragged;
-
-                const toggleBatchSelection = () => {
-                  playSound('click');
-                  if (isCheckedBatch) {
-                    setSelectedBatchIds(selectedBatchIds.filter((id) => id !== skill.id));
-                  } else {
-                    setSelectedBatchIds([...selectedBatchIds, skill.id]);
-                  }
-                };
-
-                return (
-                  <div
-                    key={skill.id}
-                    className={`skill-card-wrapper ${isSameCategoryWithNext ? 'has-next-same-cat' : ''}`}
-                    draggable={!isBatchSelectMode}
-                    onDragStart={(e) => {
-                      setDraggedLayoutIdx(idx);
-                      e.dataTransfer.effectAllowed = 'move';
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setDragOverLayoutIdx(idx);
-                    }}
-                    onDragLeave={() => {
-                      if (dragOverLayoutIdx === idx) setDragOverLayoutIdx(null);
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      if (draggedLayoutIdx !== null && draggedLayoutIdx !== idx) {
-                        const fromReal = getRealIndex(draggedLayoutIdx);
-                        const toReal = getRealIndex(idx);
-                        playSound('train');
-                        reorderSkills(fromReal, toReal);
-                      }
-                      setDraggedLayoutIdx(null);
-                      setDragOverLayoutIdx(null);
-                    }}
-                    onDragEnd={() => {
-                      setDraggedLayoutIdx(null);
-                      setDragOverLayoutIdx(null);
-                    }}
-                  >
-                    <div
-                      className={`skill-card compact-editor-card ${isMax ? 'gold-maxed' : ''}`}
-                      onClick={() => {
-                        if (isBatchSelectMode) {
-                          toggleBatchSelection();
-                        }
-                      }}
-                      style={{
-                        ...getCardStyle(isMax, skillColor),
-                        cursor: isBatchSelectMode ? 'pointer' : 'grab',
-                        opacity: isBeingDragged ? 0.4 : 1,
-                        borderStyle: isDragTarget ? 'dashed' : 'solid',
-                        borderWidth: isCheckedBatch || isDragTarget ? '2px' : '1px',
-                        borderColor: isCheckedBatch
-                          ? '#f87171'
-                          : isDragTarget
-                          ? 'var(--theme-accent, #38bdf8)'
-                          : boxColorType === 'theme'
-                          ? activeThemePreset.border
-                          : isMax
-                          ? '#facc15'
-                          : skillColor,
-                        boxShadow: isCheckedBatch
-                          ? '0 0 14px rgba(248, 113, 113, 0.5)'
-                          : isDragTarget
-                          ? '0 0 15px rgba(56, 189, 248, 0.4)'
-                          : isMax
-                          ? '0 0 10px rgba(250, 204, 21, 0.3)'
-                          : `0 0 8px ${skillColor.startsWith && skillColor.startsWith('#') ? skillColor + '40' : skillColor}`,
-                        ...(isCheckedBatch ? { backgroundColor: 'rgba(127, 29, 29, 0.25)' } : {})
-                      }}
-                    >
-                      {!isBatchSelectMode && (
-                        <div className="reorder-button-group" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            className="reorder-btn edge-btn"
-                            disabled={idx === 0}
-                            onClick={() => { playSound('click'); reorderSkills(currentRealIdx, getRealIndex(0)); }}
-                            title={tx("Mover para o topo")}
-                          >
-                            ▲▲
-                          </button>
-                          <button
-                            type="button"
-                            className="reorder-btn"
-                            disabled={idx === 0}
-                            onClick={() => { playSound('click'); reorderSkills(currentRealIdx, getRealIndex(idx - 1)); }}
-                            title={tx("Mover para cima")}
-                          >
-                            ▲
-                          </button>
-                          <button
-                            type="button"
-                            className="reorder-btn"
-                            disabled={idx === visibleSkills.length - 1}
-                            onClick={() => { playSound('click'); reorderSkills(currentRealIdx, getRealIndex(idx + 1)); }}
-                            title={tx("Mover para baixo")}
-                          >
-                            ▼
-                          </button>
-                          <button
-                            type="button"
-                            className="reorder-btn edge-btn"
-                            disabled={idx === visibleSkills.length - 1}
-                            onClick={() => { playSound('click'); reorderSkills(currentRealIdx, getRealIndex(visibleSkills.length - 1)); }}
-                            title={tx("Mover para o fim")}
-                          >
-                            ▼▼
-                          </button>
-                        </div>
-                      )}
-
-                      {!isBatchSelectMode && (
-                        <button
-                          type="button"
-                          className="mini-missions-envelope-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            playSound('click');
-                            setEditingSkill(skill);
-                            setMiniMissionsModalTab('list');
-                            setIsMiniMissionsModalOpen(true);
-                          }}
-                          title={tx("Gerenciar Mini Missões")}
-                        >
-                          ✉️
-                        </button>
-                      )}
-
-                      <div className="skill-details">
-                        <div className="skill-name">{skill.title || skill.name}</div>
-                        <div className="skill-category">{skill.category}</div>
-                      </div>
-
-                      <div className="segments-center-zone">
-                        <div className="current-goal-title">
-                          {isMax ? tx("Habilidade Dominada!") : nextGoalText}
-                        </div>
-                        <div className="segments-bar">
-                          {renderSegmentBars(skill.level, skill.maxLevel, skillColor, isMax)}
-                        </div>
-                      </div>
-
-                      <div className="level-text">{tx("Lvl")}{' '}{skill.level}</div>
-
-                      <div className="editor-card-controls" onClick={(e) => e.stopPropagation()}>
-                        {isBatchSelectMode ? (
-                          <input
-                            type="checkbox"
-                            className="card-batch-checkbox"
-                            checked={isCheckedBatch}
-                            onChange={toggleBatchSelection}
-                          />
-                        ) : (
-                          <button
-                            type="button"
-                            className="editor-remove-btn"
-                            onClick={() => {
-                              playSound('delete');
-                              deleteSkill(skill.id);
-                            }}
-                            title={tx("Remover habilidade")}
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {isSameCategoryWithNext && (
-                      <div
-                        className="category-connector-line"
-                        style={{ '--category-line-color': skillColor }}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="modal-actions-bar">
-              <button className="confirm-button" onClick={() => { playSound('click'); setIsLayoutEditorOpen(false); }}>
-                {tx("Concluído")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isManageSkillsModalOpen && (
-        <div className="modal-backdrop" onClick={() => { playSound('click'); setIsManageSkillsModalOpen(false); }}>
-          <div className="modal-window layout-editor-modal-large" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header-row">
-              <h3>{tx("Painel de Habilidades e Ocultas")}</h3>
-              <button className="close-popup-btn" onClick={() => { playSound('click'); setIsManageSkillsModalOpen(false); }}>×</button>
-            </div>
-
-            <div className="manage-sections-stack">
-              <div className="manage-card-section">
-                <span className="card-section-label">
-                  {tx("HABILIDADES ESCONDIDAS (")}{hiddenSkills.length}):
-                </span>
-
-                {hiddenSkills.length === 0 ? (
-                  <p className="no-colors-msg">{tx("Nenhuma habilidade escondida no momento.")}</p>
-                ) : (
-                  <div className="editor-skills-scroll-container">
-                    {hiddenSkills.map((skill) => {
-                      const isMax = skill.level >= skill.maxLevel;
-                      const skillColor = skill.color || '#3b82f6';
-
-                      return (
-                        <div
-                          key={skill.id}
-                          className={`skill-card compact-editor-card ${isMax ? 'gold-maxed' : ''}`}
-                          style={getCardStyle(isMax, skillColor)}
-                        >
-                          <div className="skill-details">
-                            <div className="skill-name">{skill.title || skill.name}</div>
-                            <div className="skill-category">{skill.category}</div>
-                          </div>
-
-                          <div className="segments-center-zone">
-                            <div className="segments-bar">
-                              {renderSegmentBars(skill.level, skill.maxLevel, skillColor, isMax)}
-                            </div>
-                          </div>
-
-                          <div className="level-text">{tx("Lvl")}{' '}{skill.level}</div>
-
-                          <div className="editor-card-controls">
-                            <button
-                              type="button"
-                              className="restore-btn"
-                              onClick={() => { playSound('train'); toggleHideSkill(skill.id); }}
-                            >
-                              {tx("Mostrar")}
-                            </button>
-                            <button
-                              type="button"
-                              className="manage-edit-btn"
-                              onClick={() => {
-                                playSound('click');
-                                // O painel continua aberto por trás da edição
-                                setEditingSkill({ ...skill });
-                              }}
-                            >
-                              {tx("Editar")}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="manage-card-section">
-                <span className="card-section-label">
-                  {tx("HABILIDADES ATIVAS (")}{visibleSkills.length}):
-                </span>
-
-                <div className="editor-skills-scroll-container">
-                  {visibleSkills.map((skill, idx) => {
-                    const isMax = skill.level >= skill.maxLevel;
-                    const skillColor = skill.color || '#3b82f6';
-
-                    const nextSkill = visibleSkills[idx + 1];
-                    const isSameCategoryWithNext =
-                      nextSkill &&
-                      (skill.category || 'Geral').trim().toLowerCase() ===
-                        (nextSkill.category || 'Geral').trim().toLowerCase();
-
-                    return (
-                      <div
-                        key={skill.id}
-                        className={`skill-card-wrapper ${isSameCategoryWithNext ? 'has-next-same-cat' : ''}`}
-                      >
-                        <div
-                          className={`skill-card compact-editor-card ${isMax ? 'gold-maxed' : ''}`}
-                          style={getCardStyle(isMax, skillColor)}
-                        >
-                          <div className="skill-details">
-                            <div className="skill-name">{skill.title || skill.name}</div>
-                            <div className="skill-category">{skill.category}</div>
-                          </div>
-
-                          <div className="segments-center-zone">
-                            <div className="segments-bar">
-                              {renderSegmentBars(skill.level, skill.maxLevel, skillColor, isMax)}
-                            </div>
-                          </div>
-
-                          <div className="level-text">{tx("Lvl")}{' '}{skill.level}</div>
-
-                          <div className="editor-card-controls">
-                            <button
-                              type="button"
-                              className="hide-action-btn"
-                              onClick={() => { playSound('click'); toggleHideSkill(skill.id); }}
-                            >
-                              {tx("Ocultar")}
-                            </button>
-                            <button
-                              type="button"
-                              className="manage-edit-btn"
-                              onClick={() => {
-                                playSound('click');
-                                // O painel continua aberto por trás da edição
-                                setEditingSkill({ ...skill });
-                              }}
-                            >
-                              {tx("Editar")}
-                            </button>
-                          </div>
-                        </div>
-
-                        {isSameCategoryWithNext && (
-                          <div
-                            className="category-connector-line"
-                            style={{ '--category-line-color': skillColor }}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-actions-bar">
-              <button className="confirm-button" onClick={() => { playSound('click'); setIsManageSkillsModalOpen(false); }}>
-                {tx("Concluído")}
-              </button>
-            </div>
-          </div>
-        </div>
+        <SkillsManager
+          skills={skills}
+          hiddenSkillIds={hiddenSkillIds}
+          folders={sortedAvailableFolders}
+          linkSkillsByCategory={linkSkillsByCategory}
+          applySkillLayout={applySkillLayout}
+          playSound={playSound}
+          onClose={() => setIsLayoutEditorOpen(false)}
+          onEdit={(skill) => setEditingSkill({ ...skill })}
+          onMissions={(skill) => {
+            setEditingSkill(skill);
+            setMiniMissionsModalTab('list');
+            setIsMiniMissionsModalOpen(true);
+          }}
+        />
       )}
 
       <ColorDeckModal
@@ -4982,313 +4566,7 @@ editingSkill.miniMissions.map((mm, idx) => {
             </div>
 
             <div className="objectives-section-wrapper">
-<div className="modules-header-bar" style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginBottom: '1.2rem', background: 'rgba(0, 0, 0, 0.2)', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--theme-border, #334155)' }}>
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-    <h3 className="section-label-large" style={{ margin: 0 }}>{tx("Metas e Níveis")}</h3>
-
-    {/* Seletor, Renomear e Excluir Módulo */}
-    <div className="module-selector-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-      <label style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 'bold' }}>{tx("Módulo/Curso:")}</label>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-        {/* Controles de Ação (Apenas para Módulos criados pelo utilizador) */}
-        {editingSkill.activeModuleId && editingSkill.activeModuleId !== 'default' && (
-          <>
-            {!editingSkill.isEditingModuleName ? (
-              /* Botões de Lápis (Renomear) e Lixeira (Excluir) ao lado esquerdo */
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                <button
-                  type="button"
-                  className="cancel-button"
-                  style={{ padding: '0.35rem 0.55rem', fontSize: '0.9rem', cursor: 'pointer' }}
-                  onClick={() => setEditingSkill({ ...editingSkill, isEditingModuleName: true, isConfirmingDeleteModule: false })}
-                  title={tx("Renomear este módulo")}
-                >
-                  ✎
-                </button>
-                <button
-                  type="button"
-                  className="editor-remove-btn"
-                  style={{ width: '30px', height: '30px', fontSize: '0.85rem' }}
-                  onClick={async () => {
-                    const mod = (editingSkill.modules || []).find((m) => m.id === editingSkill.activeModuleId);
-                    if (!(await ask({ title: tx("Excluir este módulo?"), message: mod ? `"${mod.name}"` : '', yes: tx("Excluir"), danger: true }))) return;
-                    if (playSound) playSound('delete');
-                    setEditingSkill((prev) => {
-                      const deletedId = prev.activeModuleId;
-                      return {
-                        ...prev,
-                        modules: (prev.modules || []).filter((m) => m.id !== deletedId),
-                        activeModuleId: 'default',
-                        level: prev.defaultLevel ?? 0,
-                        maxLevel: prev.defaultMaxLevel ?? 10,
-                        levelDescriptions: prev.defaultLevelDescriptions ?? {},
-                        levelTasks: prev.defaultLevelTasks ?? {},
-                        levelInfos: prev.defaultLevelInfos ?? {},
-                        isEditingModuleName: false
-                      };
-                    });
-                  }}
-                  title={tx("Excluir este módulo")}
-                >
-                  🗑️
-                </button>
-              </div>
-            ) : null}
-          </>
-        )}
-
-        {editingSkill.isEditingModuleName ? (
-          /* Campo Inline para Renomear o Módulo Ativo */
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <input
-              type="text"
-              defaultValue={
-                (editingSkill.modules || []).find((m) => m.id === editingSkill.activeModuleId)?.name || ''
-              }
-              id="renameModuleInput"
-              autoFocus
-              style={{
-                padding: '0.35rem 0.6rem',
-                background: 'rgba(0, 0, 0, 0.5)',
-                border: '1px solid var(--theme-accent, #38bdf8)',
-                borderRadius: '6px',
-                color: '#fff',
-                fontSize: '0.85rem',
-                outline: 'none'
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const newName = e.target.value.trim();
-                  if (newName) {
-                    const updatedMods = (editingSkill.modules || []).map((m) =>
-                      m.id === editingSkill.activeModuleId ? { ...m, name: newName } : m
-                    );
-                    setEditingSkill({ ...editingSkill, modules: updatedMods, isEditingModuleName: false });
-                  }
-                }
-              }}
-            />
-            <button
-              type="button"
-              className="confirm-button"
-              style={{ padding: '0.35rem 0.6rem', fontSize: '0.78rem' }}
-              onClick={() => {
-                const input = document.getElementById('renameModuleInput');
-                const newName = input ? input.value.trim() : '';
-                if (newName) {
-                  const updatedMods = (editingSkill.modules || []).map((m) =>
-                    m.id === editingSkill.activeModuleId ? { ...m, name: newName } : m
-                  );
-                  setEditingSkill({ ...editingSkill, modules: updatedMods, isEditingModuleName: false });
-                }
-              }}
-            >
-              {tx("Salvar")}
-            </button>
-            <button
-              type="button"
-              className="cancel-button"
-              style={{ padding: '0.35rem 0.6rem', fontSize: '0.78rem' }}
-              onClick={() => setEditingSkill({ ...editingSkill, isEditingModuleName: false })}
-            >
-              ✕
-            </button>
-          </div>
-        ) : (
-          /* Lista Suspensa do Módulo */
-          <select
-            value={editingSkill.activeModuleId || 'default'}
-            onChange={(e) => {
-              const targetModuleId = e.target.value;
-
-              if (targetModuleId === '__SHOW_CREATE_INPUT__') {
-                setEditingSkill({ ...editingSkill, isCreatingModule: true, isConfirmingDeleteModule: false });
-                return;
-              }
-
-              // 1. Salva os dados do módulo que estava aberto ANTES de trocar
-              const currentActiveId = editingSkill.activeModuleId || 'default';
-              let updatedModules = [...(editingSkill.modules || [])];
-
-              if (currentActiveId !== 'default') {
-                updatedModules = updatedModules.map((mod) => {
-                  if (mod.id === currentActiveId) {
-                    return {
-                      ...mod,
-                      level: editingSkill.level,
-                      maxLevel: editingSkill.maxLevel,
-                      levelDescriptions: editingSkill.levelDescriptions,
-                      levelTasks: editingSkill.levelTasks,
-                      levelInfos: editingSkill.levelInfos
-                    };
-                  }
-                  return mod;
-                });
-              } else {
-                editingSkill.defaultLevel = editingSkill.level;
-                editingSkill.defaultMaxLevel = editingSkill.maxLevel;
-                editingSkill.defaultLevelDescriptions = editingSkill.levelDescriptions;
-                editingSkill.defaultLevelTasks = editingSkill.levelTasks;
-                editingSkill.defaultLevelInfos = editingSkill.levelInfos;
-              }
-
-              // 2. Carrega os dados do módulo selecionado
-              if (targetModuleId === 'default') {
-                setEditingSkill({
-                  ...editingSkill,
-                  modules: updatedModules,
-                  activeModuleId: 'default',
-                  level: editingSkill.defaultLevel ?? 0,
-                  maxLevel: editingSkill.defaultMaxLevel ?? 10,
-                  levelDescriptions: editingSkill.defaultLevelDescriptions ?? {},
-                  levelTasks: editingSkill.defaultLevelTasks ?? {},
-                  levelInfos: editingSkill.defaultLevelInfos ?? {},
-                  isCreatingModule: false,
-                  isEditingModuleName: false,
-                  isConfirmingDeleteModule: false
-                });
-              } else {
-                const targetMod = updatedModules.find((m) => m.id === targetModuleId);
-                if (targetMod) {
-                  setEditingSkill({
-                    ...editingSkill,
-                    modules: updatedModules,
-                    activeModuleId: targetModuleId,
-                    level: targetMod.level || 0,
-                    maxLevel: targetMod.maxLevel || 10,
-                    levelDescriptions: targetMod.levelDescriptions || {},
-                    levelTasks: targetMod.levelTasks || {},
-                    levelInfos: targetMod.levelInfos || {},
-                    isCreatingModule: false,
-                    isEditingModuleName: false,
-                    isConfirmingDeleteModule: false
-                  });
-                }
-              }
-            }}
-            style={{
-              padding: '0.45rem 0.8rem',
-              borderRadius: '6px',
-              background: 'rgba(0, 0, 0, 0.5)',
-              border: '1px solid var(--theme-accent, #38bdf8)',
-              color: '#fff',
-              fontSize: '0.85rem',
-              fontWeight: 'bold',
-              cursor: 'pointer'
-            }}
-          >
-            <option value="default">{tx("Módulo Geral")}</option>
-            {(editingSkill.modules || []).map((mod) => (
-              <option key={mod.id} value={mod.id}>
-                {mod.name}
-              </option>
-            ))}
-            <option value="__SHOW_CREATE_INPUT__">{tx("+ Criar Novo Módulo...")}</option>
-          </select>
-        )}
-      </div>
-    </div>
-  </div>
-
-  {/* Campo Inline para Criar Novo Módulo */}
-  {editingSkill.isCreatingModule && (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(15, 23, 42, 0.8)', padding: '0.6rem', borderRadius: '8px', border: '1px dashed var(--theme-accent, #38bdf8)' }}>
-      <input
-        type="text"
-        placeholder={tx("Nome do novo módulo (ex: Design Web, Design Gráfico...)")}
-        id="newModuleNameInput"
-        autoFocus
-        style={{
-          flex: 1,
-          padding: '0.45rem 0.7rem',
-          background: 'rgba(0, 0, 0, 0.4)',
-          border: '1px solid var(--theme-border, #334155)',
-          borderRadius: '6px',
-          color: '#fff',
-          fontSize: '0.85rem',
-          outline: 'none'
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            const inputVal = e.target.value.trim();
-            if (inputVal) {
-              const newModId = `mod_${Date.now()}`;
-              const newModule = {
-                id: newModId,
-                name: inputVal,
-                maxLevel: 10,
-                level: 0,
-                levelDescriptions: {},
-                levelTasks: {},
-                levelInfos: {}
-              };
-              const updatedModules = [...(editingSkill.modules || []), newModule];
-              setEditingSkill({
-                ...editingSkill,
-                modules: updatedModules,
-                activeModuleId: newModId,
-                level: 0,
-                maxLevel: 10,
-                levelDescriptions: {},
-                levelTasks: {},
-                levelInfos: {},
-                isCreatingModule: false,
-                isConfirmingDeleteModule: false
-              });
-            }
-          }
-        }}
-      />
-      <button
-        type="button"
-        className="confirm-button"
-        style={{ padding: '0.45rem 0.8rem', fontSize: '0.8rem' }}
-        onClick={() => {
-          const inputElem = document.getElementById('newModuleNameInput');
-          const inputVal = inputElem ? inputElem.value.trim() : '';
-          if (inputVal) {
-            const newModId = `mod_${Date.now()}`;
-            const newModule = {
-              id: newModId,
-              name: inputVal,
-              maxLevel: 10,
-              level: 0,
-              levelDescriptions: {},
-              levelTasks: {},
-              levelInfos: {}
-            };
-            const updatedModules = [...(editingSkill.modules || []), newModule];
-            setEditingSkill({
-              ...editingSkill,
-              modules: updatedModules,
-              activeModuleId: newModId,
-              level: 0,
-              maxLevel: 10,
-              levelDescriptions: {},
-              levelTasks: {},
-              levelInfos: {},
-              isCreatingModule: false,
-              isConfirmingDeleteModule: false
-            });
-          }
-        }}
-      >
-        {tx("Salvar Módulo")}
-      </button>
-      <button
-        type="button"
-        className="cancel-button"
-        style={{ padding: '0.45rem 0.7rem', fontSize: '0.8rem' }}
-        onClick={() => setEditingSkill({ ...editingSkill, isCreatingModule: false })}
-      >
-        {tx("Cancelar")}
-      </button>
-    </div>
-  )}
-</div>
+<ModuleTabs skill={editingSkill} setSkill={setEditingSkill} playSound={playSound} />
               <div className="horizontal-levels-grid">
                 {Array.from({ length: editingSkill.maxLevel }).map((_, idx) => {
                   const lvlNum = idx + 1;

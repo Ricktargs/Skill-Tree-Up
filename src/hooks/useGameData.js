@@ -985,6 +985,15 @@ const trainSkill = (skillId) => {
     recordState(result);
   };
 
+  // Editor "Organizar habilidades": várias mudanças (ordem, ocultas, pasta,
+  // exclusão) num passo só de desfazer
+  const applySkillLayout = (newSkills, newHidden) => {
+    const list = Array.isArray(newSkills) ? newSkills : skills;
+    const ids = new Set(list.map((s) => s.id));
+    const hidden = (Array.isArray(newHidden) ? newHidden : hiddenSkillIds).filter((id) => ids.has(id));
+    recordState(list, hidden);
+  };
+
   const toggleHideSkill = (skillId) => {
     const isHidden = hiddenSkillIds.includes(skillId);
     const newHidden = isHidden
@@ -1221,6 +1230,7 @@ const trainSkill = (skillId) => {
     removeCustomColorFromDeck,
     hiddenSkillIds,
     toggleHideSkill,
+    applySkillLayout,
     playerLevel,
     totalXp,
     currentXpProgress,

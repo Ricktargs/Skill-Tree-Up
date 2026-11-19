@@ -1451,3 +1451,157 @@ select.fc-input { resize: none; cursor: pointer; }
 .fcm-play:hover { border-color: var(--fc-accent, #38bdf8); }
 html.is-touch .fcm-tool,
 html.is-touch .fcm-play { min-height: 34px; }
+
+/* ---------- Importar em lote: arquivos e voz ---------- */
+.fc-bulk.drag-over {
+  outline: 2px dashed var(--fc-accent, #38bdf8);
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+.fc-bulk-files,
+.fc-bulk-voice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+}
+.fc-bulk-voice > span:not(.fcm-voice) {
+  font-weight: 700;
+  opacity: 0.8;
+}
+.fc-bulk-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 220px;
+  padding: 3px 4px 3px 9px;
+  border-radius: 999px;
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.04);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fc-bulk-file.used {
+  border-style: solid;
+  border-color: var(--fc-accent, #38bdf8);
+}
+.fc-bulk-file button {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.fc-bulk-file button:hover { opacity: 1; background: rgba(239, 68, 68, 0.3); }
+
+/* ---------- Mídia nas cartas selecionadas ---------- */
+.fcm-sel {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.14);
+}
+.fcm-sel-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+}
+.fcm-sel-label {
+  min-width: 64px;
+  font-weight: 700;
+  opacity: 0.85;
+}
+.fcm-sel-info {
+  margin-left: auto;
+  opacity: 0.65;
+}
+.fcm-seg {
+  display: inline-flex;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.fcm-seg button {
+  padding: 4px 11px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.fcm-seg button.on {
+  background: color-mix(in srgb, var(--fc-accent, #38bdf8) 28%, transparent);
+  opacity: 1;
+}
+
+.fcm-seq {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--fc-accent, #38bdf8);
+  background: color-mix(in srgb, var(--fc-accent, #38bdf8) 8%, rgba(0, 0, 0, 0.2));
+}
+.fcm-seq-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+.fcm-seq-top small { margin-left: auto; opacity: 0.7; }
+.fcm-seq-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.fcm-seq-card img {
+  max-height: 90px;
+  max-width: 40%;
+  border-radius: 8px;
+  object-fit: contain;
+}
+.fcm-seq-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.fcm-rec-big { min-width: 150px; }
+.fcm-rec-big.rec {
+  border-color: #ef4444 !important;
+  color: #fecaca;
+  animation: fcm-rec 1s ease-in-out infinite;
+}
+
+@media (max-width: 760px) {
+  .fcm-sel-label { min-width: 0; }
+  .fcm-sel-info { margin-left: 0; flex-basis: 100%; }
+  .fcm-voice select { max-width: 150px; }
+  .fcm-tool, .fcm-seg button { min-height: 34px; }
+  .fcm-rec-big { flex-basis: 100%; min-height: 42px; }
+}

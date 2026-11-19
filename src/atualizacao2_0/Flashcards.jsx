@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ask } from '../shared/Dialog.jsx';
 import { createPortal } from 'react-dom';
 import './Flashcards.css';
-import { CardThumb, EMPTY_MEDIA, FaceEditor, FaceMedia, MediaBadges, mediaToFields, sideMedia, stopCardSound } from './FlashcardMedia.jsx';
+import { CardThumb, EMPTY_MEDIA, FaceEditor, FaceMedia, MediaBadges, SelectionMedia, VoicePicker, isImageFile, isMediaFile, materializeBulk, mediaToFields, planBulk, sideMedia, stopCardSound } from './FlashcardMedia.jsx';
 import { deleteMedia } from '../shared/mediaStore.js';
 import { tx, useLanguage } from '../i18n/index.jsx';
 import {
@@ -36,7 +36,11 @@ const BULK_HINT = [
   '',
   'O verso pode ter várias linhas e linhas em branco.',
   'Cada linha com | começa uma carta nova.',
-  'Para perguntas com várias linhas, separe as cartas com ---'
+  'Para perguntas com várias linhas, separe as cartas com ---',
+  '',
+  'Imagens e áudios: arraste os arquivos aqui ou use 📎.',
+  'Escreva [gato.jpg] ou [miau.mp3] do lado da pergunta ou da resposta.',
+  'Arquivos não citados viram cartas sozinhos (gato.jpg + gato.mp3 = uma carta).'
 ];
 
 const STATUS_LABEL = { new: 'Nova', due: 'Para revisar', learning: 'Aprendendo', mastered: 'Dominada' };
@@ -713,6 +717,12 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
   const backOk = Boolean(back.trim() || backMedia.img || backMedia.audio);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulk, setBulk] = useState('');
+  const [bulkFiles, setBulkFiles] = useState([]); // imagens e áudios do lote
+  const [bulkVoice, setBulkVoice] = useState({ front: '', frontLang: '', back: '', backLang: '' });
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkDrag, setBulkDrag] = useState(false);
+  const bulkFileRef = useRef(null);
+  const bulkTextRef = useRef(null);
   const [query, setQuery] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [notice, setNotice] = useState('');
@@ -753,6 +763,48 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
   const inFilter = filterKey === 'all' ? cards : cards.filter((c) => groupKey(c) === filterKey);
   const visible = q ? inFilter.filter((c) => (c.front + ' ' + c.back).toLowerCase().includes(q)) : inFilter;
   const ungroupedCount = cards.filter((c) => groupKey(c) === NO_GROUP).length;
+
+  // ---------- Importar em lote (texto + imagens + áudios) ----------
+  const bulkPlan = planBulk(parseBulk(bulk), bulkFiles);
+  const addBulkFiles = (files, insertToken = false) => {
+    const list = [...(files || [])].filter(isMediaFile);
+    if (!list.length) return;
+    // nomes repetidos (ex.: "image.png" colado) ganham número
+    const names = new Set(bulkFiles.map((f) => f.name.toLowerCase()));
+    const fixed = list.map((f) => {
+      let name = f.name || (isImageFile(f) ? 'imagem.png' : 'audio.webm');
+      const dot = name.lastIndexOf('.');
+      const stem = dot > 0 ? name.slice(0, dot) : name;
+      const ext = dot > 0 ? name.slice(dot) : '';
+      let k = 2;
+      while (names.has(name.toLowerCase())) name = `${stem}-${k++}${ext}`;
+      names.add(name.toLowerCase());
+      return name === f.name ? f : new File([f], name, { type: f.type });
+    });
+    if (insertToken && bulkTextRef.current) {
+      const el = bulkTextRef.current;
+      const at = el.selectionStart ?? bulk.length;
+      const token = fixed.map((f) => `[${f.name}]`).join(' ');
+      setBulk(`${bulk.slice(0, at)}${token}${bulk.slice(at)}`);
+    }
+    setBulkFiles([...bulkFiles, ...fixed]);
+  };
+  const importBulk = async () => {
+    if (!bulkPlan.cards.length || bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      const ready = await materializeBulk(bulkPlan, bulkVoice);
+      const n = fc.addCards(deck.id, ready);
+      click('train');
+      setBulk('');
+      setBulkFiles([]);
+      setBulkOpen(false);
+      flash(tx('{n} carta(s) importada(s)', { n }));
+    } catch {
+      flash(tx('Não deu para guardar os arquivos.'));
+    }
+    setBulkBusy(false);
+  };
 
   const toggleSelect = (id) =>
     setSelected((prev) => {
@@ -1024,29 +1076,86 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
               </button>
             </div>
             {bulkOpen && (
-              <div className="fc-bulk">
+              <div
+                className={`fc-bulk ${bulkDrag ? 'drag-over' : ''}`}
+                onDragOver={(e) => {
+                  if (![...(e.dataTransfer?.types || [])].includes('Files')) return;
+                  e.preventDefault();
+                  setBulkDrag(true);
+                }}
+                onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget) && setBulkDrag(false)}
+                onDrop={(e) => {
+                  if (!e.dataTransfer?.files?.length) return;
+                  e.preventDefault();
+                  setBulkDrag(false);
+                  addBulkFiles(e.dataTransfer.files);
+                }}
+              >
                 <textarea
+                  ref={bulkTextRef}
                   className="fc-input"
                   rows={8}
                   placeholder={BULK_HINT.map((l) => (l ? tx(l) : '')).join(NL)}
                   value={bulk}
                   onChange={(e) => setBulk(e.target.value)}
+                  onPaste={(e) => {
+                    const files = [...(e.clipboardData?.files || [])].filter(isMediaFile);
+                    if (!files.length) return;
+                    e.preventDefault();
+                    addBulkFiles(files, true); // colou uma imagem: entra no texto como [nome]
+                  }}
                 />
+                <div className="fc-bulk-files">
+                  <button type="button" className="fcm-tool" onClick={() => bulkFileRef.current?.click()} disabled={bulkBusy}>
+                    📎 {tx('Imagens e áudios')}
+                  </button>
+                  {bulkFiles.map((f) => (
+                    <span key={f.name} className={`fc-bulk-file ${bulkPlan.used.has(f) ? 'used' : ''}`} title={bulkPlan.used.has(f) ? tx('Citado no texto') : tx('Vira uma carta sozinho')}>
+                      {isImageFile(f) ? '🖼' : '🎵'} {f.name}
+                      <button
+                        type="button"
+                        onClick={() => setBulkFiles((prev) => prev.filter((x) => x !== f))}
+                        aria-label={tx('Tirar')}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                  {bulkFiles.length > 1 && (
+                    <button type="button" className="fcm-tool" onClick={() => setBulkFiles([])}>
+                      {tx('Tirar todos')}
+                    </button>
+                  )}
+                  <input
+                    ref={bulkFileRef}
+                    type="file"
+                    accept="image/*,audio/*"
+                    multiple
+                    hidden
+                    onChange={(e) => (addBulkFiles(e.target.files), (e.target.value = ''))}
+                  />
+                </div>
+                <div className="fc-bulk-voice">
+                  <span>🗣 {tx('Pergunta')}</span>
+                  <VoicePicker
+                    voice={bulkVoice.front}
+                    lang={bulkVoice.frontLang}
+                    onChange={({ voice, lang }) => setBulkVoice((v) => ({ ...v, front: voice, frontLang: lang }))}
+                  />
+                  <span>🗣 {tx('Resposta')}</span>
+                  <VoicePicker
+                    voice={bulkVoice.back}
+                    lang={bulkVoice.backLang}
+                    onChange={({ voice, lang }) => setBulkVoice((v) => ({ ...v, back: voice, backLang: lang }))}
+                  />
+                </div>
                 <div className="fc-add-actions">
-                  <small>{tx('{n} carta(s) reconhecida(s)', { n: parseBulk(bulk).length })}</small>
-                  <button
-                    type="button"
-                    className="fc-btn primary small"
-                    disabled={parseBulk(bulk).length === 0}
-                    onClick={() => {
-                      const n = fc.addCards(deck.id, parseBulk(bulk));
-                      click('train');
-                      setBulk('');
-                      setBulkOpen(false);
-                      flash(tx('{n} carta(s) importada(s)', { n }));
-                    }}
-                  >
-                    {tx('Importar')}
+                  <small>
+                    {tx('{n} carta(s) reconhecida(s)', { n: bulkPlan.cards.length })}
+                    {bulkFiles.length > 0 && ` · ${tx('{f} arquivo(s)', { f: bulkFiles.length })}`}
+                  </small>
+                  <button type="button" className="fc-btn primary small" disabled={bulkPlan.cards.length === 0 || bulkBusy} onClick={importBulk}>
+                    {bulkBusy ? tx('Importando…') : tx('Importar')}
                   </button>
                 </div>
               </div>
@@ -1138,6 +1247,9 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
                   ＋ {tx('Criar grupo')}
                 </button>
               </div>
+              {selected.size > 0 && (
+                <SelectionMedia cards={cards.filter((c) => selected.has(c.id))} onUpdate={fc.updateCard} click={click} flash={flash} />
+              )}
             </div>
           )}
 

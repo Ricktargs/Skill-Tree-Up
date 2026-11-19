@@ -278,7 +278,9 @@ export function sanctuaryWorld(layout) {
     return { min: seg[0] + EDGE * 0.45, max: seg[1] - EDGE * 0.45 };
   };
   const main = items.find((i) => i.type === "main") || { x: MAIN_X, size: 1 };
-  const mainBase = top(main.x) - 16;
+  // o pé do tronco entra um pouco na terra: o corte no chão (GroundClip)
+  // esconde o que fica enterrado, e o tronco sempre encosta no terreno
+  const mainBase = top(main.x) + 14;
   const xs = segments.flat();
   return {
     kind,
@@ -477,13 +479,16 @@ function Draggable({ item, world, children, transform, pokeAt }) {
     const toP = (ev) => new DOMPoint(ev.clientX, ev.clientY).matrixTransform(inv);
     const p0 = toP(e);
     const grabX = p0.x - item.x;
+    const h0 = item.h || 0;
     setLive({ selected: item.id });
     const move = (ev) => {
       const p = toP(ev);
       const x = Math.round(clamp(p.x - grabX, -2500, 3800));
       const patch = { x };
       if (item.type === "fireflies") patch.h = Math.round(clamp(world.top(x) - p.y, 20, 420));
-      if (item.type === "bgisland") patch.h = Math.round(clamp(groundY(x) - p.y, 40, 700));
+      // fundo: sobe e desce livre (árvores no chão, no morro ou no céu)
+      if (item.type === "bgisland") patch.h = Math.round(clamp((item.h || 260) + (p0.y - p.y), -400, 1600));
+      if (item.type === "bgtree") patch.h = Math.round(clamp(h0 + (p0.y - p.y), -400, 1600));
       updateItem(item.id, patch, true);
     };
     const up = () => {
@@ -523,13 +528,46 @@ function Draggable({ item, world, children, transform, pokeAt }) {
   );
 }
 
+/** Mostra só o que está acima do chão (o resto fica "enterrado"). */
+let clipSeq = 0;
+function GroundClip({ world, x, half, children }) {
+  const [id] = useState(() => `sanc-ground-clip-${++clipSeq}`);
+  const pts = [];
+  const from = x - half;
+  const to = x + half;
+  for (let px = from; px <= to; px += 12) pts.push(`${Math.round(px)},${(world.top(px) + 1).toFixed(1)}`);
+  pts.push(`${Math.round(to)},${(world.top(to) + 1).toFixed(1)}`, `${Math.round(to)},-8000`, `${Math.round(from)},-8000`);
+  return (
+    <>
+      <defs>
+        <clipPath id={id} clipPathUnits="userSpaceOnUse">
+          <polygon points={pts.join(" ")} />
+        </clipPath>
+      </defs>
+      <g clipPath={`url(#${id})`}>{children}</g>
+    </>
+  );
+}
+
 /** Envolve o desenho da árvore principal: posição, tamanho e arrasto. */
 export function MainTreeWrap({ world, children }) {
   if (!world) return children;
+  const size = world.main.size || 1;
   return (
-    <Draggable item={world.main} world={world} transform={world.mainTransform} pokeAt={{ x: MAIN_X, y: BASE_Y - 250 }}>
+    <GroundClip world={world} x={world.main.x} half={1100 * size}>
+      <Draggable item={world.main} world={world} transform={world.mainTransform} pokeAt={{ x: MAIN_X, y: BASE_Y - 250 }}>
+        {children}
+      </Draggable>
+    </GroundClip>
+  );
+}
+
+/** Raízes da árvore principal: atrás do terreno (só aparece o que sai da terra). */
+export function MainTreeRoots({ world, children }) {
+  return (
+    <g className="sanc-main-roots" transform={world.mainTransform} aria-hidden="true">
       {children}
-    </Draggable>
+    </g>
   );
 }
 
@@ -544,9 +582,11 @@ export const SanctuaryBack = memo(function SanctuaryBack({ world, season }) {
         <Draggable key={it.id} item={it} world={world} pokeAt={it.type === "tree" ? { x: it.x, y: world.top(it.x) - 230 * (it.size || 1) } : null}>
           {it.type === "lake" && <Lake x={it.x} size={it.size || 1} top={world.top} season={season} />}
           {it.type === "tree" && (
-            <g transform={it.flip ? `translate(${2 * it.x} 0) scale(-1 1)` : undefined}>
-              <DecoTree id={it.id} x={it.x} size={it.size || 1} top={world.top} variant={it.seed || 0} />
-            </g>
+            <GroundClip world={world} x={it.x} half={420 * (it.size || 1)}>
+              <g transform={it.flip ? `translate(${2 * it.x} 0) scale(-1 1)` : undefined}>
+                <DecoTree id={it.id} x={it.x} size={it.size || 1} top={world.top} variant={it.seed || 0} noRoots sink />
+              </g>
+            </GroundClip>
           )}
           {it.type === "tent" && <Tent x={it.x} size={it.size || 1} top={world.top} dir={it.flip ? -1 : 1} />}
           {it.type === "fire" && <Fire x={it.x} size={it.size || 1} top={world.top} dir={it.flip ? -1 : 1} />}
@@ -658,12 +698,13 @@ const bezPt = (p, t) => {
     u * u * u * p[0][1] + 3 * u * u * t * p[1][1] + 3 * u * t * t * p[2][1] + t * t * t * p[3][1],
   ];
 };
-const DecoTree = memo(function DecoTree({ id, x, size, top, variant = 0, noRoots = false }) {
+const DecoTree = memo(function DecoTree({ id, x, size, top, variant = 0, noRoots = false, sink = false }) {
   const seed = hashString(id) + variant;
   const t = {
     index: 0,
     x,
-    baseY: top(x) - 14 * size,
+    // "sink": o pé entra na terra (o chão recorta), senão fica apoiado
+    baseY: sink ? top(x) + 12 * size : top(x) - 14 * size,
     scale: size,
     H: 380 * size,
     baseHalf: 24 * size,
@@ -835,9 +876,15 @@ export const SanctuaryBackdrop = memo(function SanctuaryBackdrop({ world, view, 
         const list = bg.filter((i) => (i.layer || 2) === L);
         if (!list.length) return null;
         const k = LAYER_SPEED[L];
-        // anda mais devagar que a cena quando a câmera se move
-        const ox = (-view.x * (1 - k)) / (view.zoom || 1);
-        const oy = (-view.y * (1 - k) * 0.6) / (view.zoom || 1);
+        // Anda mais devagar que a cena quando a câmera se move. A conta usa o
+        // CENTRO da câmera (e não o canto da tela): no zoom o centro quase não
+        // muda, então as camadas do fundo ficam no lugar em vez de "fugir".
+        // (600, 350) = centro da tela; na vista inicial fica tudo igual a antes.
+        const z = view.zoom || 1;
+        const cx = (600 - view.x) / z;
+        const cy = (350 - view.y) / z;
+        const ox = (cx - 600) * (1 - k);
+        const oy = (cy - 350) * (1 - k) * 0.6;
         return (
           <g key={L} transform={`translate(${ox} ${oy})`}>
             <g transform={baseTransform} className={`sanc-world sanc-bg l${L}`}>
@@ -845,7 +892,7 @@ export const SanctuaryBackdrop = memo(function SanctuaryBackdrop({ world, view, 
                 const size = (it.size || 1) * LAYER_SCALE[L];
                 const mirror = it.flip ? `translate(${2 * it.x} 0) scale(-1 1)` : undefined;
                 if (it.type === "bgtree") {
-                  const base = groundY(it.x) + 26 - (L - 1) * 30;
+                  const base = groundY(it.x) + 26 - (L - 1) * 30 - (it.h || 0);
                   return (
                     <Draggable key={it.id} item={it} world={world} pokeAt={{ x: it.x, y: base - 220 * size }}>
                       <g transform={mirror}>

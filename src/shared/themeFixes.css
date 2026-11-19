@@ -1,0 +1,255 @@
+/* =========================================================
+   TEMA EM TUDO + LISTAS SUSPENSAS + NOME DE EMOJIS/CORES
+   ========================================================= */
+
+/* ---------- Janelas que abrem fora da tela principal (emoji, cor,
+   menus) também recebem as cores do tema ---------- */
+html[data-ui-theme='gamificado'] {
+  --theme-accent: var(--g-accent, #38bdf8);
+  --theme-on-accent: var(--g-on-accent, #0b1220);
+  --theme-modal-bg: var(--g-modal, #0f172a);
+  --theme-border: var(--g-border, #334155);
+  --opt-bg: var(--g-modal, #0f172a);
+  --opt-fg: #e2e8f0;
+}
+html[data-ui-theme='nanquim'] {
+  --theme-accent: var(--nq-accent);
+  --theme-on-accent: var(--nq-paper);
+  --theme-modal-bg: var(--nq-paper);
+  --theme-border: var(--nq-line-strong);
+  --opt-bg: var(--nq-paper);
+  --opt-fg: var(--nq-ink);
+}
+
+/* ---------- Nanquim Clássico: a tinta (botões, títulos, links) segue o
+   tema de cores nos 3 modos — antes Neurônios e Santuário ficavam azuis ---------- */
+html[data-ui-theme='nanquim'][data-nq-follow='true'] {
+  --nq-accent: color-mix(in srgb, var(--theme-accent-src, #2e6f8e) 70%, var(--nq-ink)) !important;
+  --nq-title: color-mix(in srgb, var(--theme-accent-src, #2e6f8e) 62%, var(--nq-ink)) !important;
+  /* botões principais e folhagem (Árvore/Neurônios) */
+  --nq-foliage: color-mix(in srgb, var(--theme-accent-src, #2e6f8e) 58%, #0e1218) !important;
+  --nq-foliage-2: color-mix(in srgb, var(--theme-accent-src, #2e6f8e) 68%, #0e1218) !important;
+  --nq-foliage-active: color-mix(in srgb, var(--theme-accent-src, #2e6f8e) 82%, var(--nq-ink)) !important;
+  --nq-foliage-edge: color-mix(in srgb, var(--theme-accent-src, #2e6f8e) 25%, #05070c) !important;
+}
+html[data-ui-theme='nanquim'][data-nq-follow='true'] .mode-switcher .mode-btn.active {
+  background: var(--nq-accent) !important;
+  color: var(--nq-paper) !important;
+}
+
+/* ---------- Gameficado: troca de modo e botões principais na cor do tema ---------- */
+html[data-ui-theme='gamificado'] .mode-switcher .mode-btn.active {
+  background: var(--g-accent) !important;
+  color: var(--g-on-accent, #0b1220) !important;
+}
+
+/* ---------- Listas suspensas (<select>): opções legíveis e na cor do tema.
+   Antes herdavam o fundo transparente/colorido do botão e ficavam
+   rosadas com o texto apagado ---------- */
+html select option,
+html select optgroup {
+  background-color: var(--opt-bg, #0f172a) !important;
+  color: var(--opt-fg, #e2e8f0) !important;
+}
+html select option:checked {
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 30%, var(--opt-bg, #0f172a)) !important;
+  color: var(--opt-fg, #e2e8f0) !important;
+}
+html select option:disabled {
+  color: color-mix(in srgb, var(--opt-fg, #e2e8f0) 45%, var(--opt-bg, #0f172a)) !important;
+}
+html select {
+  accent-color: var(--theme-accent, #38bdf8);
+}
+html[data-ui-theme='gamificado'] select,
+html[data-ui-theme='nanquim'][data-ui-dark='true'] select {
+  color-scheme: dark;
+}
+html[data-ui-theme='nanquim'][data-ui-dark='false'] select {
+  color-scheme: light;
+}
+
+/* caixas de marcar, rádios e barras deslizantes também na cor do tema */
+html input[type='checkbox'],
+html input[type='radio'],
+html input[type='range'],
+html progress {
+  accent-color: var(--theme-accent, #38bdf8);
+}
+
+/* ---------- Seletor de emoji do avatar (biblioteca) ---------- */
+html .EmojiPickerReact {
+  --epr-highlight-color: var(--theme-accent, #38bdf8);
+  --epr-hover-bg-color: color-mix(in srgb, var(--theme-accent, #38bdf8) 22%, transparent);
+  --epr-focus-bg-color: color-mix(in srgb, var(--theme-accent, #38bdf8) 30%, transparent);
+  --epr-search-input-bg-color-active: var(--theme-modal-bg, #0f172a);
+  --epr-search-border-color: var(--theme-accent, #38bdf8);
+  --epr-category-icon-active-color: var(--theme-accent, #38bdf8);
+  --epr-skin-tone-outer-border-color: var(--theme-accent, #38bdf8);
+}
+
+/* ---------- Balãozinho com o nome do emoji / cor ---------- */
+.orbe-hint {
+  position: fixed;
+  z-index: 2147483000;
+  left: 0;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(260px, 80vw);
+  padding: 5px 10px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--theme-accent, #38bdf8) 55%, transparent);
+  background: var(--theme-modal-bg, #0f172a);
+  color: var(--opt-fg, #e2e8f0);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  font: 600 0.78rem/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -100%) scale(0.92);
+  transform-origin: 50% 100%;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.orbe-hint.below {
+  transform: translate(-50%, 0) scale(0.92);
+  transform-origin: 50% 0;
+}
+.orbe-hint.on {
+  opacity: 1;
+  transform: translate(-50%, -100%) scale(1);
+}
+.orbe-hint.below.on {
+  transform: translate(-50%, 0) scale(1);
+}
+.orbe-hint b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.orbe-hint small {
+  opacity: 0.6;
+  font-weight: 500;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.7rem;
+}
+.orbe-hint i {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+}
+.orbe-hint-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+/* clicou: dá um pulinho e fica com a borda na cor do tema */
+.orbe-hint.clicked {
+  border-color: var(--theme-accent, #38bdf8);
+}
+.orbe-hint.pop {
+  animation: orbe-hint-pop 0.32s ease;
+}
+.orbe-hint.below.pop {
+  animation-name: orbe-hint-pop-below;
+}
+@keyframes orbe-hint-pop {
+  0% { transform: translate(-50%, -80%) scale(0.85); }
+  60% { transform: translate(-50%, -112%) scale(1.04); }
+  100% { transform: translate(-50%, -100%) scale(1); }
+}
+@keyframes orbe-hint-pop-below {
+  0% { transform: translate(-50%, -20%) scale(0.85); }
+  60% { transform: translate(-50%, 12%) scale(1.04); }
+  100% { transform: translate(-50%, 0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .orbe-hint,
+  .orbe-hint.pop {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* ---------- Botões redondos/quadrados do topo: fundo na cor do tema ---------- */
+html #root .app-screen .top-icon-button,
+html #root .app-screen.shell-only .top-icon-button {
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 24%, var(--theme-modal-bg, #0f172a)) !important;
+  border-color: color-mix(in srgb, var(--theme-accent, #38bdf8) 60%, transparent) !important;
+}
+html #root .app-screen .top-icon-button:hover,
+html #root .app-screen .top-icon-button.is-on {
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 40%, var(--theme-modal-bg, #0f172a)) !important;
+  border-color: var(--theme-accent, #38bdf8) !important;
+}
+
+/* ---------- Canto inferior esquerdo: 📋 Tarefas em cima do ✒️ Editor de
+   notas e 🎴 Flashcards à direita dele (em qualquer modo) ---------- */
+.notes-dock {
+  position: fixed;
+  left: calc(20px + env(safe-area-inset-left, 0px));
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  z-index: 8100;
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-areas:
+    'tasks .'
+    'notes flash';
+  gap: 0.6rem;
+  align-items: end;
+  pointer-events: none;
+}
+.notes-dock > * {
+  pointer-events: auto;
+}
+html .notes-dock .top-icon-button.notes-fab {
+  position: relative !important;
+  left: auto !important;
+  bottom: auto !important;
+  grid-area: notes;
+}
+.notes-dock .dock-tasks { grid-area: tasks; }
+.notes-dock .dock-flash { grid-area: flash; }
+/* o dock fica no <body>: recebe aqui a cor do tema como os outros botões */
+html .notes-dock .top-icon-button {
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 24%, var(--theme-modal-bg, #0f172a)) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent, #38bdf8) 60%, transparent) !important;
+  color: var(--opt-fg, #e2e8f0) !important;
+}
+html .notes-dock .top-icon-button:hover,
+html .notes-dock .top-icon-button.is-on {
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 40%, var(--theme-modal-bg, #0f172a)) !important;
+  border-color: var(--theme-accent, #38bdf8) !important;
+}
+
+/* ⚙️ com 🎨 embaixo */
+.top-nav-buttons { align-items: flex-start; }
+.top-nav-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* celular e tablet: dock acima da troca de modos e some com janela aberta */
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  html .notes-dock {
+    left: calc(12px + env(safe-area-inset-left, 0px));
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    gap: 0.45rem;
+  }
+  html .notes-dock .top-icon-button {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  /* controle do Santuário acima do dock */
+  html .sanc-pad { bottom: calc(172px + env(safe-area-inset-bottom, 0px)) !important; }
+}
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape), (min-width: 761px) and (max-width: 1100px) and (min-height: 521px), (pointer: coarse) and (min-width: 761px) and (max-width: 1400px) and (min-height: 521px) {
+  body:has(.modal-backdrop) .notes-dock,
+  body:has(.ui-dialog-backdrop) .notes-dock,
+  body:has(.np-panel) .notes-dock { display: none !important; }
+}
+/* painel de notas aberto: só o ✒️ fica (para fechar), sem cobrir o painel */
+body:has(.np-panel) .notes-dock .dock-tasks,
+body:has(.np-panel) .notes-dock .dock-flash { display: none !important; }

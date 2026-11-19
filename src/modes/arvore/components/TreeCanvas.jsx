@@ -12,7 +12,7 @@ import { TreeDefs, Ground, ForestRoots, ForestTrunks } from "./TreeArt";
 import { refuseExtraTrees, useGrowthPermissions } from "../lib/growthPermissions";
 import TouchPad from "./TouchPad.jsx";
 import { IS_TOUCH } from "../../../shared/touch.js";
-import { BranchHandles, BranchLanterns, BranchTools, MainTreeWrap, SanctuaryBack, SanctuaryBackdrop, selectBranch, SanctuaryFront, SanctuaryHero, SanctuaryPanel, WorldGround, sanctuaryWorld, seasonOf, shownLayout, useSanctuary } from "./Sanctuary.jsx";
+import { BranchHandles, BranchLanterns, BranchTools, MainTreeRoots, MainTreeWrap, SanctuaryBack, SanctuaryBackdrop, selectBranch, SanctuaryFront, SanctuaryHero, SanctuaryPanel, WorldGround, sanctuaryWorld, seasonOf, shownLayout, useSanctuary } from "./Sanctuary.jsx";
 
 const HOLD_MS = 1500;
 const DRAG_THRESHOLD = 6;
@@ -488,10 +488,16 @@ const TreeScene = memo(function TreeScene({
 
   return (
     <>
+      {/* Santuário: as raízes ficam atrás do terreno */}
+      {sanctuary && (
+        <MainTreeRoots world={world}>
+          <ForestRoots trees={trees} />
+        </MainTreeRoots>
+      )}
       {sanctuary ? <WorldGround world={world} /> : <Ground />}
       {sanctuary && <SanctuaryBack world={world} season={season} />}
       <MainTreeWrap world={sanctuary ? world : null}>
-      <ForestRoots trees={trees} />
+      {!sanctuary && <ForestRoots trees={trees} />}
 
       {placed.links.map((link) => {
         const stroke =
