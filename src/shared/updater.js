@@ -26,7 +26,7 @@ export const DOWNLOADS = {
   // iPhone: a Apple só deixa instalar fora da App Store pela Tela de Início (Safari)
   iphone: { label: 'iPhone', icon: '📱', file: 'Tela de Início (Safari)', url: null }
 };
-export const SITE_URL = 'https://skillorbg.vercel.app';
+export const SITE_URL = 'https://orbeskill.vercel.app';
 const UA = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
 const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (/macintosh/i.test(UA) && typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1);
 // Aberto pelo ícone da Tela de Início do iPhone

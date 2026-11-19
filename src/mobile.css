@@ -9,7 +9,7 @@
 /* ---------------------------------------------------------
    EDITAR HABILIDADE — tela cheia, cabeçalho e rodapé fixos
    --------------------------------------------------------- */
-@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape), (min-width: 761px) and (max-width: 1100px) and (min-height: 521px), (pointer: coarse) and (min-width: 761px) and (max-width: 1400px) and (min-height: 521px) {
   html .modal-backdrop:has(> .full-screen-edit) {
     padding: 0 !important;
     align-items: stretch !important;
@@ -213,7 +213,7 @@
 }
 
 /* Nada passa da largura da tela (sem arrastar para o lado) */
-@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape), (min-width: 761px) and (max-width: 1100px) and (min-height: 521px), (pointer: coarse) and (min-width: 761px) and (max-width: 1400px) and (min-height: 521px) {
   html .modal-window.full-screen-edit { overflow-x: hidden !important; }
   html .modal-window.full-screen-edit *,
   html .modal-window.full-screen-edit *::before,
@@ -334,7 +334,7 @@
 }
 
 /* ✒️ (editor de notas) não fica por cima das janelas no celular */
-@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape), (min-width: 761px) and (max-width: 1100px) and (min-height: 521px), (pointer: coarse) and (min-width: 761px) and (max-width: 1400px) and (min-height: 521px) {
   body:has(.modal-backdrop) .notes-fab,
   body:has(.ui-dialog-backdrop) .notes-fab { display: none !important; }
 }
@@ -509,4 +509,57 @@ html.is-touch .tree-page .sanc-panel-body {
   html .top-left-nav-buttons,
   html .top-left-nav-buttons > div,
   html .top-nav-buttons { gap: 3px !important; }
+}
+
+/* =========================================================
+   TABLET (retrato e paisagem) — Editar Habilidade grande e compacta
+   Janela quase do tamanho da tela, com borda; cabeçalho e rodapé fixos.
+   ========================================================= */
+@media (min-width: 761px) and (max-width: 1100px) and (min-height: 521px), (pointer: coarse) and (min-width: 761px) and (max-width: 1400px) and (min-height: 521px) {
+  html .modal-backdrop:has(> .full-screen-edit) { background: rgba(2, 6, 23, 0.55) !important; }
+  html .modal-window.full-screen-edit {
+    inset: max(14px, env(safe-area-inset-top, 0px)) 14px 14px 14px !important;
+    width: auto !important;
+    height: auto !important;
+    border-radius: 18px !important;
+    border: 1px solid var(--theme-border, #334155) !important;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45) !important;
+  }
+  html .full-screen-edit > .modal-header-row { padding: 12px 16px 12px 22px !important; border-radius: 18px 18px 0 0; }
+  html .full-screen-edit > .modal-header-row h2 { font-size: 19px !important; }
+  html .full-screen-edit .header-action-row-right .cancel-button { padding: 8px 12px !important; font-size: 13px !important; }
+  html .full-screen-edit .header-action-row-right .delete-btn { font-size: 13px !important; }
+  html .full-screen-edit > .horizontal-info-bar {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+    margin: 16px 18px !important;
+    padding: 16px !important;
+  }
+  html .full-screen-edit > .horizontal-info-bar > :nth-child(1),
+  html .full-screen-edit > .horizontal-info-bar > :nth-child(4) { grid-column: span 2 !important; }
+  html .full-screen-edit .horizontal-info-bar input,
+  html .full-screen-edit .horizontal-info-bar select { height: 44px !important; min-height: 44px !important; }
+  html .full-screen-edit .horizontal-info-bar .color-dot,
+  html .full-screen-edit .horizontal-info-bar .add-custom-color-dot-btn { width: 34px !important; height: 34px !important; }
+  html .full-screen-edit > .objectives-section-wrapper { margin: 0 18px !important; }
+  html .full-screen-edit .horizontal-levels-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important; gap: 14px !important; }
+  html .full-screen-edit .level-card-item { padding: 14px !important; }
+  html .full-screen-edit .level-card-item textarea { min-height: 84px !important; }
+  html .full-screen-edit > .modal-actions-bar { padding: 12px 18px !important; border-radius: 0 0 18px 18px; justify-content: flex-end !important; }
+  html .full-screen-edit > .modal-actions-bar button { flex: 0 1 220px !important; height: 48px !important; min-height: 48px !important; font-size: 15px !important; }
+}
+/* Tablet em pé, mais estreito (iPad mini / 768px): 2 colunas de dados */
+@media (min-width: 761px) and (max-width: 860px) and (orientation: portrait) {
+  html .full-screen-edit > .horizontal-info-bar { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  html .full-screen-edit > .horizontal-info-bar > :nth-child(1),
+  html .full-screen-edit > .horizontal-info-bar > :nth-child(4) { grid-column: 1 / -1 !important; }
+  html .full-screen-edit > .horizontal-info-bar > :nth-child(2),
+  html .full-screen-edit > .horizontal-info-bar > :nth-child(3),
+  html .full-screen-edit > .horizontal-info-bar > :nth-child(5),
+  html .full-screen-edit > .horizontal-info-bar > :nth-child(6) { grid-column: span 1 !important; }
+}
+
+/* Celular: Editar Habilidade em tela cheia sem cantos (vence a regra do Nanquim) */
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  html #root .modal-window.full-screen-edit { border-radius: 0 !important; border: none !important; }
 }

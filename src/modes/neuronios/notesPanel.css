@@ -342,7 +342,7 @@
    Paisagem: lista estreita + nota lado a lado
    ========================================================= */
 .np-back { display: none; }
-@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape), (min-width: 761px) and (max-width: 1100px) and (min-height: 521px), (pointer: coarse) and (min-width: 761px) and (max-width: 1400px) and (min-height: 521px) {
   .np-panel {
     left: 0 !important;
     right: 0 !important;
@@ -433,7 +433,29 @@
 }
 
 /* ✒️ e a troca de modos não ficam por cima do editor aberto */
-@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape), (min-width: 761px) and (max-width: 1100px) and (min-height: 521px), (pointer: coarse) and (min-width: 761px) and (max-width: 1400px) and (min-height: 521px) {
   body:has(.np-panel) .notes-fab,
   body:has(.np-panel) .mode-switcher { display: none !important; }
+}
+
+/* =========================================================
+   TABLET (retrato e paisagem) — editor de notas grande
+   Tela cheia: lista à esquerda e a nota ao lado, com espaço para escrever.
+   ========================================================= */
+@media (min-width: 761px) and (max-width: 1100px) and (min-height: 521px), (pointer: coarse) and (min-width: 761px) and (max-width: 1400px) and (min-height: 521px) {
+  .np-body { flex-direction: row !important; }
+  .np-side {
+    width: clamp(240px, 30vw, 300px) !important;
+    max-height: none !important;
+    border-right: 1px solid var(--line) !important;
+    border-bottom: none !important;
+    padding: 12px 10px !important;
+  }
+  .np-head { padding: 10px 16px !important; }
+  .np-head h2 { font-size: 20px !important; }
+  .np-editor > .nr-editor { padding: 12px 22px !important; }
+  .np-neuron-bar { padding: 8px 22px !important; }
+  .np-note-folder { padding: 8px 22px 0 !important; }
+  .np-back { display: none !important; }
+  .np-row { min-height: 40px; }
 }

@@ -12,7 +12,7 @@ const detect = () => {
   const cap = window.Capacitor;
   if (cap && cap.isNativePlatform && cap.isNativePlatform()) return true; // app Android
   const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-  const small = Math.min(window.screen.width, window.screen.height) <= 820;
+  const small = Math.min(window.screen.width, window.screen.height) <= 1100; // celulares e tablets
   return Boolean(coarse && small && navigator.maxTouchPoints > 0);
 };
 
