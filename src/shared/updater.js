@@ -88,12 +88,22 @@ export const hasUpdate = (s = state) => s.status === 'available' || s.status ===
 
 const selfUpdating = PLATFORM === 'windows' && desktop && desktop.installUpdate;
 
-async function checkGithub() {
+const ALL_RELEASES = `https://github.com/${REPO}/releases`;
+async function latestRelease() {
   const r = await fetch(RELEASE_API, { cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } });
   if (!r.ok) throw new Error(`GitHub ${r.status}`);
-  const rel = await r.json();
+  return r.json();
+}
+const hasAsset = (rel, file) => Array.isArray(rel && rel.assets) && rel.assets.some((a) => a.name === file);
+
+async function checkGithub() {
+  const rel = await latestRelease();
   const latest = String(rel.tag_name || '').replace(/^v/i, '');
-  return newer(latest, APP_VERSION) ? latest : null;
+  if (!newer(latest, APP_VERSION)) return null;
+  // versão nova sem o arquivo deste sistema (ex.: o GitHub ficou sem Mac): ainda não avisa
+  const d = DOWNLOADS[PLATFORM];
+  if (d && d.url && !hasAsset(rel, d.file)) return null;
+  return latest;
 }
 
 async function checkWeb() {
@@ -141,6 +151,7 @@ export function installUpdate() {
   }
   const d = DOWNLOADS[PLATFORM];
   if (!d) return openLink(RELEASES_PAGE);
+  if (PLATFORM === 'mac') return downloadFor('mac');
   if (PLATFORM === 'android') {
     // abre no navegador do celular, que baixa o APK novo e oferece instalar por cima
     window.location.href = d.url;
@@ -179,7 +190,18 @@ export async function showIphoneHelp() {
 export function downloadFor(id) {
   if (id === 'iphone') return showIphoneHelp();
   const d = DOWNLOADS[id];
-  return d && d.url ? openDownload(d.url) : openDownload(RELEASES_PAGE);
+  if (!d || !d.url) return openDownload(RELEASES_PAGE);
+  if (id !== 'mac') return openDownload(d.url);
+  // Mac: se a versão mais nova saiu sem o .dmg, abre a lista de versões
+  // (onde fica o .dmg anterior) em vez de um link quebrado.
+  const pre = PLATFORM === 'web' ? window.open('about:blank', '_blank') : null; // abre já no clique (bloqueador de pop-up)
+  const go = (url) => {
+    if (pre && !pre.closed) pre.location.href = url;
+    else openDownload(url);
+  };
+  return latestRelease()
+    .then((rel) => go(hasAsset(rel, d.file) ? d.url : ALL_RELEASES))
+    .catch(() => go(d.url));
 }
 
 // Abre um link de download (no Android o navegador do celular cuida do arquivo)

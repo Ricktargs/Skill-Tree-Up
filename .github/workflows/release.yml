@@ -46,6 +46,33 @@ jobs:
 
   mac:
     runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Versão da tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+      - run: npx vite build
+      - run: npx electron-builder --mac dmg --universal --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac
+          path: release/ORBE-G-Mac.dmg
+
+  # Segunda chance: às vezes o GitHub fica sem máquina Mac (Apple Silicon) livre.
+  # Aí tenta numa máquina Mac Intel (o .dmg é o mesmo, serve para os dois).
+  mac-retry:
+    needs: mac
+    if: always() && needs.mac.result != 'success'
+    runs-on: macos-15-intel
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -106,10 +133,13 @@ jobs:
           name: android
           path: ORBE-G-Android.apk
 
+  # Publica quando Windows e Android ficaram prontos — com o Mac se alguma
+  # das duas tentativas deu certo (sem ele, o programa manda o Mac para a
+  # página de versões, onde fica o .dmg anterior).
   publicar:
-    needs: [windows, mac, android]
+    needs: [windows, mac, mac-retry, android]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: always() && startsWith(github.ref, 'refs/tags/v') && needs.windows.result == 'success' && needs.android.result == 'success'
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -122,6 +152,6 @@ jobs:
           body: |
             **Baixar:**
             - 🪟 Windows: `ORBE-G-Instalador.exe`
-            - 🍎 Mac: `ORBE-G-Mac.dmg` (na primeira vez: botão direito no app → Abrir)
+            - 🍎 Mac: `ORBE-G-Mac.dmg` (na primeira vez: botão direito no app → Abrir) — se não estiver aqui, pegue na versão anterior
             - 🤖 Android: `ORBE-G-Android.apk` (permita "instalar apps desconhecidos")
           files: arquivos/*
