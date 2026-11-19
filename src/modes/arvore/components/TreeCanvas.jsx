@@ -10,6 +10,8 @@ import { sfx } from "../lib/sound";
 import { canopyCircles } from "../lib/canopy";
 import { TreeDefs, Ground, ForestRoots, ForestTrunks } from "./TreeArt";
 import { refuseExtraTrees, useGrowthPermissions } from "../lib/growthPermissions";
+import TouchPad from "./TouchPad.jsx";
+import { IS_TOUCH } from "../../../shared/touch.js";
 import { BranchHandles, BranchLanterns, BranchTools, MainTreeWrap, SanctuaryBack, SanctuaryBackdrop, selectBranch, SanctuaryFront, SanctuaryHero, SanctuaryPanel, WorldGround, sanctuaryWorld, seasonOf, shownLayout, useSanctuary } from "./Sanctuary.jsx";
 
 const HOLD_MS = 1500;
@@ -329,6 +331,8 @@ export default function TreeCanvas({ activeIds, onNodeClick, onOpenBranch }) {
   return (
     <div
       ref={workspaceRef}
+      data-pinch-zoom="0.0005"
+      data-pinch-cap="120"
       className={`workspace ${panning ? "dragging" : ""} ${swapSourceId ? "swap-mode" : ""} ${sanctuary ? `is-sanctuary season-${season}` : ""} ${sanctuary && sanc.editing ? "is-editing" : ""}`}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -382,6 +386,7 @@ export default function TreeCanvas({ activeIds, onNodeClick, onOpenBranch }) {
       )}
       <SanctuaryPanel prefs={sanc} />
       {sanctuary && <BranchTools />}
+      {sanctuary && IS_TOUCH && !sanc.editing && <TouchPad />}
 
       <div className={`zoom-badge ${badgeVisible ? "visible" : ""}`}>{Math.round(view.zoom * 100)}%</div>
     </div>

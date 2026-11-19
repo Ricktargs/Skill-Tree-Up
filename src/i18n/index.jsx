@@ -17,7 +17,7 @@ import ja from './ja.js';
 
 export const LANGUAGES = [
   { code: 'pt', flag: '🇧🇷', native: 'Português' },
-  { code: 'en', flag: '🇺🇸', native: 'English' },
+  { code: 'en', flag: '🇬🇧', native: 'English' },
   { code: 'es', flag: '🇪🇸', native: 'Español' },
   { code: 'it', flag: '🇮🇹', native: 'Italiano' },
   { code: 'zh-CN', flag: '🇨🇳', native: '中文 (简体)' },

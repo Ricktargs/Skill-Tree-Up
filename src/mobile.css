@@ -1,0 +1,432 @@
+/* =========================================================
+   CELULAR — REPAGINAÇÃO (carregado por último)
+   Retrato: até 760px de largura.
+   Paisagem: até 520px de altura.
+   Regra geral: cada janela rola UMA vez só (nada de rolagem dentro
+   de rolagem) e os botões principais ficam sempre à mão.
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   EDITAR HABILIDADE — tela cheia, cabeçalho e rodapé fixos
+   --------------------------------------------------------- */
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  html .modal-backdrop:has(> .full-screen-edit) {
+    padding: 0 !important;
+    align-items: stretch !important;
+    overflow: hidden !important;
+  }
+  html .modal-window.full-screen-edit {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 100% !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    display: block !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Cabeçalho fixo: título numa linha + ações pequenas */
+  html .full-screen-edit > .modal-header-row {
+    position: sticky !important;
+    top: 0;
+    z-index: 5;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px 10px 8px 14px !important;
+    margin: 0 !important;
+    background: var(--theme-modal-bg, #121927) !important;
+    border-bottom: 1px solid var(--theme-border, #334155) !important;
+  }
+  html .full-screen-edit > .modal-header-row h2 {
+    flex: 1;
+    min-width: 0;
+    margin: 0 !important;
+    font-size: 15px !important;
+    line-height: 1.25 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  html .full-screen-edit .header-action-row-right {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: auto !important;
+    flex-shrink: 0;
+  }
+  html .full-screen-edit .header-action-row-right .cancel-button {
+    padding: 6px 9px !important;
+    font-size: 12px !important;
+    min-height: 32px !important;
+    width: auto !important;
+  }
+  html .full-screen-edit .header-action-row-right .delete-btn {
+    font-size: 12px !important;
+    padding: 6px 4px !important;
+    white-space: nowrap;
+  }
+  html .full-screen-edit .close-modal-x-btn {
+    width: 34px !important;
+    height: 34px !important;
+    flex-shrink: 0;
+  }
+
+  /* Dados da habilidade em grade compacta */
+  html .full-screen-edit > .horizontal-info-bar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    align-items: start !important;
+    gap: 10px !important;
+    margin: 12px !important;
+    padding: 12px !important;
+    width: auto !important;
+    height: auto !important;
+    box-sizing: border-box !important;
+  }
+  html .full-screen-edit > .horizontal-info-bar > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+  html .full-screen-edit > .horizontal-info-bar > :nth-child(1),
+  html .full-screen-edit > .horizontal-info-bar > :nth-child(4) {
+    grid-column: 1 / -1 !important;
+  }
+  html .full-screen-edit > .horizontal-info-bar > :nth-child(2),
+  html .full-screen-edit > .horizontal-info-bar > :nth-child(3),
+  html .full-screen-edit > .horizontal-info-bar > :nth-child(5),
+  html .full-screen-edit > .horizontal-info-bar > :nth-child(6) {
+    grid-column: span 1 !important;
+  }
+  /* Nome: campo e envelope (mini missões) na mesma linha */
+  html .full-screen-edit .horizontal-info-bar > :nth-child(1) {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    align-items: center !important;
+    align-content: start !important;
+    column-gap: 8px !important;
+    row-gap: 4px !important;
+  }
+  html .full-screen-edit .horizontal-info-bar > :nth-child(1) > label { grid-column: 1 / -1; }
+  html .full-screen-edit .horizontal-info-bar .mini-missions-envelope-btn { margin: 0 !important; height: 40px !important; }
+  html .full-screen-edit .horizontal-info-bar .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px !important;
+  }
+  html .full-screen-edit .horizontal-info-bar > :nth-child(1) { display: grid !important; }
+  html .full-screen-edit .horizontal-info-bar label { font-size: 11.5px !important; margin: 0 !important; }
+  html .full-screen-edit .horizontal-info-bar input,
+  html .full-screen-edit .horizontal-info-bar select {
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 10px !important;
+    font-size: 15px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  html .full-screen-edit .link-new-skill-btn {
+    margin: 2px 0 0 !important;
+    padding: 4px 6px !important;
+    font-size: 11px !important;
+    min-height: 0 !important;
+    width: 100% !important;
+  }
+  html .full-screen-edit .horizontal-info-bar .color-selector {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  html .full-screen-edit .horizontal-info-bar .color-dot,
+  html .full-screen-edit .horizontal-info-bar .add-custom-color-dot-btn {
+    width: 30px !important;
+    height: 30px !important;
+  }
+  /* Concluídos e Nível máximo lado a lado, compactos */
+  html .full-screen-edit .horizontal-info-bar .control-box {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+    padding: 8px !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+  html .full-screen-edit .control-box .box-title-stacked { display: flex !important; flex-direction: row !important; gap: 6px; justify-content: center; font-size: 13px; }
+  html .full-screen-edit .control-box .max-lvl-header-row { width: 100% !important; gap: 4px !important; padding: 0 !important; }
+  html .full-screen-edit .control-box .title-with-custom-btn { display: flex !important; flex-wrap: wrap; justify-content: space-between; gap: 4px; font-size: 12px; }
+  html .full-screen-edit .control-box .preset-level-dropdown,
+  html .full-screen-edit .control-box .custom-max-lvl-input { height: 34px !important; min-height: 34px !important; font-size: 13px !important; width: 100% !important; }
+  html .full-screen-edit .control-box .btn-group { display: flex !important; justify-content: center !important; gap: 10px !important; }
+  html .full-screen-edit .control-box .icon-button { width: 42px !important; height: 38px !important; font-size: 20px !important; }
+
+  /* Metas e níveis: lista normal (rola junto com a janela) */
+  html .full-screen-edit > .objectives-section-wrapper {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 12px !important;
+    padding: 0 !important;
+  }
+  html .full-screen-edit .modules-header-bar { margin-bottom: 10px !important; padding: 10px !important; }
+  html .full-screen-edit .module-selector-group { flex-wrap: wrap !important; }
+  html .full-screen-edit .module-selector-group select { min-height: 36px; max-width: 100%; }
+  html .full-screen-edit .horizontal-levels-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 0 12px !important;
+  }
+  html .full-screen-edit .level-card-item { padding: 10px !important; gap: 8px !important; width: auto !important; }
+  html .full-screen-edit .level-card-item textarea { min-height: 64px !important; font-size: 14px !important; }
+
+  /* Rodapé fixo: Cancelar / Salvar sempre à mão */
+  html .full-screen-edit > .modal-actions-bar {
+    position: sticky !important;
+    bottom: 0;
+    z-index: 5;
+    display: flex !important;
+    gap: 10px !important;
+    margin: 0 !important;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    background: var(--theme-modal-bg, #121927) !important;
+    border-top: 1px solid var(--theme-border, #334155) !important;
+  }
+  html .full-screen-edit > .modal-actions-bar button { flex: 1 !important; min-height: 44px !important; height: 44px !important; padding: 0 10px !important; font-size: 14px !important; }
+}
+
+/* Paisagem: dados em 4 colunas e níveis lado a lado */
+@media (max-height: 520px) and (orientation: landscape) {
+  html .full-screen-edit > .horizontal-info-bar { grid-template-columns: repeat(4, 1fr) !important; }
+  html .full-screen-edit > .horizontal-info-bar > :nth-child(1),
+  html .full-screen-edit > .horizontal-info-bar > :nth-child(4) { grid-column: span 2 !important; }
+  html .full-screen-edit .horizontal-levels-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)) !important; }
+  html .full-screen-edit > .modal-header-row { padding-top: 6px !important; padding-bottom: 6px !important; }
+  html .full-screen-edit > .modal-actions-bar { padding-top: 6px !important; padding-bottom: 6px !important; }
+  html .full-screen-edit > .modal-actions-bar button { min-height: 38px !important; height: 38px !important; }
+}
+
+/* Telas bem estreitas: cabeçalho quebra em duas linhas */
+@media (max-width: 400px) {
+  html .full-screen-edit > .modal-header-row { flex-wrap: wrap !important; }
+  html .full-screen-edit > .modal-header-row h2 { flex-basis: calc(100% - 44px); }
+  html .full-screen-edit .header-action-row-right { order: 3; width: 100% !important; justify-content: flex-start !important; }
+  html .full-screen-edit .header-action-row-right .close-modal-x-btn { position: absolute; top: 8px; right: 10px; }
+}
+
+/* ---------------------------------------------------------
+   PAISAGEM — as janelas rolam por inteiro (sem áreas espremidas)
+   --------------------------------------------------------- */
+@media (max-height: 520px) and (orientation: landscape) {
+  html .modal-backdrop { padding: 6px !important; }
+  html .modal-backdrop > .modal-window:not(.full-screen-edit) {
+    max-height: calc(100dvh - 12px) !important;
+    margin-top: auto !important;
+    margin-bottom: auto !important;
+  }
+
+  /* Tarefas */
+  html .ck-window { height: auto !important; min-height: 0 !important; max-height: calc(100dvh - 12px) !important; overflow-y: auto !important; display: block !important; padding: 0.7rem 0.9rem !important; }
+  html .ck-window .ck-header { margin-bottom: 8px; }
+  html .ck-window .ck-body { height: auto !important; min-height: 0 !important; overflow: visible !important; }
+  html .ck-window .ck-sidebar,
+  html .ck-window .ck-main,
+  html .ck-window .ck-tasks,
+  html .ck-window .ck-lists { height: auto !important; max-height: none !important; overflow: visible !important; }
+
+  /* Tema */
+  html .th-window { min-height: 0 !important; overflow-y: auto !important; display: block !important; padding: 0.8rem 1rem !important; }
+  html .th-window > * + * { margin-top: 10px; }
+  html .th-window .th-grid { max-height: none !important; overflow: visible !important; height: auto !important; }
+  html .th-window .th-family-btn { padding-top: 6px !important; padding-bottom: 6px !important; }
+
+  /* Editor de layout das habilidades */
+  html .layout-editor-modal-large { overflow-y: auto !important; display: block !important; max-height: calc(100dvh - 12px) !important; padding: 0.8rem 1rem !important; }
+  html .layout-editor-modal-large > * + * { margin-top: 10px; }
+  html .layout-editor-modal-large .editor-skills-scroll-container { max-height: none !important; height: auto !important; overflow: visible !important; }
+  html .layout-editor-modal-large .modal-actions-bar { position: sticky; bottom: -0.8rem; background: var(--theme-modal-bg, #121927); padding: 8px 0 !important; }
+
+  /* Missões */
+  html .missions-modal-large { overflow-y: auto !important; max-height: calc(100dvh - 12px) !important; }
+
+  /* Pomodoro: relógio ao lado dos controles */
+  html .pomodoro-modal-window {
+    width: min(640px, calc(100vw - 16px)) !important;
+    max-height: calc(100dvh - 12px) !important;
+    overflow-y: auto !important;
+    display: grid !important;
+    grid-template-columns: 170px 1fr;
+    grid-template-areas:
+      'head head'
+      'dial tabs'
+      'dial modes'
+      'dial ctrl'
+      'dial foot';
+    column-gap: 16px !important;
+    row-gap: 8px !important;
+    align-items: center;
+    padding: 0.7rem 1rem !important;
+  }
+  html .pomodoro-modal-window > .pomo-header { grid-area: head; }
+  html .pomodoro-modal-window > .pomo-tabs { grid-area: tabs; }
+  html .pomodoro-modal-window > .pomo-modes { grid-area: modes; }
+  html .pomodoro-modal-window > .pomo-dial { grid-area: dial; justify-self: center; }
+  html .pomodoro-modal-window > .pomodoro-controls-row { grid-area: ctrl; }
+  html .pomodoro-modal-window > .pomo-footer { grid-area: foot; }
+  html .pomodoro-modal-window > * { margin: 0 !important; }
+
+  /* Cabeçalhos e títulos mais baixos */
+  html .modal-window h2, html .modal-window h3 { line-height: 1.2; }
+}
+
+/* ✒️ (editor de notas) não fica por cima das janelas no celular */
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  body:has(.modal-backdrop) .notes-fab,
+  body:has(.ui-dialog-backdrop) .notes-fab { display: none !important; }
+}
+
+/* =========================================================
+   MODO TOUCH (html.is-touch — só celular)
+   ========================================================= */
+html.is-touch { -webkit-tap-highlight-color: transparent; }
+html.is-touch button,
+html.is-touch [role='button'],
+html.is-touch a { touch-action: manipulation; }
+/* segurar o dedo não abre a lupa/menu do sistema nem seleciona texto (fora dos campos) */
+html.is-touch body { -webkit-touch-callout: none; }
+html.is-touch button,
+html.is-touch .skill-card,
+html.is-touch .np-row,
+html.is-touch .tree-node,
+html.is-touch .nr-svg,
+html.is-touch .workspace,
+html.is-touch .fc-deck,
+html.is-touch .ck-task { -webkit-user-select: none; user-select: none; }
+
+/* o que só aparecia passando o mouse fica sempre visível */
+html.is-touch .fc-row-actions,
+html.is-touch .ck-handle,
+html.is-touch .record-actions,
+html.is-touch .np-preset-edit,
+html.is-touch .skill-link-remove,
+html.is-touch .nr-page-chip > .nr-page-chip-x { opacity: 1 !important; }
+html.is-touch .np-folder-actions { display: inline-flex !important; }
+html.is-touch .np-folder .np-count { display: none; }
+
+/* alvos de toque maiores nas listas */
+html.is-touch .np-row { min-height: 38px; }
+html.is-touch .nr-sd-item { min-height: 44px; }
+
+/* aviso visual de "segurou" (botão direito) */
+.touch-hold-ring {
+  position: fixed;
+  z-index: 2147483600;
+  width: 46px;
+  height: 46px;
+  margin: -23px 0 0 -23px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25), 0 0 18px rgba(56, 189, 248, 0.6);
+  pointer-events: none;
+  animation: touch-hold 0.45s ease-out forwards;
+}
+@keyframes touch-hold {
+  from { transform: scale(0.4); opacity: 1; }
+  to { transform: scale(1.5); opacity: 0; }
+}
+
+/* ---------- Santuário leve no celular ----------
+   A aquarela (ruído + distorção) é refeita a cada quadro quando a câmera
+   anda — no celular isso travava tudo. Aqui ela sai; o desenho fica igual. */
+html.is-touch .tree-page [filter] { filter: none !important; }
+html.is-touch .tree-page path[fill^='url(#grain'] { display: none !important; }
+html.is-touch .tree-page .sanc-smoke,
+html.is-touch .tree-page .sanc-wave,
+html.is-touch .tree-page .sanc-water,
+html.is-touch .tree-page .sanc-water-line,
+html.is-touch .tree-page .sanc-flame { animation: none !important; }
+html.is-touch .tree-page .workspace,
+html.is-touch .tree-page .tree-svg { will-change: auto; }
+html.is-touch .tree-page * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html.is-touch .nr-svg [filter] { filter: none !important; }
+
+/* ---------- Controle na tela (andar e pular) ---------- */
+.sanc-pad {
+  position: absolute;
+  left: calc(12px + env(safe-area-inset-left, 0px));
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  /* acima da troca de modos */
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 !important;
+  pointer-events: none;
+}
+.sanc-pad-dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 48px);
+  grid-template-rows: repeat(2, 48px);
+  grid-template-areas: '. up .' 'left down right';
+  gap: 6px;
+  pointer-events: auto;
+}
+.sanc-pad-btn {
+  pointer-events: auto;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(15, 23, 42, 0.42);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+.sanc-pad-btn:active { background: rgba(56, 189, 248, 0.55); transform: scale(0.94); }
+.sanc-pad-btn.up { grid-area: up; }
+.sanc-pad-btn.left { grid-area: left; }
+.sanc-pad-btn.right { grid-area: right; }
+.sanc-pad-btn.down { grid-area: down; }
+.sanc-pad-btn.jump { width: 64px; height: 64px; border-radius: 50%; font-size: 24px; }
+@media (max-height: 520px) and (orientation: landscape) {
+  .sanc-pad { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* No toque, o botão "Layout" do Santuário sobe para o canto de cima
+   (embaixo fica o controle de andar/pular) */
+html.is-touch .tree-page .sanc-panel {
+  top: calc(64px + env(safe-area-inset-top, 0px));
+  bottom: auto;
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  max-height: calc(100dvh - 150px);
+}
+html.is-touch .tree-page .sanc-panel-body {
+  max-height: calc(100dvh - 200px);
+  overflow-y: auto;
+  width: min(270px, calc(100vw - 24px));
+  box-sizing: border-box;
+}

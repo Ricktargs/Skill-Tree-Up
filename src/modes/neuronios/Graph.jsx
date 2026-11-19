@@ -550,6 +550,7 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
     <div className="nr-graph">
       <svg
         ref={svgRef}
+        data-pinch-zoom="0.0015"
         className="nr-svg"
         onPointerDown={(e) => onPointerDown(e, null)}
         onPointerMove={onPointerMove}
