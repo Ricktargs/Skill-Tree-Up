@@ -91,7 +91,15 @@ jobs:
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease -PorbeVersionCode=${{ github.run_number }} -PorbeVersionName=${{ steps.ver.outputs.name }}
+          set +e
+          ./gradlew assembleRelease --no-daemon -PorbeVersionCode=${{ github.run_number }} -PorbeVersionName=${{ steps.ver.outputs.name }} 2>&1 | tee gradle.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            # mostra o motivo nas anotações do GitHub
+            grep -A12 "What went wrong" gradle.log | head -14 | while IFS= read -r l; do echo "::error::$l"; done
+            exit "$status"
+          fi
           cp app/build/outputs/apk/release/app-release.apk ../ORBE-G-Android.apk
       - uses: actions/upload-artifact@v4
         with:
