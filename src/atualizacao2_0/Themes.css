@@ -589,7 +589,7 @@
 .th-ink-head::-webkit-details-marker { display: none; }
 .th-ink-head::after { content: '▾'; margin-left: auto; opacity: 0.6; transition: transform 0.15s ease; }
 .th-ink[open] .th-ink-head::after { transform: rotate(180deg); }
-.th-ink-swatch { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.55); flex: none; }
+.th-ink-swatch { width: 18px; height: 18px; border-radius: 5px; border: 1px solid rgba(255, 255, 255, 0.35); flex: none; }
 .th-ink-head strong { font-size: 0.85rem; }
 .th-ink-head small { order: 3; flex-basis: 100%; font-size: 0.72rem; opacity: 0.7; }
 .th-ink-head::after { order: 2; }
@@ -601,10 +601,10 @@
 }
 
 .th-ink-dot {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.5);
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   cursor: pointer;
   padding: 0;
@@ -634,11 +634,11 @@
 }
 .th-simple .th-swatch {
   flex: none;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 3px solid;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(0, 0, 0, 0.15);
 }
 .th-simple .th-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .th-simple .th-name { font-size: 0.9rem; font-weight: 800; }

@@ -27,7 +27,8 @@ export default function UndoToast() {
       style={{
         position: 'fixed',
         left: '50%',
-        bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))',
+        // acima da barra Neurônios / Santuário / Habilidades
+        bottom: 'calc(92px + env(safe-area-inset-bottom, 0px))',
         transform: 'translateX(-50%)',
         zIndex: 2000000,
         padding: '0.55rem 1.1rem',

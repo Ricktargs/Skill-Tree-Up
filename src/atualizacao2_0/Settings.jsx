@@ -467,7 +467,8 @@ const COMMAND_GROUPS = [
       { keys: ['A'], text: 'Emoji do avatar.' },
       { keys: ['G'], text: 'Pastas e filtros.' },
       { keys: ['O'], text: 'Habilidades e ocultas.' },
-      { keys: ['E'], text: 'Editor de layout (ordem das habilidades).' }
+      { keys: ['E'], text: 'Editor de notas (em qualquer modo).' },
+      { keys: ['L'], text: 'Editor de layout (ordem das habilidades).' }
     ]
   },
   {

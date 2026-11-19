@@ -4,11 +4,14 @@ import App from '../App.jsx';
 import { MODES, setMode, useMode } from './modeState.js';
 import { DialogHost } from '../shared/Dialog.jsx';
 import { useActiveProfileId } from '../shared/activeProfile.js';
+import { useNotesPanelOpen } from '../shared/notesPanel.js';
 import { tx, useLanguage } from '../i18n/index.jsx';
 
 // A Árvore só carrega quando for aberta (e sai da memória ao trocar de modo)
 const ArvoreApp = lazy(() => import('./arvore/App.jsx'));
 const NeuroniosApp = lazy(() => import('./neuronios/Neuronios.jsx'));
+// Editor de notas (✏️): só carrega quando é aberto
+const NotesPanel = lazy(() => import('./neuronios/NotesPanel.jsx'));
 
 const isTyping = (el) =>
   el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
@@ -16,6 +19,7 @@ const isTyping = (el) =>
 export default function ModeRoot() {
   const mode = useMode();
   const profileId = useActiveProfileId();
+  const notesOpen = useNotesPanelOpen();
 
   // Título da aba conforme o projeto aberto
   useEffect(() => {
@@ -53,6 +57,12 @@ export default function ModeRoot() {
       {mode === 'neuronios' && (
         <Suspense fallback={<div className="mode-loading" />}>
           <NeuroniosApp key={profileId} />
+        </Suspense>
+      )}
+
+      {notesOpen && (
+        <Suspense fallback={null}>
+          <NotesPanel key={profileId} />
         </Suspense>
       )}
 

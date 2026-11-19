@@ -1,14 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sfx } from '../arvore/lib/sound.js';
+import { DEFAULT_FORCES } from './forces.js';
 
 // =========================================================
 // MAPA DE NEURÔNIOS — grafo com forças (estilo Obsidian)
 // Repulsão entre nós, molas nas ligações e leve puxão ao centro.
 // Rolar = zoom · arrastar o fundo = mover · arrastar nó = reposicionar
 // Shift + arrastar o fundo = caixa de seleção · Delete = excluir os selecionados
+// V = nova arrumação aleatória (ligados juntos, ninguém sobreposto)
 // =========================================================
 
-const LINK_DISTANCE = 95;
 
 // Número estável por neurônio (ritmo da flutuação)
 const floatSeed = (id) => {
@@ -16,18 +17,38 @@ const floatSeed = (id) => {
   for (let i = 0; i < id.length; i += 1) h = (h * 31 + id.charCodeAt(i)) | 0;
   return Math.abs(h);
 };
-const REPULSION = 2600;
-const SPRING = 0.035;
-const CENTER = 0.006;
 const DAMPING = 0.58;
 
-export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreateAt, onSettle, onDeleteMany, highlightIds, resizeKey }) {
+// Distância mínima entre dois neurônios (para nunca ficarem sobrepostos)
+const MIN_GAP = 46;
+
+// Último enquadramento do mapa: ao fechar a janela do neurônio (no celular o mapa
+// some e volta), o mapa reaparece igual, sem zoom que ninguém pediu
+let lastView = null;
+
+const shuffled = (arr) => {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+};
+
+export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreateAt, onSettle, onDeleteMany, highlightIds, resizeKey, forces = DEFAULT_FORCES }) {
   const svgRef = useRef(null);
   const sim = useRef(new Map()); // id -> { x, y, vx, vy, fixed }
   const alpha = useRef(1);
   const raf = useRef(0);
   const [, setFrame] = useState(0);
-  const [view, setView] = useState({ x: 0, y: 0, k: 1 });
+  const [view, setView] = useState(() => lastView || { x: 0, y: 0, k: 1 });
+  // As forças vêm do painel "Mapa/Neuro" (fica embaixo do + Neurônio)
+  const forcesRef = useRef(forces);
+  const forcesKey = `${forces.center}|${forces.repel}|${forces.link}|${forces.distance}`;
+  const firstForces = useRef(true);
+  useEffect(() => {
+    lastView = view;
+  }, [view]);
   const [size, setSize] = useState({ w: 800, h: 600 });
   const [hover, setHover] = useState(null);
   const drag = useRef(null); // { id?, pan?, box?, sx, sy, moved }
@@ -109,6 +130,7 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
     const pos = sim.current;
     const list = nodes.map((n) => pos.get(n.id)).filter(Boolean);
     const a = alpha.current;
+    const F = forcesRef.current;
     // Repulsão
     for (let i = 0; i < list.length; i += 1) {
       for (let j = i + 1; j < list.length; j += 1) {
@@ -123,7 +145,7 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
           d2 = 1;
         }
         if (d2 > 250000) continue;
-        const f = (REPULSION / d2) * a;
+        const f = (F.repel / d2) * a;
         const d = Math.sqrt(d2);
         const fx = (dx / d) * f;
         const fy = (dy / d) * f;
@@ -141,7 +163,7 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
       const dx = q.x - p.x;
       const dy = q.y - p.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
-      const f = (d - (l.distance || LINK_DISTANCE)) * SPRING * a;
+      const f = (d - (l.distance || F.distance)) * F.link * a;
       const fx = (dx / d) * f;
       const fy = (dy / d) * f;
       p.vx += fx;
@@ -149,10 +171,32 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
       q.vx -= fx;
       q.vy -= fy;
     });
+    // Colisão: nenhum neurônio fica em cima de outro
+    for (let i = 0; i < list.length; i += 1) {
+      for (let j = i + 1; j < list.length; j += 1) {
+        const p = list[i];
+        const q = list[j];
+        const dx = q.x - p.x;
+        const dy = q.y - p.y;
+        const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+        if (d >= MIN_GAP) continue;
+        const push = (MIN_GAP - d) / 2;
+        const ux = dx / d;
+        const uy = dy / d;
+        if (!p.fixed) {
+          p.x -= ux * push;
+          p.y -= uy * push;
+        }
+        if (!q.fixed) {
+          q.x += ux * push;
+          q.y += uy * push;
+        }
+      }
+    }
     // Centro + movimento
     list.forEach((p) => {
-      p.vx -= p.x * CENTER * a;
-      p.vy -= p.y * CENTER * a;
+      p.vx -= p.x * F.center * a;
+      p.vy -= p.y * F.center * a;
       if (p.fixed) {
         p.vx = 0;
         p.vy = 0;
@@ -195,6 +239,16 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
     [run]
   );
 
+  useEffect(() => {
+    forcesRef.current = forces;
+    if (firstForces.current) {
+      firstForces.current = false;
+      return;
+    }
+    reheat(0.5);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forcesKey]);
+
   // Novos nós entram perto de um vizinho (ou da posição salva)
   const nodeKey = nodes.map((n) => n.id).join('|');
   const linkKey = links.map((l) => `${l.source}>${l.target}`).join('|');
@@ -215,6 +269,11 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
         fixed: false
       });
     });
+    // Mapa novo (ninguém com posição salva): já nasce em galhos, sem embolar
+    if (added > 2 && added === nodes.length && nodes.every((n) => typeof n.x !== 'number')) {
+      shuffleRef.current(false);
+      return () => cancelAnimationFrame(raf.current);
+    }
     reheat(added > 0 && added === nodes.length && nodes.every((n) => typeof n.x === 'number') ? 0.15 : 0.6);
     return () => cancelAnimationFrame(raf.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -238,13 +297,122 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
     const maxX = Math.max(...xs);
     const minY = Math.min(...ys);
     const maxY = Math.max(...ys);
-    const k = Math.max(0.25, Math.min(2, Math.min((size.w - 120) / (maxX - minX + 1), (size.h - 140) / (maxY - minY + 1))));
+    const k = Math.max(0.25, Math.min(1, Math.min((size.w - 120) / (maxX - minX + 1), (size.h - 140) / (maxY - minY + 1))));
     setView({ x: -((minX + maxX) / 2) * k, y: -((minY + maxY) / 2) * k, k });
     return undefined;
   }, [nodes, size]);
 
-  // Enquadra uma vez quando o mapa abre
-  const fittedRef = useRef(false);
+  // ---------- V: nova arrumação aleatória ----------
+  // Cada grupo de neurônios ligados vai para um lugar sorteado (perto dos outros,
+  // sem encostar) e, dentro do grupo, cada um nasce ao lado de quem está ligado a ele.
+  // Depois as forças do mapa terminam de ajeitar: ligados bem perto, soltos só perto.
+  const shuffleLayout = useCallback((withSound = true) => {
+    const pos = sim.current;
+    const ids = nodes.map((n) => n.id).filter((id) => pos.has(id));
+    if (ids.length < 2) return;
+
+    // Grupos ligados (componentes), descobertos a partir de pontos sorteados
+    const seen = new Set();
+    const comps = [];
+    shuffled(ids).forEach((start) => {
+      if (seen.has(start)) return;
+      const tree = [{ id: start, parent: null }];
+      seen.add(start);
+      for (let k = 0; k < tree.length; k += 1) {
+        shuffled([...(neighbors.get(tree[k].id) || [])]).forEach((nb) => {
+          if (seen.has(nb) || !pos.has(nb)) return;
+          seen.add(nb);
+          tree.push({ id: nb, parent: tree[k].id });
+        });
+      }
+      comps.push(tree);
+    });
+
+    // Lugar de cada grupo: espiral a partir do centro, sem invadir outro grupo
+    const placed = [];
+    comps.forEach((tree) => {
+      const dist = forcesRef.current.distance;
+      const R = tree.length === 1 ? MIN_GAP * 0.6 : dist * Math.sqrt(tree.length) * 0.75 + 20;
+      const gap = 30;
+      let cx = 0;
+      let cy = 0;
+      for (let attempt = 0; attempt < 600; attempt += 1) {
+        const dist = attempt * 6;
+        const ang = Math.random() * Math.PI * 2;
+        const x = Math.cos(ang) * dist;
+        const y = Math.sin(ang) * dist;
+        if (placed.every((c) => Math.hypot(c.x - x, c.y - y) >= c.r + R + gap)) {
+          cx = x;
+          cy = y;
+          break;
+        }
+      }
+      placed.push({ x: cx, y: cy, r: R });
+
+      // Dentro do grupo: galhos crescendo para fora (como uma teia/constelação).
+      // Cada filho sai na direção oposta a quem veio antes, abrindo em leque.
+      const at = new Map();
+      const dir = new Map(); // ângulo do galho que chegou em cada neurônio
+      const kids = new Map();
+      tree.forEach((t) => {
+        if (t.parent) kids.set(t.parent, [...(kids.get(t.parent) || []), t.id]);
+      });
+      tree.forEach((t) => {
+        if (!t.parent) {
+          at.set(t.id, { x: cx, y: cy });
+          return;
+        }
+        const parent = at.get(t.parent);
+        const siblings = kids.get(t.parent);
+        const i = siblings.indexOf(t.id);
+        const n = siblings.length;
+        const root = !tree.find((x) => x.id === t.parent).parent;
+        // raiz: espalha em volta toda; resto: leque de até ~150° para fora
+        const base = root ? Math.random() * Math.PI * 2 : dir.get(t.parent);
+        const spread = root ? Math.PI * 2 : Math.min(Math.PI * 0.85, 0.55 * n);
+        const ang = root
+          ? base + (i / n) * spread
+          : base + (n === 1 ? 0 : (i / (n - 1) - 0.5) * spread) + (Math.random() - 0.5) * 0.25;
+        dir.set(t.id, ang);
+        const len = dist * (0.9 + Math.random() * 0.25);
+        at.set(t.id, { x: parent.x + Math.cos(ang) * len, y: parent.y + Math.sin(ang) * len });
+      });
+      at.forEach((xy, id) => {
+        const p = pos.get(id);
+        p.x = xy.x;
+        p.y = xy.y;
+        p.vx = 0;
+        p.vy = 0;
+        p.fixed = false;
+      });
+    });
+
+    if (withSound) sfx.play('rustle');
+    reheat(1);
+  }, [nodes, neighbors, reheat]);
+
+  const shuffleRef = useRef(shuffleLayout);
+  useEffect(() => {
+    shuffleRef.current = shuffleLayout;
+  });
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || (e.key || '').toLowerCase() !== 'v') return;
+      const el = document.activeElement;
+      const editing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+      if (editing || document.querySelector('.ui-dialog-backdrop, .modal-backdrop')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      // Sem zoom: o mapa fica onde está, só os neurônios se rearrumam
+      shuffleRef.current();
+    };
+    window.addEventListener('keydown', onKey, { capture: true });
+    return () => window.removeEventListener('keydown', onKey, { capture: true });
+  }, []);
+
+  // Enquadra uma vez quando o mapa abre (só afasta, nunca aproxima).
+  // Se o mapa já foi visto nesta sessão, volta exatamente como estava.
+  const fittedRef = useRef(Boolean(lastView));
   useEffect(() => {
     if (fittedRef.current || nodes.length === 0) return undefined;
     const t = setTimeout(() => {
@@ -432,7 +600,14 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
                 <g className="nr-float" style={{ animationDuration: `${5 + (floatSeed(n.id) % 40) / 10}s`, animationDelay: `${-(floatSeed(n.id) % 50) / 10}s` }}>
                   {isActive && <circle className="nr-halo" r={r + 7} />}
                   {selected.has(n.id) && <circle className="nr-select-ring" r={r + 5} />}
-                  <circle className="nr-dot" r={r} style={{ '--nr-c': n.color }} />
+                  <circle
+                    className="nr-dot"
+                    r={r}
+                    style={{
+                      '--nr-c': n.color,
+                      ...(n.glow ? { filter: `drop-shadow(0 0 ${n.glow.toFixed(1)}px ${n.color})` } : null)
+                    }}
+                  />
                   {label && (
                     <text className="nr-label" y={r + 13} textAnchor="middle" style={{ fontSize: `${Math.max(9, 11.5 / Math.sqrt(view.k))}px` }}>
                       {n.label.length > 34 ? `${n.label.slice(0, 32)}…` : n.label}

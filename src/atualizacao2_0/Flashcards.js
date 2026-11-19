@@ -41,13 +41,15 @@ const dayDiff = (a, b) => {
 
 // ---------- Estado de uma carta ----------
 export const isNewCard = (c) => !c.reps && !c.lastReview;
-export const isDue = (c, today) => !isNewCard(c) && (!c.due || c.due <= today);
+// `dueAt` (hora exata) existe quando o tempo é em minutos/horas
+export const isDue = (c, today, now = Date.now()) =>
+  !isNewCard(c) && (!c.due || c.due < today || (c.due === today && (!c.dueAt || c.dueAt <= now)));
 export const isMastered = (c) => (c.interval || 0) >= MASTERED_DAYS;
 
-export const cardStatus = (c, today) => {
+export const cardStatus = (c, today, now = Date.now()) => {
   if (isNewCard(c)) return 'new';
   if (isMastered(c)) return 'mastered';
-  if (isDue(c, today)) return 'due';
+  if (isDue(c, today, now)) return 'due';
   return 'learning';
 };
 
@@ -60,8 +62,9 @@ export const deckIntervals = (deck) => {
   const v = (deck && deck.intervals) || {};
   const num = (x, d) => {
     if (x === '' || x === null || x === undefined) return d;
-    const n = Math.round(Number(x));
-    return Number.isFinite(n) ? Math.min(MAX_INTERVAL_DAYS, Math.max(0, n)) : d;
+    const n = Number(x);
+    // arredonda para o minuto
+    return Number.isFinite(n) ? Math.min(MAX_INTERVAL_DAYS, Math.max(0, Math.round(n * 1440) / 1440)) : d;
   };
   return {
     again: num(v.again, DEFAULT_INTERVALS.again),
@@ -78,11 +81,12 @@ export const schedule = (card, rating, cfg = DEFAULT_INTERVALS) => {
   const reps = card.reps || 0;
   const interval = card.interval || 0;
   // Primeira vez: o tempo escolhido. Depois (se `grow`), cresce a partir dele.
-  const grown = (base, factor) =>
-    Math.min(
-      MAX_INTERVAL_DAYS,
-      cfg.grow && reps > 0 && base > 0 ? Math.max(base, Math.round(Math.max(interval, 1) * factor)) : base
-    );
+  const grown = (base, factor) => {
+    if (!(cfg.grow && reps > 0 && base > 0)) return base;
+    // cresce a partir do intervalo atual (ou do tempo base, se for maior)
+    const g = Math.max(base, Math.max(interval, base) * factor);
+    return Math.min(MAX_INTERVAL_DAYS, g >= 1 ? Math.round(g) : Math.round(g * 1440) / 1440);
+  };
   if (rating === 1) {
     return { interval: cfg.again, ease: Math.max(1.3, ease - 0.2), reps: 0, lapses: (card.lapses || 0) + 1 };
   }
@@ -94,6 +98,12 @@ export const schedule = (card, rating, cfg = DEFAULT_INTERVALS) => {
 // Rótulo curto do intervalo ("agora", "3 d", "2 sem", "1 mês")
 export const intervalLabel = (days) => {
   if (!days) return '< 1 min';
+  if (days < 1) {
+    const min = Math.round(days * 1440);
+    if (min < 60) return `${min} min`;
+    const h = min / 60;
+    return `${Number.isInteger(h) ? h : h.toFixed(1)} h`;
+  }
   if (days < 7) return `${days} d`;
   if (days < 30) return `${Math.round(days / 7)} sem`;
   if (days < 365) return `${Math.round(days / 30)} m`;
@@ -257,10 +267,14 @@ export function useFlashcards(profileId, { onReward } = {}) {
   const data = useMemo(() => sanitize(rawData), [rawData]);
   const [isOpen, setIsOpen] = useState(false);
   const [today, setToday] = useState(() => toDayKey());
+  const [now, setNow] = useState(() => Date.now());
 
   // Virada do dia
   useEffect(() => {
-    const refresh = () => setToday(toDayKey());
+    const refresh = () => {
+      setToday(toDayKey());
+      setNow(Date.now());
+    };
     const id = setInterval(refresh, 60000);
     document.addEventListener('visibilitychange', refresh);
     return () => {
@@ -456,7 +470,12 @@ export function useFlashcards(profileId, { onReward } = {}) {
       const cards = d.cards.map((c) => {
         if (c.id !== cardId) return c;
         const next = schedule(c, rating, deckIntervals(d.decks.find((x) => x.id === c.deckId)));
-        return { ...c, ...next, due: addDays(day, next.interval), lastReview: new Date().toISOString() };
+        // Menos de um dia: guarda a hora exata em que volta
+        if (next.interval > 0 && next.interval < 1) {
+          const at = Date.now() + next.interval * 86400000;
+          return { ...c, ...next, due: toDayKey(new Date(at)), dueAt: at, lastReview: new Date().toISOString() };
+        }
+        return { ...c, ...next, due: addDays(day, Math.round(next.interval)), dueAt: null, lastReview: new Date().toISOString() };
       });
       // Sequência de dias estudando
       let { streak, lastStudyDay } = d.stats;
@@ -497,7 +516,7 @@ export function useFlashcards(profileId, { onReward } = {}) {
     (deckId) => {
       const cards = data.cards.filter((c) => !deckId || c.deckId === deckId);
       const fresh = cards.filter(isNewCard).length;
-      const due = cards.filter((c) => isDue(c, today)).length;
+      const due = cards.filter((c) => isDue(c, today, now)).length;
       const mastered = cards.filter(isMastered).length;
       return {
         total: cards.length,
@@ -508,14 +527,25 @@ export function useFlashcards(profileId, { onReward } = {}) {
         mastery: cards.length ? Math.round((mastered / cards.length) * 100) : 0
       };
     },
-    [data.cards, today]
+    [data.cards, today, now]
   );
 
   // Fila de estudo: revisões vencidas primeiro, depois novas (limitadas)
   // `groups`: só as cartas desses grupos (NO_GROUP = sem grupo); aí as novas não têm limite,
   // porque o grupo já é o "pedaço" que a pessoa escolheu estudar.
   // `all`: treino livre — todas as cartas dos grupos, mesmo as que ainda não venceram.
-  const buildQueue = (deckId, { groups = null, all = false } = {}) => {
+  const buildQueue = (deckId, opts = {}) => {
+    const ids = buildOrderedQueue(deckId, opts);
+    if (!opts.shuffle) return ids;
+    // Ordem aleatória: embaralha (Fisher-Yates)
+    const out = [...ids];
+    for (let i = out.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+  };
+  const buildOrderedQueue = (deckId, { groups = null, all = false } = {}) => {
     let pool = data.cards.filter((c) => !deckId || c.deckId === deckId);
     if (groups) {
       const deck = data.decks.find((x) => x.id === deckId);
@@ -524,7 +554,9 @@ export function useFlashcards(profileId, { onReward } = {}) {
       pool = pool.filter((c) => want.has(c.groupId && known.has(c.groupId) ? c.groupId : NO_GROUP));
     }
     if (all) return pool.map((c) => c.id);
-    const due = pool.filter((c) => isDue(c, today)).sort((a, b) => (a.due || '').localeCompare(b.due || ''));
+    const due = pool
+      .filter((c) => isDue(c, today, now))
+      .sort((a, b) => (a.due || '').localeCompare(b.due || '') || (a.dueAt || 0) - (b.dueAt || 0));
     const freshAll = pool.filter(isNewCard);
     const fresh = groups ? freshAll : freshAll.slice(0, NEW_PER_SESSION);
     return [...due, ...fresh].map((c) => c.id);
@@ -548,6 +580,7 @@ export function useFlashcards(profileId, { onReward } = {}) {
     escapeRef,
     keyRef,
     today,
+    now,
     decks: data.decks,
     cards: data.cards,
     deckSort: data.prefs.deckSort,

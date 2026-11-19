@@ -198,3 +198,10 @@ html[data-ui-theme='nanquim'] .fc-btn.primary {
   border-color: transparent !important;
 }
 html[data-ui-theme='nanquim'] .fc-btn.primary:disabled { opacity: 0.45; }
+
+/* Flashcards: janela do tempo de repetição no papel do tema */
+html[data-ui-theme='nanquim'] .fc-iv-window {
+  background: var(--nq-paper) var(--nq-grain) !important;
+  border-color: var(--nq-line-strong) !important;
+  color: var(--nq-ink) !important;
+}

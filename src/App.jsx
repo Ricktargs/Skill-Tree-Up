@@ -20,6 +20,8 @@ import { DEFAULT_HERO } from './atualizacao2_0/HeroModels.js';
 import { useCustomThemes, getThemeById, onAccentColor } from './atualizacao2_0/Themes.js';
 import { useProfileStoredState, collectBackupExtras, applyBackupExtras, collectFullStorage, restoreFullStorage } from './atualizacao2_0/ProfileStorage.js';
 import { sfx } from './modes/arvore/lib/sound.js';
+import { createPortal } from 'react-dom';
+import { toggleNotesPanel, useNotesPanelOpen } from './shared/notesPanel.js';
 import { globalUndo, globalRedo } from './atualizacao2_0/GlobalUndo.js';
 import UndoToast from './atualizacao2_0/UndoToast.jsx';
 import ColorDeckModal from './atualizacao2_0/ColorDeck.jsx';
@@ -227,6 +229,7 @@ export default function App() {
 
   // Checklists de cada perfil (antes eram os mesmos para todos)
   // Tarefas rendem 2 XP; completar uma lista inteira rende 1 diamante
+  const notesPanelOpen = useNotesPanelOpen();
   const taskState = useTaskUpdate(activeProfileId, {
     onTaskXp: (xp, title) => grantBonusXp(xp, `✅ Tarefa: ${title}`, 'Tarefas'),
     onListComplete: (listTitle) => {
@@ -828,6 +831,23 @@ const handleSaveMiniEdit = (idx, oldText) => {
           activeElem.tagName === 'TEXTAREA' ||
           activeElem.isContentEditable);
 
+      // Desfazer/refazer global vale em qualquer modo (Neurônios, Santuário, Habilidades)
+      if (isCtrlOrCmd && !isEditingText && !e.altKey && (keyLower === 'z' || keyLower === 'y')) {
+        e.preventDefault();
+        if (keyLower === 'z' && !e.shiftKey) {
+          if (globalUndo()) playSound('click');
+        } else if (globalRedo()) playSound('click');
+        return;
+      }
+
+      // E: editor de notas (✒️), em qualquer modo
+      if (keyLower === 'e' && !isCtrlOrCmd && !e.altKey && !isEditingText) {
+        e.preventDefault();
+        playSound('click');
+        toggleNotesPanel();
+        return;
+      }
+
       // Fora das Habilidades, só P (Perfil), M (Missões) e C (Tema) são atalhos daqui
       if (!inSkills && !(['p', 'm', 'c'].includes(keyLower) && !isCtrlOrCmd && !e.altKey && !isEditingText)) return;
 
@@ -883,7 +903,8 @@ const handleSaveMiniEdit = (idx, oldText) => {
         e.preventDefault();
         playSound('click');
         setIsMissionsModalOpen((prev) => !prev);
-      } else if (keyLower === 'e') {
+      } else if (keyLower === 'l') {
+        // Editor de layout (ordem das habilidades): antes era o E
         e.preventDefault();
         playSound('click');
         setIsLayoutEditorOpen((prev) => !prev);
@@ -1591,6 +1612,21 @@ if (folderSortOrder === 'a-z') {
 
         <TaskAlert taskState={taskState} />
 
+        {/* Editor de notas: canto inferior esquerdo, em qualquer modo
+            (no <body>, para ficar por cima do painel de notas) */}
+        {createPortal(<button
+          type="button"
+          className={`top-icon-button notes-fab ${notesPanelOpen ? 'is-on' : ''}`}
+          title={tx('Editor de notas (E)')}
+          aria-label={tx('Editor de notas (E)')}
+          onClick={() => {
+            playSound('click');
+            toggleNotesPanel();
+          }}
+        >
+          ✒️
+        </button>, document.body)}
+
         {inSkills && pendingTransfers && pendingTransfers.length > 0 && (
           <button
             className="top-icon-button mail-badge-btn pulse-glow"
@@ -1608,7 +1644,7 @@ if (folderSortOrder === 'a-z') {
         {inSkills && (
           <button
             className="top-icon-button"
-            title={tx("Editor de Layouts / Habilidades (E)")}
+            title={tx("Editor de Layouts / Habilidades (L)")}
             onClick={() => { playSound('click'); setIsLayoutEditorOpen(true); }}
           >
             ✏️

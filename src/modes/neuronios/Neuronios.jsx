@@ -5,7 +5,9 @@ import '../arvore/ui.css';
 import './neuronios.css';
 import Graph from './Graph.jsx';
 import EditorPane from './Editor.jsx';
-import { plainText, tagColor, useNeuronios } from './store.js';
+import ColorPicker from './ColorPicker.jsx';
+import { DEFAULT_FORCES, FORCE_LIMITS, glowColor, glowSize, loadForces, richness, saveForces } from './forces.js';
+import { isNeuron, plainText, tagColor, useNeuronios } from './store.js';
 import { useUiTheme } from '../../shared/uiTheme.js';
 import { registerModeActions } from '../../shared/modeBridge.js';
 // mesmos sons do Santuário (respeitam "Efeitos sonoros" nas Configurações)
@@ -33,6 +35,11 @@ export default function Neuronios() {
   const [activeId, setActiveId] = useState(() => view.activeId || null);
   const [query, setQuery] = useState('');
   const [toast, setToast] = useState(null);
+  const [tagPick, setTagPick] = useState(null); // { tag, x, y } — cor de uma tag
+  // Painel "Mapa/Neuro": forças do mapa (embaixo do + Neurônio)
+  const [forces, setForces] = useState(loadForces);
+  const [mapOpen, setMapOpen] = useState(false);
+  useEffect(() => saveForces(forces), [forces]);
   const [split, setSplit] = useState(() => (typeof view.split === 'number' ? view.split : 0.5));
   const narrow = useNarrow();
   const splitRef = useRef(null);
@@ -87,6 +94,13 @@ export default function Neuronios() {
       if (activeIdRef.current === id) setActiveId(next[Math.min(i, next.length - 1)] || null);
       return next;
     });
+  }, []);
+
+  // X do canto da janela: fecha todas as abas e volta ao mapa
+  const closeAll = useCallback(() => {
+    sfx.play('close');
+    setOpenIds([]);
+    setActiveId(null);
   }, []);
 
   const createNeuronRef = useRef(() => {});
@@ -154,7 +168,8 @@ export default function Neuronios() {
   };
 
   const graph = useMemo(() => {
-    let visible = notes;
+    // Notas do editor geral que ainda não são neurônios ficam fora do mapa
+    let visible = notes.filter(isNeuron);
     if (selectedTags.length) {
       visible = visible.filter((n) =>
         matchAll ? selectedTags.every((t) => (n.tags || []).includes(t)) : selectedTags.some((t) => (n.tags || []).includes(t))
@@ -166,13 +181,33 @@ export default function Neuronios() {
       const linked = new Set(noteLinks.flatMap((l) => [l.source, l.target]));
       visible = visible.filter((n) => linked.has(n.id) || n.id === activeId);
     }
-    const nodes = visible.map((n) => ({
-      id: n.id,
-      label: n.title || 'Sem título',
-      color: n.color || (n.tags && n.tags[0] ? tagColor(n.tags[0]) : 'var(--foliage)'),
-      x: n.x,
-      y: n.y
-    }));
+    const degreeOf = new Map();
+    links.forEach((l) => {
+      degreeOf.set(l.source, (degreeOf.get(l.source) || 0) + 1);
+      degreeOf.set(l.target, (degreeOf.get(l.target) || 0) + 1);
+    });
+    const nodes = visible.map((n) => {
+      const base = n.color || (n.tags && n.tags[0] ? tagColor(n.tags[0]) : 'var(--foliage)');
+      const html = n.content || '';
+      const pagesHtml = Object.values(n.pages || {})
+        .map((pg) => pg.content || '')
+        .join(' ');
+      const words = (plainText(html) + ' ' + plainText(pagesHtml)).split(/\s+/).filter(Boolean).length;
+      const t = richness({
+        words,
+        links: degreeOf.get(n.id) || 0,
+        pages: Object.keys(n.pages || {}).length,
+        images: ((html + pagesHtml).match(/<img\b/gi) || []).length
+      });
+      return {
+        id: n.id,
+        label: n.title || 'Sem título',
+        color: glowColor(base, t),
+        glow: glowSize(t),
+        x: n.x,
+        y: n.y
+      };
+    });
     if (tagNodes) {
       const used = new Set();
       visible.forEach((n) => (n.tags || []).forEach((t) => used.add(t)));
@@ -183,7 +218,8 @@ export default function Neuronios() {
     }
     noteLinks = noteLinks.map((l) => ({ ...l }));
     return { nodes, links: noteLinks };
-  }, [notes, links, selectedTags, matchAll, tagNodes, hideOrphans, activeId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- as cores das tags mudam o desenho
+  }, [notes, links, selectedTags, matchAll, tagNodes, hideOrphans, activeId, store.view.tagColors]);
 
   // Busca: destaca os neurônios encontrados (os outros ficam claros)
   const highlightIds = useMemo(() => {
@@ -201,6 +237,8 @@ export default function Neuronios() {
     const onKey = (e) => {
       if (e.key === 'Escape') {
         if (e.defaultPrevented) return;
+        // Esc com o seletor de cor aberto só fecha o seletor
+        if (document.querySelector('.nr-color-pop')) return;
         if (isTyping(document.activeElement)) return document.activeElement.blur();
         if (activeIdRef.current) return closeTab(activeIdRef.current);
         return undefined;
@@ -209,7 +247,8 @@ export default function Neuronios() {
       if (e.key.toLowerCase() === 'n') {
         e.preventDefault();
         createNeuron();
-      } else if (e.key === '/') {
+      } else if (e.key === '/' || e.key === ' ') {
+        // "/" ou Espaço: buscar neurônio
         e.preventDefault();
         searchRef.current?.focus();
       }
@@ -245,7 +284,7 @@ export default function Neuronios() {
           <div className="top-center">
             <h1>NEURÔNIOS</h1>
             <div className="nr-stats">
-              {notes.length} {notes.length === 1 ? 'neurônio' : 'neurônios'} · {links.length} {links.length === 1 ? 'ligação' : 'ligações'}
+              {notes.filter(isNeuron).length} {notes.filter(isNeuron).length === 1 ? 'neurônio' : 'neurônios'} · {links.length} {links.length === 1 ? 'ligação' : 'ligações'}
             </div>
           </div>
 
@@ -256,13 +295,64 @@ export default function Neuronios() {
 
         {/* Busca + filtro de tags */}
         <div className="nr-filters">
-          <button type="button" className="btn small btn-primary nr-new" onClick={() => createNeuron()} title="Novo neurônio (N)">
-            ＋ Neurônio
-          </button>
+          <div className="nr-new-col">
+            <button type="button" className="btn small btn-primary nr-new" onClick={() => createNeuron()} title="Novo neurônio (N)">
+              ＋ Neurônio
+            </button>
+            <button
+              type="button"
+              className={`btn small nr-mapneuro ${mapOpen ? 'on' : ''}`}
+              onClick={() => {
+                sfx.play('tick');
+                setMapOpen((v) => !v);
+              }}
+              title="Forças do mapa"
+            >
+              ⚙ Mapa/Neuro
+            </button>
+            {mapOpen && (
+              <div className="nr-forces-panel">
+                {[
+                  ['center', 'Força central', 'Puxa os neurônios soltos para o meio'],
+                  ['repel', 'Força de repulsão', 'Quanto os neurônios se empurram'],
+                  ['link', 'Força das ligações', 'Quanto as ligações puxam os ligados'],
+                  ['distance', 'Distância das ligações', 'Tamanho de cada fio']
+                ].map(([k, label, hint]) => {
+                  const [min, max, stepV] = FORCE_LIMITS[k];
+                  return (
+                    <label key={k} className="nr-force" title={hint}>
+                      <span>{label}</span>
+                      <input
+                        type="range"
+                        min={min}
+                        max={max}
+                        step={stepV}
+                        value={forces[k]}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          setForces((f) => ({ ...f, [k]: v }));
+                        }}
+                      />
+                    </label>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="btn small"
+                  onClick={() => {
+                    sfx.play('tick');
+                    setForces({ ...DEFAULT_FORCES });
+                  }}
+                >
+                  ↺ Restaurar padrão
+                </button>
+              </div>
+            )}
+          </div>
           <input
             ref={searchRef}
             className="search-input nr-search"
-            placeholder="Buscar neurônios…  ( / )"
+            placeholder="Buscar neurônios…  ( / ou Espaço )"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -280,6 +370,11 @@ export default function Neuronios() {
                 className={`nr-filter-chip ${selectedTags.includes(tag) ? 'on' : ''}`}
                 style={{ '--tag': tagColor(tag) }}
                 onClick={() => toggleTag(tag)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setTagPick({ tag, x: e.clientX, y: e.clientY });
+                }}
+                title="Clique para filtrar · botão direito para mudar a cor"
               >
                 #{tag} <small>{count}</small>
               </button>
@@ -317,6 +412,7 @@ export default function Neuronios() {
               onCreateAt={(x, y) => createNeuron({ x, y })}
               onSettle={store.savePositions}
               onDeleteMany={deleteMany}
+              forces={forces}
             />
           )}
 
@@ -329,6 +425,7 @@ export default function Neuronios() {
               activeId={activeId}
               onActivate={setActiveId}
               onCloseTab={closeTab}
+              onCloseAll={closeAll}
               onOpen={(id, newTab) => open(id, newTab)}
               onDelete={deleteNeuron}
               onBackToMap={narrow ? () => setActiveId(null) : null}
@@ -340,6 +437,26 @@ export default function Neuronios() {
           <div className="nr-empty-map">
             {notes.length === 0 ? 'Nenhum neurônio ainda. Clique em ＋ ou dê dois cliques no mapa.' : 'Nenhum neurônio com esse filtro.'}
           </div>
+        )}
+
+        {tagPick && (
+          <ColorPicker
+            x={tagPick.x}
+            y={tagPick.y}
+            title={`Cor da tag #${tagPick.tag}`}
+            value={tagColor(tagPick.tag)}
+            onPick={(c) => {
+              sfx.play('tick');
+              store.setTagColor(tagPick.tag, c);
+            }}
+            onReset={() => {
+              sfx.play('tick');
+              store.setTagColor(tagPick.tag, null);
+              setTagPick(null);
+            }}
+            resetLabel="Cor automática"
+            onClose={() => setTagPick(null)}
+          />
         )}
 
         {toast && (

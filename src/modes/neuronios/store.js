@@ -3,10 +3,10 @@
 // Cada neurônio é uma nota em HTML. As ligações entre neurônios
 // ficam no próprio texto como <a class="wikilink" data-id="...">.
 // =========================================================
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { sanitizeHtml } from '../arvore/lib/html.js';
 import { profileKey, readProfileRaw } from '../../atualizacao2_0/ProfileStorage.js';
-import { getActiveProfileId } from '../../shared/activeProfile.js';
+import { getActiveProfileId, useActiveProfileId } from '../../shared/activeProfile.js';
 
 export const STORAGE_KEY = 'neuronios-v1';
 export const THEME_KEY = 'eu-sou-arvore-theme'; // mesmo tema da Árvore
@@ -21,7 +21,13 @@ const hash = (s) => {
   for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) | 0;
   return Math.abs(h);
 };
-export const tagColor = (tag) => TAG_COLORS[hash(String(tag || '')) % TAG_COLORS.length];
+// Cores escolhidas pela pessoa para cada tag (guardadas em view.tagColors)
+let TAG_OVERRIDES = {};
+// Copia idempotente das cores salvas: tagColor() é usada em vários lugares fora do hook
+const syncTagOverrides = (colors) => {
+  TAG_OVERRIDES = colors || {};
+};
+export const tagColor = (tag) => TAG_OVERRIDES[tag] || TAG_COLORS[hash(String(tag || '')) % TAG_COLORS.length];
 
 export const normalizeTag = (t) =>
   String(t || '')
@@ -99,98 +105,177 @@ const starter = () => {
 };
 
 // Cada perfil tem os próprios neurônios ("neuronios-v1__<perfil>")
-const load = () => {
+const load = (pid) => {
   try {
-    const raw = readProfileRaw(STORAGE_KEY, getActiveProfileId());
-    if (!raw) return { notes: starter(), view: {} };
+    const raw = readProfileRaw(STORAGE_KEY, pid);
+    if (!raw) return { notes: starter(), folders: [], view: {} };
     const v = JSON.parse(raw);
     return {
       notes: Array.isArray(v.notes) ? v.notes.filter((n) => n && n.id) : [],
+      folders: Array.isArray(v.folders) ? v.folders.filter((f) => f && f.id) : [],
       view: v.view && typeof v.view === 'object' ? v.view : {}
     };
   } catch (e) {
-    return { notes: starter(), view: {} };
+    return { notes: starter(), folders: [], view: {} };
   }
 };
 
-// =========================================================
-// HOOK
-// =========================================================
-export function useNeuronios() {
-  const [data, setData] = useState(load);
-  const [saveError, setSaveError] = useState(false);
-  const first = useRef(true);
-  const keyRef = useRef(profileKey(STORAGE_KEY, getActiveProfileId()));
+// Neurônio = aparece no mapa. Notas do editor geral só viram neurônio
+// se forem ligadas com [[ ]] (ou pelo botão "Transformar em neurônio").
+export const isNeuron = (n) => n && n.isNeuron !== false;
 
-  // Salva (com um pequeno atraso para não gravar a cada tecla)
-  useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      if (localStorage.getItem(keyRef.current)) return;
-    }
-    const t = setTimeout(() => {
-      try {
-        localStorage.setItem(keyRef.current, JSON.stringify(data));
-        setSaveError(false);
-      } catch (e) {
-        setSaveError(true);
-      }
-    }, 300);
-    return () => clearTimeout(t);
-  }, [data]);
-
-  const notes = data.notes;
-  const byId = useMemo(() => new Map(notes.map((n) => [n.id, n])), [notes]);
-  const notesRef = useRef(notes);
-  useEffect(() => {
-    notesRef.current = notes;
+// Quem foi ligado com [[ ]] vira neurônio sozinho (menos quem pediu para ficar só como nota)
+const autoPromote = (data) => {
+  const waiting = data.notes.filter((n) => n.isNeuron === false && !n.keepNote);
+  if (!waiting.length) return data;
+  const ids = new Set(data.notes.map((n) => n.id));
+  const linked = new Set();
+  data.notes.forEach((n) => {
+    linksIn(fullContent(n)).forEach((t) => {
+      if (!ids.has(t) || t === n.id) return;
+      linked.add(t);
+      linked.add(n.id);
+    });
   });
+  if (!waiting.some((n) => linked.has(n.id))) return data;
+  return { ...data, notes: data.notes.map((n) => (n.isNeuron === false && !n.keepNote && linked.has(n.id) ? { ...n, isNeuron: true } : n)) };
+};
 
-  const addNote = useCallback((fields = {}) => {
-    const now = new Date().toISOString();
+// =========================================================
+// STORE COMPARTILHADO
+// O mapa (modo Neurônios) e o editor de notas (✏️, em qualquer modo) usam
+// os MESMOS dados ao mesmo tempo: uma mudança num aparece no outro na hora.
+// =========================================================
+const shared = { pid: null, state: null, rev: 0, saveTimer: null };
+const listeners = new Set();
+const emit = () => listeners.forEach((l) => l());
+const subscribe = (l) => {
+  listeners.add(l);
+  return () => listeners.delete(l);
+};
+
+const ensureLoaded = (pid) => {
+  if (shared.state && shared.pid === pid) return;
+  // trocou de perfil: grava o que faltava do anterior e carrega o novo
+  if (shared.saveTimer && shared.state) flushSave();
+  shared.pid = pid;
+  shared.state = { data: load(pid), saveError: false, rev: shared.rev };
+};
+const getSnapshot = () => {
+  ensureLoaded(getActiveProfileId());
+  return shared.state;
+};
+
+const flushSave = () => {
+  clearTimeout(shared.saveTimer);
+  shared.saveTimer = null;
+  if (!shared.state) return;
+  let saveError = false;
+  try {
+    localStorage.setItem(profileKey(STORAGE_KEY, shared.pid), JSON.stringify(shared.state.data));
+  } catch (e) {
+    saveError = true;
+  }
+  if (saveError !== shared.state.saveError) {
+    shared.state = { ...shared.state, saveError };
+    emit();
+  }
+};
+
+// Atualiza os dados (com um pequeno atraso para gravar, como antes)
+const setData = (fn) => {
+  const cur = getSnapshot();
+  const next = typeof fn === 'function' ? fn(cur.data) : fn;
+  if (!next || next === cur.data) return;
+  shared.state = { ...cur, data: autoPromote(next) };
+  emit();
+  clearTimeout(shared.saveTimer);
+  shared.saveTimer = setTimeout(flushSave, 300);
+};
+
+// Ctrl+Z / Ctrl+Y global devolveu os neurônios: recarrega e avisa os editores abertos
+if (typeof window !== 'undefined') {
+  window.addEventListener('rpg-undo-restore', (e) => {
+    const keys = (e.detail && e.detail.keys) || [];
+    if (!shared.pid || !keys.includes(profileKey(STORAGE_KEY, shared.pid))) return;
+    clearTimeout(shared.saveTimer);
+    shared.saveTimer = null;
+    shared.rev += 1;
+    shared.state = { data: load(shared.pid), saveError: false, rev: shared.rev };
+    emit();
+  });
+  // Antes de fechar, grava o que ainda estava esperando
+  window.addEventListener('beforeunload', () => {
+    if (shared.saveTimer) flushSave();
+  });
+}
+
+const nowIso = () => new Date().toISOString();
+const randomColor = () => TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
+
+// ---------- Ações (iguais para quem usar o store) ----------
+const actions = {
+  addNote: (fields = {}) => {
+    const now = nowIso();
+    const asNeuron = fields.isNeuron !== false;
     const note = {
       id: uid(),
-      title: (fields.title || '').trim() || 'Novo neurônio',
+      title: (fields.title || '').trim() || (asNeuron ? 'Novo neurônio' : 'Nova nota'),
       tags: fields.tags || [],
       content: fields.content || '',
       // Cada neurônio novo nasce com uma cor aleatória da paleta
-      color: fields.color || TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)],
+      color: fields.color || randomColor(),
       createdAt: now,
       updatedAt: now,
       x: fields.x,
-      y: fields.y
+      y: fields.y,
+      ...(asNeuron ? {} : { isNeuron: false }),
+      ...(fields.folderId ? { folderId: fields.folderId } : {})
     };
     setData((d) => ({ ...d, notes: [...d.notes, note] }));
     return note;
-  }, []);
+  },
 
-  const updateNote = useCallback((id, fields) => {
+  updateNote: (id, fields) =>
     setData((d) => ({
       ...d,
-      notes: d.notes.map((n) => (n.id === id ? { ...n, ...fields, updatedAt: new Date().toISOString() } : n))
-    }));
-  }, []);
+      notes: d.notes.map((n) => (n.id === id ? { ...n, ...fields, updatedAt: nowIso() } : n))
+    })),
+
+  // Neurônio ↔ só nota
+  setNeuron: (id, on) =>
+    setData((d) => ({
+      ...d,
+      notes: d.notes.map((n) => {
+        if (n.id !== id) return n;
+        const copy = { ...n, updatedAt: nowIso() };
+        if (on) {
+          delete copy.isNeuron;
+          delete copy.keepNote;
+        } else {
+          copy.isNeuron = false;
+          copy.keepNote = true;
+        }
+        return copy;
+      })
+    })),
 
   // Posições do mapa (sem mexer na data de edição)
-  const savePositions = useCallback((positions) => {
+  savePositions: (positions) =>
     setData((d) => ({
       ...d,
       notes: d.notes.map((n) => (positions[n.id] ? { ...n, x: positions[n.id].x, y: positions[n.id].y } : n))
-    }));
-  }, []);
+    })),
 
-  const deleteNote = useCallback((id) => {
-    let removed = null;
-    setData((d) => {
-      removed = d.notes.find((n) => n.id === id) || null;
-      return { ...d, notes: d.notes.filter((n) => n.id !== id) };
-    });
+  deleteNote: (id) => {
+    const removed = getSnapshot().data.notes.find((n) => n.id === id) || null;
+    setData((d) => ({ ...d, notes: d.notes.filter((n) => n.id !== id) }));
     return removed;
-  }, []);
+  },
 
   // ---------- Páginas (+Pag) ----------
-  const addPage = useCallback((noteId, fields = {}) => {
-    const now = new Date().toISOString();
+  addPage: (noteId, fields = {}) => {
+    const now = nowIso();
     const page = {
       id: `pg_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
       title: (fields.title || '').trim() || 'Nova página',
@@ -203,10 +288,10 @@ export function useNeuronios() {
       notes: d.notes.map((n) => (n.id === noteId ? { ...n, pages: { ...(n.pages || {}), [page.id]: page }, updatedAt: now } : n))
     }));
     return page;
-  }, []);
+  },
 
-  const updatePage = useCallback((noteId, pageId, fields) => {
-    const now = new Date().toISOString();
+  updatePage: (noteId, pageId, fields) => {
+    const now = nowIso();
     setData((d) => ({
       ...d,
       notes: d.notes.map((n) => {
@@ -214,11 +299,11 @@ export function useNeuronios() {
         return { ...n, updatedAt: now, pages: { ...n.pages, [pageId]: { ...n.pages[pageId], ...fields, updatedAt: now } } };
       })
     }));
-  }, []);
+  },
 
   /** Exclui uma página (e as páginas que estão dentro dela) e tira as marcas +Pag do texto. */
-  const deletePage = useCallback((noteId, pageId) => {
-    const owner = notesRef.current.find((n) => n.id === noteId);
+  deletePage: (noteId, pageId) => {
+    const owner = getSnapshot().data.notes.find((n) => n.id === noteId);
     if (!owner || !owner.pages || !owner.pages[pageId]) return;
     const gone = new Set([pageId]);
     const walk = (html) =>
@@ -230,7 +315,7 @@ export function useNeuronios() {
     walk(owner.pages[pageId].content);
     const strip = (html) =>
       [...gone].reduce((h, pid) => h.replace(new RegExp(`<a\\b[^>]*data-page="${pid}"[^>]*>[\\s\\S]*?</a>(&nbsp;)?`, 'g'), ''), html || '');
-    const now = new Date().toISOString();
+    const now = nowIso();
     setData((d) => ({
       ...d,
       notes: d.notes.map((n) => {
@@ -242,18 +327,17 @@ export function useNeuronios() {
         return { ...n, content: strip(n.content), pages, updatedAt: now };
       })
     }));
-  }, []);
+  },
 
   /**
    * Ligar uma página com [[ ]]: ela vira um neurônio de verdade (aparece no
    * mapa). Leva junto as páginas que estão dentro dela, e as marcas +Pag que
    * apontavam para ela viram ligações [[ ]].
    */
-  const promotePage = useCallback((noteId, pageId) => {
-    const owner = notesRef.current.find((n) => n.id === noteId);
+  promotePage: (noteId, pageId) => {
+    const owner = getSnapshot().data.notes.find((n) => n.id === noteId);
     const page = owner && owner.pages && owner.pages[pageId];
     if (!page) return null;
-    // páginas dentro da página (em qualquer profundidade) vão junto
     const moved = new Set();
     const walk = (html) =>
       pagesIn(html).forEach((pid) => {
@@ -262,18 +346,19 @@ export function useNeuronios() {
         walk(owner.pages[pid].content);
       });
     walk(page.content);
-    const now = new Date().toISOString();
+    const now = nowIso();
     const neuron = {
       id: uid(),
       title: page.title || 'Nova página',
       tags: [],
       content: page.content || '',
       pages: Object.fromEntries([...moved].map((pid) => [pid, owner.pages[pid]])),
-      color: TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)],
+      color: randomColor(),
       createdAt: page.createdAt || now,
       updatedAt: now,
       x: typeof owner.x === 'number' ? owner.x + 90 : undefined,
-      y: typeof owner.y === 'number' ? owner.y + 40 : undefined
+      y: typeof owner.y === 'number' ? owner.y + 40 : undefined,
+      ...(owner.folderId ? { folderId: owner.folderId } : {})
     };
     const re = new RegExp(`<a\\b[^>]*data-page="${pageId}"[^>]*>[\\s\\S]*?</a>`, 'g');
     const swap = (html) => (html || '').replace(re, wikilinkHtml(neuron));
@@ -293,33 +378,93 @@ export function useNeuronios() {
       ]
     }));
     return neuron;
-  }, []);
+  },
 
   // Exclui vários de uma vez (seleção no mapa); devolve os excluídos
-  const deleteNotes = useCallback((ids) => {
+  deleteNotes: (ids) => {
     const set = new Set(ids);
-    let removed = [];
-    setData((d) => {
-      removed = d.notes.filter((n) => set.has(n.id));
-      return { ...d, notes: d.notes.filter((n) => !set.has(n.id)) };
-    });
+    const removed = getSnapshot().data.notes.filter((n) => set.has(n.id));
+    setData((d) => ({ ...d, notes: d.notes.filter((n) => !set.has(n.id)) }));
     return removed;
-  }, []);
+  },
 
-  const restoreNotes = useCallback((list) => {
+  restoreNotes: (list) => {
     if (!list || !list.length) return;
     setData((d) => {
       const have = new Set(d.notes.map((n) => n.id));
       return { ...d, notes: [...d.notes, ...list.filter((n) => !have.has(n.id))] };
     });
-  }, []);
+  },
 
-  const restoreNote = useCallback((note) => {
+  restoreNote: (note) => {
     if (!note) return;
     setData((d) => (d.notes.some((n) => n.id === note.id) ? d : { ...d, notes: [...d.notes, note] }));
-  }, []);
+  },
 
-  const setView = useCallback((fields) => setData((d) => ({ ...d, view: { ...d.view, ...fields } })), []);
+  setView: (fields) => setData((d) => ({ ...d, view: { ...d.view, ...fields } })),
+
+  // Cor de uma tag (null volta para a cor automática)
+  setTagColor: (tag, color) =>
+    setData((d) => {
+      const tagColors = { ...((d.view && d.view.tagColors) || {}) };
+      if (color) tagColors[tag] = color;
+      else delete tagColors[tag];
+      return { ...d, view: { ...d.view, tagColors } };
+    }),
+
+  // ---------- Pastas do editor de notas (com hierarquia) ----------
+  addFolder: (name, parentId = null) => {
+    const folder = { id: `fd_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, name: (name || '').trim() || 'Nova pasta', parentId: parentId || null, createdAt: nowIso() };
+    setData((d) => ({ ...d, folders: [...(d.folders || []), folder] }));
+    return folder;
+  },
+  renameFolder: (id, name) => {
+    const clean = String(name || '').trim();
+    if (!clean) return;
+    setData((d) => ({ ...d, folders: (d.folders || []).map((f) => (f.id === id ? { ...f, name: clean.slice(0, 60) } : f)) }));
+  },
+  // Excluir a pasta não apaga nada: o que estava dentro sobe um nível
+  deleteFolder: (id) =>
+    setData((d) => {
+      const folder = (d.folders || []).find((f) => f.id === id);
+      if (!folder) return d;
+      const up = folder.parentId || null;
+      return {
+        ...d,
+        folders: (d.folders || []).filter((f) => f.id !== id).map((f) => (f.parentId === id ? { ...f, parentId: up } : f)),
+        notes: d.notes.map((n) => (n.folderId === id ? { ...n, folderId: up } : n))
+      };
+    }),
+  // Mover pasta para dentro de outra (sem deixar entrar nela mesma)
+  moveFolder: (id, parentId) =>
+    setData((d) => {
+      const folders = d.folders || [];
+      let p = parentId;
+      while (p) {
+        if (p === id) return d;
+        p = (folders.find((f) => f.id === p) || {}).parentId;
+      }
+      return { ...d, folders: folders.map((f) => (f.id === id ? { ...f, parentId: parentId || null } : f)) };
+    }),
+  // Cor da pasta (e outros campos)
+  updateFolder: (id, fields) =>
+    setData((d) => ({ ...d, folders: (d.folders || []).map((f) => (f.id === id ? { ...f, ...fields } : f)) })),
+  moveNote: (id, folderId) =>
+    setData((d) => ({ ...d, notes: d.notes.map((n) => (n.id === id ? { ...n, folderId: folderId || null } : n)) }))
+};
+
+// =========================================================
+// HOOK (mesma interface de antes, agora com dados compartilhados)
+// =========================================================
+export function useNeuronios() {
+  useActiveProfileId(); // trocar de perfil carrega os dados dele
+  const state = useSyncExternalStore(subscribe, getSnapshot);
+  const { data } = state;
+
+  const notes = data.notes;
+  // tagColor() lê as cores escolhidas para as tags
+  syncTagOverrides(data.view && data.view.tagColors);
+  const byId = useMemo(() => new Map(notes.map((n) => [n.id, n])), [notes]);
 
   // Tags com contagem
   const tags = useMemo(() => {
@@ -353,19 +498,10 @@ export function useNeuronios() {
     tags,
     links,
     backlinks,
+    folders: data.folders || [],
     view: data.view,
-    saveError,
-    addNote,
-    updateNote,
-    savePositions,
-    deleteNote,
-    deleteNotes,
-    addPage,
-    updatePage,
-    promotePage,
-    deletePage,
-    restoreNote,
-    restoreNotes,
-    setView
+    rev: state.rev,
+    saveError: state.saveError,
+    ...actions
   };
 }

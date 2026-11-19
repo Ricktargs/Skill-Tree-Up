@@ -5,11 +5,20 @@ import { THEME_CATEGORIES, makeTheme, findCategoryOf, getThemeById } from './The
 import { useUiTheme, setVisual, setNanquimTheme } from '../shared/uiTheme.js';
 import { NANQUIM_THEMES } from '../shared/nanquimThemes.js';
 
+// Degradê de verdade de um tema do Gameficado (cor de destaque → borda → fundo)
+const themeGradient = (t) =>
+  `linear-gradient(145deg, ${t.color} 0%, ${t.border || t.color} 45%, ${t.boxBg || t.modalBg || '#0b0f1a'} 75%, ${t.modalBg || '#0b0f1a'} 100%)`;
+
 // Tema do Nanquim: só a cor, o nome e a descrição
 function NanquimCard({ theme, palette, accent, active, onClick }) {
   return (
     <button type="button" className={`th-card th-simple ${active ? 'active' : ''}`} onClick={onClick}>
-      <span className="th-swatch" style={{ background: accent, borderColor: palette.paper }} />
+      <span
+        className="th-swatch"
+        style={{
+          background: `linear-gradient(145deg, ${accent} 0%, ${palette.foliage2 || accent} 38%, ${palette.paper3 || palette.bg} 72%, ${palette.paper} 100%)`
+        }}
+      />
       <span className="th-text">
         <span className="th-name">{tx(theme.name)}</span>
         <small className="th-desc">{tx(theme.desc)}</small>
@@ -36,7 +45,10 @@ function ThemeCard({ theme, active, editing, favorite, onClick, onContextMenu, l
       onClick={onClick}
       onContextMenu={onContextMenu}
     >
-      <span className="th-swatch" style={{ background: theme.color, borderColor: theme.modalBg || '#0b0f1a' }} />
+      <span
+        className="th-swatch"
+        style={{ background: themeGradient(theme) }}
+      />
       <span className="th-text">
         <span className="th-name">{label}</span>
         {desc && <small className="th-desc">{desc}</small>}
@@ -251,7 +263,7 @@ export function ThemeModal({
             {ui.visual === 'nanquim' && ui.nq === 'classico' && (
               <details className="th-ink">
                 <summary className="th-ink-head">
-                  <span className="th-ink-swatch" style={{ background: getThemeById(currentTheme, customThemes).color }} />
+                  <span className="th-ink-swatch" style={{ background: themeGradient(getThemeById(currentTheme, customThemes)) }} />
                   <strong>🎨 {tx('Cor da tinta do Clássico')}</strong>
                   <small>{tx('Escolha qualquer cor dos temas — o papel continua o do Santuário.')}</small>
                 </summary>
@@ -261,7 +273,7 @@ export function ThemeModal({
                       key={t.id}
                       type="button"
                       className={`th-ink-dot ${currentTheme === t.id ? 'active' : ''}`}
-                      style={{ background: t.color }}
+                      style={{ background: themeGradient(t) }}
                       title={t.custom ? t.name : tx(t.name)}
                       onClick={() => {
                         click();

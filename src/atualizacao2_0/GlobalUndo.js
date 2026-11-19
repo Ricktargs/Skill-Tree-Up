@@ -24,7 +24,8 @@ const IGNORED = [
   /^debug/i,
   /^app_active_mode/,
   /^eu-sou-arvore/,
-  /^neuronios/
+  // preferências de aparência dos Neurônios (forças do mapa, cor do lápis/marca-texto)
+  /^nr-/
 ];
 
 // Timers extras: só a configuração conta (iniciar/pausar/tocar não entra no histórico)
@@ -63,9 +64,29 @@ const notify = () => {
 
 const isTracked = (key) => typeof key === 'string' && !IGNORED.some((re) => re.test(key));
 
+// Neurônios: mexer no mapa (posição) ou abrir/fechar abas não é uma "ação" para desfazer
+const neuroniosComparable = (raw) => {
+  try {
+    const v = JSON.parse(raw);
+    return JSON.stringify({
+      notes: (v.notes || []).map((n) => {
+        const copy = { ...n };
+        delete copy.x;
+        delete copy.y;
+        return copy;
+      }),
+      folders: v.folders || [],
+      tagColors: (v.view && v.view.tagColors) || {}
+    });
+  } catch (e) {
+    return raw;
+  }
+};
+const PATTERN_COMPARATORS = [[/^neuronios-v1/, neuroniosComparable]];
+
 const sameValue = (key, a, b) => {
   if (a === b) return true;
-  const cmp = COMPARATORS[key];
+  const cmp = COMPARATORS[key] || (PATTERN_COMPARATORS.find(([re]) => re.test(key)) || [])[1];
   if (cmp && a !== null && b !== null) return cmp(a) === cmp(b);
   return false;
 };

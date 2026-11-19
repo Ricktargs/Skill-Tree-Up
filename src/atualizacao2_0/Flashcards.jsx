@@ -708,6 +708,7 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
   const [pickN, setPickN] = useState('10');
   const [groupFilter, setGroupFilter] = useState('all');
   const [renaming, setRenaming] = useState(null); // { id, name }
+  const [intervalsOpen, setIntervalsOpen] = useState(false);
   const frontRef = useRef(null);
 
   // "Adicionar Flashcards" pelo menu: já foca no campo da frente
@@ -825,7 +826,6 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
 
   const linkedModule = skill ? skillModules(skill).find((m) => m.id === (deck.moduleId || 'default')) : null;
   const cfg = fc.intervalsOf(deck.id);
-  const setIntervalDays = (field, value) => fc.updateDeck(deck.id, { intervals: { ...cfg, [field]: value } });
 
   return (
     <div className="fc-editor" style={{ '--fc-deck': deckColor(deck) }}>
@@ -910,48 +910,35 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
           )}
 
           {/* Tempo de repetição de cada resposta */}
-          <div className="fc-field fc-intervals">
-            <span>⏱️ {tx('Tempo de repetição')}</span>
-            {RATINGS.map((r) => (
-              <label key={r.value} className={`fc-interval ${r.cls}`}>
-                <b>{tx(r.label)}</b>
-                <input
-                  type="number"
-                  min="0"
-                  max={MAX_INTERVAL_DAYS}
-                  value={cfg[r.field]}
-                  onChange={(e) => setIntervalDays(r.field, e.target.value === '' ? '' : Number(e.target.value))}
-                />
-                <small>{cfg[r.field] === 0 ? tx('mesma sessão') : cfg[r.field] === 1 ? tx('dia') : tx('dias')}</small>
-              </label>
-            ))}
-            <label className="fc-check">
-              <input
-                type="checkbox"
-                checked={cfg.grow}
-                onChange={(e) => {
-                  click();
-                  setIntervalDays('grow', e.target.checked);
-                }}
-              />
-              {tx('Aumentar o tempo a cada acerto (repetição espaçada)')}
-            </label>
-            <small className="fc-interval-help">
-              {cfg.grow
-                ? tx('Os tempos acima valem na 1ª vez; depois, cada acerto aumenta o intervalo.')
-                : tx('Os tempos ficam sempre iguais aos de cima.')}
-            </small>
-            <button
-              type="button"
-              className="fc-btn small ghost-line"
-              onClick={() => {
-                click();
-                fc.updateDeck(deck.id, { intervals: { ...DEFAULT_INTERVALS } });
-              }}
-            >
-              ↺ {tx('Tempos padrão')}
-            </button>
-          </div>
+          {/* Fica fechado: só um resumo; os detalhes abrem numa janela grande */}
+          <button
+            type="button"
+            className="fc-intervals-open"
+            onClick={() => {
+              click();
+              setIntervalsOpen(true);
+            }}
+            title={tx('Ajustar o tempo de repetição')}
+          >
+            <span className="fc-intervals-title">⏱️ {tx('Tempo de repetição')}</span>
+            <span className="fc-intervals-sum">
+              {RATINGS.map((r) => (
+                <i key={r.value} className={r.cls}>
+                  {tx(r.label)} · {intervalLabel(cfg[r.field])}
+                </i>
+              ))}
+            </span>
+            <small>{cfg.grow ? tx('Aumenta a cada acerto') : tx('Tempo fixo')} · {tx('Clique para ajustar')}</small>
+          </button>
+          {intervalsOpen && (
+            <IntervalsWindow
+              fc={fc}
+              deck={deck}
+              click={click}
+              onSave={(intervals, intervalUnits) => fc.updateDeck(deck.id, { intervals, intervalUnits })}
+              onClose={() => setIntervalsOpen(false)}
+            />
+          )}
 
           <div className="fc-side-actions">
             <button
@@ -1229,8 +1216,8 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
                     <span>{c.back}</span>
                   </div>
                   {filterKey === 'all' && groupKey(c) !== NO_GROUP && <span className="fc-group-tag">{groupName(c.groupId)}</span>}
-                  <span className={`fc-status ${cardStatus(c, fc.today)}`} title={c.due ? tx('Próxima revisão: {d}', { d: c.due }) : ''}>
-                    {tx(STATUS_LABEL[cardStatus(c, fc.today)])}
+                  <span className={`fc-status ${cardStatus(c, fc.today, fc.now)}`} title={c.due ? tx('Próxima revisão: {d}', { d: c.due }) : ''}>
+                    {tx(STATUS_LABEL[cardStatus(c, fc.today, fc.now)])}
                   </span>
                   {!selecting && (
                     <div className="fc-row-actions">
@@ -1284,6 +1271,225 @@ function CardEditRow({ card, onSave, onCancel }) {
 }
 
 // =========================================================
+// JANELA: TEMPO DE REPETIÇÃO (minutos, horas, dias...)
+// =========================================================
+const UNITS = [
+  { id: 'min', label: 'minutos', days: 1 / 1440 },
+  { id: 'h', label: 'horas', days: 1 / 24 },
+  { id: 'd', label: 'dias', days: 1 },
+  { id: 'sem', label: 'semanas', days: 7 },
+  { id: 'mes', label: 'meses', days: 30 }
+];
+const unitOf = (id) => UNITS.find((u) => u.id === id) || UNITS[2];
+// Melhor unidade para mostrar um valor salvo em dias
+const guessUnit = (days) => {
+  if (!days) return 'min';
+  if (days < 1 / 24) return 'min';
+  if (days < 1) return Number.isInteger(Math.round(days * 1440) / 60) ? 'h' : 'min';
+  if (days % 30 === 0) return 'mes';
+  if (days % 7 === 0) return 'sem';
+  return 'd';
+};
+const round2 = (n) => Math.round(n * 100) / 100;
+
+const INTERVAL_PRESETS = [
+  {
+    id: 'padrao',
+    label: 'Padrão',
+    desc: 'Errei na hora, depois 1 dia, 1 dia e 4 dias',
+    values: { again: [0, 'min'], hard: [1, 'd'], good: [1, 'd'], easy: [4, 'd'] },
+    grow: true
+  },
+  {
+    id: 'intensivo',
+    label: 'Intensivo',
+    desc: 'Para decorar hoje: minutos e horas',
+    values: { again: [1, 'min'], hard: [10, 'min'], good: [1, 'h'], easy: [4, 'h'] },
+    grow: true
+  },
+  {
+    id: 'longo',
+    label: 'Revisão longa',
+    desc: 'Para manter o que já sabe: dias e semanas',
+    values: { again: [10, 'min'], hard: [2, 'd'], good: [1, 'sem'], easy: [1, 'mes'] },
+    grow: true
+  }
+];
+
+function IntervalsWindow({ fc, deck, click, onSave, onClose }) {
+  const cfg = fc.intervalsOf(deck.id);
+  const savedUnits = deck.intervalUnits || {};
+  const [draft, setDraft] = useState(() => {
+    const out = {};
+    RATINGS.forEach((r) => {
+      const u = unitOf(savedUnits[r.field] || guessUnit(cfg[r.field]));
+      out[r.field] = { value: String(round2(cfg[r.field] / u.days)), unit: u.id };
+    });
+    return out;
+  });
+  const [grow, setGrow] = useState(cfg.grow);
+
+  // Esc fecha só esta janela
+  useEffect(() => {
+    const prev = fc.escapeRef.current;
+    fc.escapeRef.current = onClose;
+    return () => {
+      fc.escapeRef.current = prev;
+    };
+  }, [fc.escapeRef, onClose]);
+
+  const toDays = (field) => {
+    const d = draft[field];
+    const n = Number(String(d.value).replace(',', '.'));
+    if (!Number.isFinite(n) || n < 0) return 0;
+    return Math.min(MAX_INTERVAL_DAYS, Math.round(n * unitOf(d.unit).days * 1440) / 1440);
+  };
+  const preview = { again: toDays('again'), hard: toDays('hard'), good: toDays('good'), easy: toDays('easy'), grow };
+
+  // Como fica se você acertar ("Bom") várias vezes seguidas
+  const growth = (() => {
+    let card = { reps: 0, interval: 0, ease: 2.5 };
+    const steps = [];
+    for (let i = 0; i < 6; i += 1) {
+      const next = schedule(card, 3, preview);
+      steps.push(intervalLabel(next.interval));
+      card = { ...card, ...next };
+    }
+    return steps;
+  })();
+
+  const set = (field, part, value) => setDraft((d) => ({ ...d, [field]: { ...d[field], [part]: value } }));
+  const applyPreset = (p) => {
+    click();
+    const out = {};
+    Object.entries(p.values).forEach(([field, [value, unit]]) => {
+      out[field] = { value: String(value), unit };
+    });
+    setDraft(out);
+    setGrow(p.grow);
+  };
+  const save = () => {
+    click('train');
+    const units = {};
+    RATINGS.forEach((r) => {
+      units[r.field] = draft[r.field].unit;
+    });
+    onSave({ again: preview.again, hard: preview.hard, good: preview.good, easy: preview.easy, grow }, units);
+    onClose();
+  };
+
+  return createPortal(
+    <div
+      className="fc-iv-backdrop"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="fc-iv-window" role="dialog" aria-label={tx('Tempo de repetição')} style={{ '--fc-deck': 'var(--theme-accent, #38bdf8)' }}>
+        <div className="fc-iv-head">
+          <div>
+            <h3>⏱️ {tx('Tempo de repetição')}</h3>
+            <small>
+              {deck.emoji || '🎴'} {deck.name}
+            </small>
+          </div>
+          <button type="button" className="st-close" onClick={onClose} title={tx('Fechar (Esc)')}>
+            ✕
+          </button>
+        </div>
+
+        <p className="fc-iv-help">
+          {tx('Depois de responder uma carta, ela volta para revisão depois desse tempo. Use minutos e horas para decorar no mesmo dia, ou dias e semanas para revisar com calma.')}
+        </p>
+
+        <div className="fc-iv-presets">
+          {INTERVAL_PRESETS.map((p) => (
+            <button key={p.id} type="button" className="fc-iv-preset" onClick={() => applyPreset(p)}>
+              <b>{tx(p.label)}</b>
+              <small>{tx(p.desc)}</small>
+            </button>
+          ))}
+        </div>
+
+        <div className="fc-iv-rows">
+          {RATINGS.map((r) => (
+            <div key={r.value} className={`fc-iv-row ${r.cls}`}>
+              <span className="fc-iv-label">
+                <kbd>{r.key}</kbd> {tx(r.label)}
+              </span>
+              <input
+                className="fc-input fc-iv-num"
+                type="number"
+                min="0"
+                step="any"
+                value={draft[r.field].value}
+                onChange={(e) => set(r.field, 'value', e.target.value)}
+              />
+              <select className="fc-input fc-iv-unit" value={draft[r.field].unit} onChange={(e) => set(r.field, 'unit', e.target.value)}>
+                {UNITS.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {tx(u.label)}
+                  </option>
+                ))}
+              </select>
+              <span className="fc-iv-result">
+                {preview[r.field] === 0 ? tx('repete na mesma sessão') : tx('volta em {t}', { t: intervalLabel(preview[r.field]) })}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <label className="fc-iv-grow">
+          <input
+            type="checkbox"
+            checked={grow}
+            onChange={(e) => {
+              click();
+              setGrow(e.target.checked);
+            }}
+          />
+          <span>
+            <b>{tx('Aumentar o tempo a cada acerto (repetição espaçada)')}</b>
+            <small>
+              {grow
+                ? tx('Os tempos acima valem na 1ª vez; depois, cada acerto aumenta o intervalo.')
+                : tx('Os tempos ficam sempre iguais aos de cima.')}
+            </small>
+          </span>
+        </label>
+
+        <div className="fc-iv-growth">
+          <span>{tx('Acertando ("Bom") várias vezes seguidas:')}</span>
+          <div>
+            {growth.map((g, i) => (
+              <i key={i}>{g}</i>
+            ))}
+          </div>
+        </div>
+
+        <div className="fc-iv-actions">
+          <button
+            type="button"
+            className="fc-btn small ghost-line"
+            onClick={() => applyPreset({ values: { again: [0, 'min'], hard: [1, 'd'], good: [1, 'd'], easy: [4, 'd'] }, grow: DEFAULT_INTERVALS.grow })}
+          >
+            ↺ {tx('Tempos padrão')}
+          </button>
+          <span className="fc-select-spacer" />
+          <button type="button" className="fc-btn" onClick={onClose}>
+            {tx('Cancelar')}
+          </button>
+          <button type="button" className="fc-btn primary" onClick={save}>
+            {tx('Salvar')}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// =========================================================
 // ESCOLHER GRUPOS ANTES DE ESTUDAR
 // =========================================================
 function GroupChooser({ fc, deck, color, click, onBack, onStart }) {
@@ -1302,6 +1508,7 @@ function GroupChooser({ fc, deck, color, click, onBack, onStart }) {
     return new Set(last.length ? last : options.map((o) => o.id));
   });
   const [all, setAll] = useState(Boolean(deck?.studyAll));
+  const [shuffle, setShuffle] = useState(Boolean(deck?.studyShuffle));
 
   if (!deck) return null;
   const ids = [...picked];
@@ -1317,8 +1524,8 @@ function GroupChooser({ fc, deck, color, click, onBack, onStart }) {
   };
   const start = () => {
     if (!queueSize) return;
-    fc.updateDeck(deck.id, { studyGroups: ids, studyAll: all });
-    onStart({ groups: ids, all });
+    fc.updateDeck(deck.id, { studyGroups: ids, studyAll: all, studyShuffle: shuffle });
+    onStart({ groups: ids, all, shuffle });
   };
 
   return (
@@ -1352,6 +1559,7 @@ function GroupChooser({ fc, deck, color, click, onBack, onStart }) {
           {tx('Nenhum')}
         </button>
       </div>
+      <div className="fc-pick-opts">
       <label className="fc-pick-all">
         <input type="checkbox" checked={all} onChange={(e) => { click(); setAll(e.target.checked); }} />
         <span>
@@ -1359,6 +1567,21 @@ function GroupChooser({ fc, deck, color, click, onBack, onStart }) {
           <small>{tx('Estuda todas as cartas dos grupos, mesmo as que ainda não chegaram no dia de revisar.')}</small>
         </span>
       </label>
+      <label className="fc-pick-all">
+        <input
+          type="checkbox"
+          checked={shuffle}
+          onChange={(e) => {
+            click();
+            setShuffle(e.target.checked);
+          }}
+        />
+        <span>
+          <b>{tx('Seguir cartões de forma aleatória')}</b>
+          <small>{tx('As cartas aparecem embaralhadas, e não na ordem da lista (1ª, 2ª, 3ª...).')}</small>
+        </span>
+      </label>
+      </div>
       <button type="button" className="fc-btn primary fc-pick-start" disabled={!queueSize} onClick={start}>
         ▶ {queueSize ? tx('Estudar {n} carta(s)', { n: queueSize }) : tx('Nada para estudar nesses grupos')}
       </button>
@@ -1403,7 +1626,8 @@ function StudySession({ fc, deck, skill, queue: initialQueue, color, click, onEx
     // Tempo 0 (ex.: Errei): a carta volta no fim da fila (no máximo 3 vezes)
     const repeats = queue.filter((id) => id === card.id).length;
     const next = schedule(card, value, fc.intervalsOf(card.deckId));
-    if (next.interval === 0 && repeats < 3) setQueue((qq) => [...qq, card.id]);
+    // (tempos curtos, até 10 min, também voltam ainda nesta sessão)
+    if ((next.interval === 0 || next.interval * 1440 <= 10) && repeats < 3) setQueue((qq) => [...qq, card.id]);
     setFlipped(false);
     setPos((p) => p + 1);
   };
@@ -1484,7 +1708,7 @@ function StudySession({ fc, deck, skill, queue: initialQueue, color, click, onEx
   if (!card) return null;
 
   const progress = Math.min(100, Math.round((pos / queue.length) * 100));
-  const status = cardStatus(card, fc.today);
+  const status = cardStatus(card, fc.today, fc.now);
 
   return (
     <div className="fc-study" style={{ '--fc-deck': color }}>

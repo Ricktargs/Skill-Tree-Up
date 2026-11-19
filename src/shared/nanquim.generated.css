@@ -1371,6 +1371,10 @@ html[data-ui-theme='nanquim'] .info-textarea:focus {
     border-color: var(--theme-accent, rgb(56, 189, 248)) !important;
     box-shadow: 0 0 0 2px rgb(var(--nq-shade-rgb) / 0.18)
 }
+html[data-ui-theme='nanquim'] .top-icon-button.is-on {
+    border-color: var(--theme-accent, rgb(56, 189, 248));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18)) 45%, transparent)
+}
 
 /* ===== src/SetMobileGrande.css ===== */
 @media (max-width: 1280px) {
@@ -1921,6 +1925,86 @@ html[data-ui-theme='nanquim'] .fc-pick-all {
 }
 html[data-ui-theme='nanquim'] .fc-pick-all small {
     color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-intervals-open {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.072);
+    background: rgb(var(--nq-shade-rgb) / 0.027)
+}
+html[data-ui-theme='nanquim'] .fc-intervals-title {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-intervals-sum i {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-intervals-sum i.again {
+    border-color: rgb(239, 68, 68)
+}
+html[data-ui-theme='nanquim'] .fc-intervals-sum i.hard {
+    border-color: rgb(249, 115, 22)
+}
+html[data-ui-theme='nanquim'] .fc-intervals-sum i.good {
+    border-color: rgb(34, 197, 94)
+}
+html[data-ui-theme='nanquim'] .fc-intervals-sum i.easy {
+    border-color: rgb(59, 130, 246)
+}
+html[data-ui-theme='nanquim'] .fc-intervals-open small {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-iv-backdrop {
+    background: rgb(var(--nq-shade-rgb) / 0.108)
+}
+html[data-ui-theme='nanquim'] .fc-iv-window {
+    background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%));
+    border: 1px solid var(--theme-border, var(--nq-line-strong));
+    color: var(--nq-ink);
+    box-shadow: 0 24px 60px rgb(var(--nq-shade-rgb) / 0.175)
+}
+html[data-ui-theme='nanquim'] .fc-iv-head small {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-iv-help {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-iv-preset {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.072);
+    background: rgb(var(--nq-shade-rgb) / 0.027)
+}
+html[data-ui-theme='nanquim'] .fc-iv-preset small {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-iv-row {
+    background: rgb(var(--nq-shade-rgb) / 0.027)
+}
+html[data-ui-theme='nanquim'] .fc-iv-row.again {
+    border-left-color: rgb(239, 68, 68)
+}
+html[data-ui-theme='nanquim'] .fc-iv-row.hard {
+    border-left-color: rgb(249, 115, 22)
+}
+html[data-ui-theme='nanquim'] .fc-iv-row.good {
+    border-left-color: rgb(34, 197, 94)
+}
+html[data-ui-theme='nanquim'] .fc-iv-row.easy {
+    border-left-color: rgb(59, 130, 246)
+}
+html[data-ui-theme='nanquim'] .fc-iv-label kbd {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.18)
+}
+html[data-ui-theme='nanquim'] .fc-iv-result {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-iv-grow small {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-iv-growth {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-iv-growth i {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-iv-growth i + i::before {
+    color: var(--nq-muted)
 }
 
 /* ===== src/atualizacao2_0/Hero.css ===== */
@@ -2642,17 +2726,18 @@ html[data-ui-theme='nanquim'] .th-ink {
     background: rgb(var(--nq-shade-rgb) / 0.022)
 }
 html[data-ui-theme='nanquim'] .th-ink-swatch {
-    border: 2px solid rgb(var(--nq-shade-rgb) / 0.22)
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.22)
 }
 html[data-ui-theme='nanquim'] .th-ink-dot {
-    border: 2px solid rgb(var(--nq-shade-rgb) / 0.22);
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.22);
     box-shadow: 0 1px 3px rgb(var(--nq-shade-rgb) / 0.088)
 }
 html[data-ui-theme='nanquim'] .th-ink-dot.active {
     outline: 2px solid var(--theme-accent, rgb(56, 189, 248))
 }
 html[data-ui-theme='nanquim'] .th-simple .th-swatch {
-    box-shadow: 0 1px 4px rgb(var(--nq-shade-rgb) / 0.105)
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.162);
+    box-shadow: 0 2px 6px rgb(var(--nq-shade-rgb) / 0.105), inset 0 0 0 1px rgb(var(--nq-shade-rgb) / 0.053)
 }
 
 /* ===== src/atualizacao2_0/Update_2.css ===== */

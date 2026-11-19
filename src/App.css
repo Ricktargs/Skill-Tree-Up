@@ -2566,3 +2566,17 @@ kbd {
   border-color: var(--theme-accent, #38bdf8) !important;
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
 }
+
+/* Botão de ferramenta ligado (ex.: editor de notas aberto) */
+.top-icon-button.is-on {
+  border-color: var(--theme-accent, #38bdf8);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent, #38bdf8) 45%, transparent);
+}
+
+/* Editor de notas (✒️): canto inferior esquerdo, por cima do painel de notas */
+.top-icon-button.notes-fab {
+  position: fixed;
+  left: calc(20px + env(safe-area-inset-left, 0px));
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  z-index: 8100;
+}
