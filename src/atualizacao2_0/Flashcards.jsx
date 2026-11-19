@@ -13,7 +13,8 @@ import {
   DEFAULT_INTERVALS,
   MAX_INTERVAL_DAYS,
   DAILY_XP_CAP,
-  NEW_PER_SESSION
+  NEW_PER_SESSION,
+  NO_GROUP
 } from './Flashcards.js';
 
 const DECK_EMOJIS = ['🎴', '📘', '📗', '📕', '🧠', '💡', '🗣️', '🧪', '📐', '💻', '🎵', '🌍', '⚔️', '🏋️', '🎨', '📜'];
@@ -23,6 +24,17 @@ const RATINGS = [
   { value: 2, key: '2', label: 'Difícil', cls: 'hard', field: 'hard' },
   { value: 3, key: '3', label: 'Bom', cls: 'good', field: 'good' },
   { value: 4, key: '4', label: 'Fácil', cls: 'easy', field: 'easy' }
+];
+
+// Dica do "Importar em lote" (uma linha por item)
+const NL = String.fromCharCode(10);
+const BULK_HINT = [
+  'pergunta | resposta',
+  '(ou pergunta :: resposta)',
+  '',
+  'O verso pode ter várias linhas e linhas em branco.',
+  'Cada linha com | começa uma carta nova.',
+  'Para perguntas com várias linhas, separe as cartas com ---'
 ];
 
 const STATUS_LABEL = { new: 'Nova', due: 'Para revisar', learning: 'Aprendendo', mastered: 'Dominada' };
@@ -63,11 +75,18 @@ export function FlashcardsModal({ fc, skills = [], playSound }) {
   const skillOf = (deck) => (deck && deck.skillId ? skills.find((s) => s.id === deck.skillId) : null);
   const deckColor = (deck) => skillOf(deck)?.color || 'var(--theme-accent, #38bdf8)';
 
-  const startStudy = (deckId) => {
-    const queue = fc.buildQueue(deckId);
+  // Deck com grupos: antes de estudar, escolhe quais grupos entram na sessão
+  const startStudy = (deckId, opts = null) => {
+    const deck = deckId ? fc.decks.find((d) => d.id === deckId) : null;
+    if (!opts && deck && (deck.groups || []).length > 0) {
+      click();
+      setView({ name: 'groups', deckId });
+      return;
+    }
+    const queue = fc.buildQueue(deckId, opts || {});
     if (queue.length === 0) return;
     click('train');
-    setView({ name: 'study', deckId, queue });
+    setView({ name: 'study', deckId, queue, opts });
   };
 
   return (
@@ -167,8 +186,20 @@ export function FlashcardsModal({ fc, skills = [], playSound }) {
             queue={view.queue}
             color={deckColor(fc.decks.find((d) => d.id === view.deckId))}
             click={click}
+            studyOpts={view.opts || {}}
             onExit={() => setView({ name: 'home' })}
-            onAgain={() => startStudy(view.deckId)}
+            onAgain={() => startStudy(view.deckId, view.opts)}
+          />
+        )}
+
+        {view.name === 'groups' && (
+          <GroupChooser
+            fc={fc}
+            deck={fc.decks.find((d) => d.id === view.deckId)}
+            color={deckColor(fc.decks.find((d) => d.id === view.deckId))}
+            click={click}
+            onBack={() => setView({ name: 'deck', deckId: view.deckId })}
+            onStart={(opts) => startStudy(view.deckId, opts)}
           />
         )}
       </div>
@@ -181,24 +212,128 @@ export function FlashcardsModal({ fc, skills = [], playSound }) {
 // =========================================================
 function DeckHome({ fc, skills, click, deckColor, skillOf, onStudy, onOpenDeck, onPickSkill, onMenu }) {
   const total = fc.deckSummary(null);
-  const holdRef = useRef(null);
-  // Celular: segurar o dedo no deck abre o mesmo menu do botão direito
-  const holdHandlers = (deckId) => ({
-    onTouchStart: (e) => {
-      const t = e.touches[0];
-      clearTimeout(holdRef.current);
-      holdRef.current = setTimeout(() => {
-        holdRef.current = 'fired';
-        onMenu(deckId, t.clientX, t.clientY);
-      }, 550);
+
+  // ---------- Ordem dos decks ----------
+  const sortedDecks = useMemo(() => {
+    const list = [...fc.decks];
+    if (fc.deckSort === 'name') list.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    else if (fc.deckSort === 'study') list.sort((a, b) => fc.deckSummary(b.id).toStudy - fc.deckSummary(a.id).toStudy);
+    else if (fc.deckSort === 'recent') list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    return list;
+  }, [fc]);
+
+  // ---------- Segurar e arrastar para reorganizar ----------
+  // Segura ~0,35 s sem mexer → o deck "solta" e segue o ponteiro; ao soltar, fica no novo lugar.
+  // No celular, segurar e soltar sem arrastar abre o menu (como antes).
+  const [drag, setDrag] = useState(null); // { id, x, y, offX, offY, w, order }
+  const dragRef = useRef(null);
+  const pressRef = useRef(null); // { id, x, y, type, timer, armed, moved }
+  const suppressClick = useRef(false);
+
+  useEffect(() => {
+    const move = (e) => {
+      const p = pressRef.current;
+      if (!p) return;
+      const dist = Math.hypot(e.clientX - p.x, e.clientY - p.y);
+      if (!p.armed) {
+        if (dist > 8) {
+          clearTimeout(p.timer);
+          pressRef.current = null;
+        }
+        return;
+      }
+      if (dist > 6) p.moved = true;
+      const d = dragRef.current;
+      if (!d) return;
+      let order = d.order;
+      const under = document.elementFromPoint(e.clientX, e.clientY);
+      const target = under && under.closest('[data-deck-id]');
+      const overId = target && target.getAttribute('data-deck-id');
+      if (overId && overId !== d.id) {
+        const from = order.indexOf(d.id);
+        const to = order.indexOf(overId);
+        if (from >= 0 && to >= 0) {
+          order = [...order];
+          order.splice(from, 1);
+          order.splice(to, 0, d.id);
+        }
+      }
+      const next = { ...d, x: e.clientX, y: e.clientY, order };
+      dragRef.current = next;
+      setDrag(next);
+    };
+    const up = () => {
+      const p = pressRef.current;
+      pressRef.current = null;
+      if (!p) return;
+      clearTimeout(p.timer);
+      const d = dragRef.current;
+      dragRef.current = null;
+      setDrag(null);
+      if (!p.armed) return;
+      suppressClick.current = true;
+      setTimeout(() => {
+        suppressClick.current = false;
+      }, 0);
+      if (d && p.moved) {
+        const before = sortedDecks.map((x) => x.id).join('|');
+        if (d.order.join('|') !== before) {
+          fc.setDeckOrder(d.order);
+          if (fc.deckSort !== 'manual') fc.setDeckSort('manual');
+          click('drop');
+        }
+      } else if (p.type === 'touch') {
+        onMenu(p.id, p.x, p.y);
+      }
+    };
+    // Enquanto arrasta no celular, a tela não rola
+    const blockScroll = (e) => {
+      if (dragRef.current) e.preventDefault();
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    window.addEventListener('touchmove', blockScroll, { passive: false });
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      window.removeEventListener('touchmove', blockScroll);
+    };
+  }, [sortedDecks, fc, click, onMenu]);
+
+  useEffect(() => () => clearTimeout(pressRef.current?.timer), []);
+
+  const pressHandlers = (deckId) => ({
+    onPointerDown: (e) => {
+      if (e.button !== 0) return;
+      const el = e.currentTarget;
+      const x = e.clientX;
+      const y = e.clientY;
+      const press = { id: deckId, x, y, type: e.pointerType, armed: false, moved: false };
+      press.timer = setTimeout(() => {
+        if (pressRef.current !== press) return;
+        press.armed = true;
+        const r = el.getBoundingClientRect();
+        const next = { id: deckId, x, y, offX: x - r.left, offY: y - r.top, w: r.width, order: sortedDecks.map((d) => d.id) };
+        dragRef.current = next;
+        setDrag(next);
+        if (navigator.vibrate) navigator.vibrate(12);
+        click('tick');
+      }, 350);
+      pressRef.current = press;
     },
-    onTouchMove: () => clearTimeout(holdRef.current),
-    onTouchEnd: (e) => {
-      if (holdRef.current === 'fired') e.preventDefault();
-      clearTimeout(holdRef.current);
-      holdRef.current = null;
+    onClickCapture: (e) => {
+      // O clique que termina um arraste não abre o deck
+      if (suppressClick.current) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
     }
   });
+
+  const shownDecks = drag ? drag.order.map((id) => fc.decks.find((d) => d.id === id)).filter(Boolean) : sortedDecks;
+  const draggedDeck = drag ? fc.decks.find((d) => d.id === drag.id) : null;
 
   return (
     <div className="fc-scroll">
@@ -224,21 +359,44 @@ function DeckHome({ fc, skills, click, deckColor, skillOf, onStudy, onOpenDeck, 
         </button>
       </div>
 
-      <div className="fc-deck-grid">
-        {fc.decks.map((deck) => {
+      {fc.decks.length > 1 && (
+        <div className="fc-order">
+          <span>{tx('Ordem')}</span>
+          <select
+            className="fc-input fc-order-select"
+            value={fc.deckSort}
+            onChange={(e) => {
+              click();
+              fc.setDeckSort(e.target.value);
+            }}
+          >
+            <option value="manual">{tx('Personalizada (arraste)')}</option>
+            <option value="name">{tx('Nome (A–Z)')}</option>
+            <option value="study">{tx('Mais cartas para estudar')}</option>
+            <option value="recent">{tx('Mais recentes')}</option>
+          </select>
+          <small>{tx('Segure um deck e arraste para mudar o lugar dele.')}</small>
+        </div>
+      )}
+
+      <div className={`fc-deck-grid ${drag ? 'is-dragging' : ''}`}>
+        {shownDecks.map((deck) => {
           const s = fc.deckSummary(deck.id);
           const skill = skillOf(deck);
           return (
             <div
               key={deck.id}
-              className={`fc-deck ${deck.notify === false ? 'muted' : ''}`}
+              data-deck-id={deck.id}
+              className={`fc-deck ${deck.notify === false ? 'muted' : ''} ${drag && drag.id === deck.id ? 'drag-src' : ''}`}
               style={{ '--fc-deck': deckColor(deck) }}
               onContextMenu={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                // segurar no celular também dispara isso: aí quem decide é o arraste
+                if (pressRef.current) return;
                 onMenu(deck.id, e.clientX, e.clientY);
               }}
-              {...holdHandlers(deck.id)}
+              {...pressHandlers(deck.id)}
             >
               <button type="button" className="fc-deck-main" onClick={() => onOpenDeck(deck.id)} title={tx('Abrir deck')}>
                 <span className="fc-deck-emoji">
@@ -306,6 +464,20 @@ function DeckHome({ fc, skills, click, deckColor, skillOf, onStudy, onOpenDeck, 
       {fc.decks.length > 0 && (
         <p className="fc-help">{tx('Dica: botão direito (ou segurar) num deck para editar, adicionar cartas, excluir ou desligar a notificação.')}</p>
       )}
+
+      {/* Deck "flutuando" embaixo do ponteiro enquanto arrasta */}
+      {drag &&
+        draggedDeck &&
+        createPortal(
+          <div
+            className="fc-deck-ghost"
+            style={{ left: drag.x - drag.offX, top: drag.y - drag.offY, width: drag.w, '--fc-deck': deckColor(draggedDeck) }}
+          >
+            <span className="fc-deck-emoji">{draggedDeck.emoji || '🎴'}</span>
+            <span className="fc-deck-name">{draggedDeck.name}</span>
+          </div>,
+          document.body
+        )}
 
       {fc.decks.length === 0 && (
         <p className="fc-help">
@@ -530,6 +702,12 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
   const [editingId, setEditingId] = useState(null);
   const [notice, setNotice] = useState('');
   const [choosingModule, setChoosingModule] = useState(false);
+  // Selecionador de cartas para montar grupos (Grupo 1, Grupo 2...)
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState(() => new Set());
+  const [pickN, setPickN] = useState('10');
+  const [groupFilter, setGroupFilter] = useState('all');
+  const [renaming, setRenaming] = useState(null); // { id, name }
   const frontRef = useRef(null);
 
   // "Adicionar Flashcards" pelo menu: já foca no campo da frente
@@ -551,7 +729,66 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
   const s = fc.deckSummary(deck.id);
   const skill = skillOf(deck);
   const q = query.trim().toLowerCase();
-  const visible = q ? cards.filter((c) => (c.front + ' ' + c.back).toLowerCase().includes(q)) : cards;
+  const groups = deck.groups || [];
+  const groupIds = new Set(groups.map((g) => g.id));
+  const groupKey = (c) => (c.groupId && groupIds.has(c.groupId) ? c.groupId : NO_GROUP);
+  const groupName = (id) => groups.find((g) => g.id === id)?.name || '';
+  const filterKey = groupFilter === 'all' || groupFilter === NO_GROUP || groupIds.has(groupFilter) ? groupFilter : 'all';
+  const inFilter = filterKey === 'all' ? cards : cards.filter((c) => groupKey(c) === filterKey);
+  const visible = q ? inFilter.filter((c) => (c.front + ' ' + c.back).toLowerCase().includes(q)) : inFilter;
+  const ungroupedCount = cards.filter((c) => groupKey(c) === NO_GROUP).length;
+
+  const toggleSelect = (id) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  // Pré-seleciona N cartas da lista (primeiro as que ainda não têm grupo)
+  const preselect = () => {
+    const n = Math.max(1, Math.min(999, parseInt(pickN, 10) || 0));
+    const free = visible.filter((c) => groupKey(c) === NO_GROUP);
+    const rest = visible.filter((c) => groupKey(c) !== NO_GROUP);
+    click();
+    setSelected(new Set([...free, ...rest].slice(0, n).map((c) => c.id)));
+  };
+  const stopSelecting = () => {
+    setSelecting(false);
+    setSelected(new Set());
+  };
+  const createGroup = () => {
+    if (selected.size === 0) return;
+    const id = fc.addGroup(deck.id, [...selected]);
+    click('train');
+    flash(tx('{n} carta(s) no novo grupo', { n: selected.size }));
+    stopSelecting();
+    setGroupFilter(id);
+  };
+  const moveSelected = (target) => {
+    if (selected.size === 0 || !target) return;
+    fc.setCardsGroup([...selected], target === NO_GROUP ? null : target);
+    click('drop');
+    flash(
+      target === NO_GROUP
+        ? tx('{n} carta(s) tirada(s) do grupo', { n: selected.size })
+        : tx('{n} carta(s) movida(s) para {g}', { n: selected.size, g: groupName(target) })
+    );
+    stopSelecting();
+  };
+  const removeGroup = async (g) => {
+    const n = cards.filter((c) => c.groupId === g.id).length;
+    const ok = await ask({
+      title: tx('Excluir o “{name}”?', { name: g.name }),
+      message: tx('As {n} carta(s) dele continuam no deck, só ficam sem grupo.', { n }),
+      yes: tx('Excluir grupo'),
+      danger: true
+    });
+    if (!ok) return;
+    click('delete');
+    fc.deleteGroup(deck.id, g.id);
+    if (filterKey === g.id) setGroupFilter('all');
+  };
   const flash = (msg) => {
     setNotice(msg);
     setTimeout(() => setNotice(''), 2500);
@@ -599,7 +836,7 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
         <span className="fc-bar-stats">
           {tx('{t} cartas · {m}% dominado', { t: s.total, m: s.mastery })}
         </span>
-        <button type="button" className="fc-btn primary" disabled={s.toStudy === 0} onClick={onStudy}>
+        <button type="button" className="fc-btn primary" disabled={s.toStudy === 0 && groups.length === 0} onClick={onStudy}>
           ▶ {tx('Estudar')} {s.toStudy > 0 ? `(${s.toStudy})` : ''}
         </button>
       </div>
@@ -782,8 +1019,8 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
               <div className="fc-bulk">
                 <textarea
                   className="fc-input"
-                  rows={5}
-                  placeholder={tx('Uma carta por linha: frente ; verso  (também aceita TAB, " :: " ou " | ")')}
+                  rows={8}
+                  placeholder={BULK_HINT.map((l) => (l ? tx(l) : '')).join(NL)}
                   value={bulk}
                   onChange={(e) => setBulk(e.target.value)}
                 />
@@ -810,8 +1047,153 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
 
           {notice && <div className="fc-notice">{notice}</div>}
 
-          {cards.length > 3 && (
-            <input className="fc-input fc-search" placeholder={tx('Buscar nas cartas...')} value={query} onChange={(e) => setQuery(e.target.value)} />
+          {cards.length > 0 && (
+            <div className="fc-list-tools">
+              {cards.length > 3 && (
+                <input className="fc-input fc-search" placeholder={tx('Buscar nas cartas...')} value={query} onChange={(e) => setQuery(e.target.value)} />
+              )}
+              <button
+                type="button"
+                className={`fc-btn small fc-select-btn ${selecting ? 'active' : ''}`}
+                onClick={() => {
+                  click();
+                  if (selecting) stopSelecting();
+                  else setSelecting(true);
+                }}
+                title={tx('Selecionar cartas para montar grupos (etapas) de estudo')}
+              >
+                ☑ {selecting ? tx('Cancelar seleção') : tx('Selecionar etapas')}
+              </button>
+            </div>
+          )}
+
+          {selecting && (
+            <div className="fc-select-bar">
+              <div className="fc-select-row">
+                <span>{tx('Pré-selecionar')}</span>
+                <input
+                  className="fc-input fc-pick-n"
+                  type="number"
+                  min="1"
+                  max="999"
+                  value={pickN}
+                  onChange={(e) => setPickN(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && preselect()}
+                />
+                <span>{tx('cartas')}</span>
+                <button type="button" className="fc-btn small" onClick={preselect}>
+                  {tx('Aplicar')}
+                </button>
+                <span className="fc-select-hint">{tx('ou clique nas cartas para escolher uma a uma')}</span>
+              </div>
+              <div className="fc-select-row">
+                <b className="fc-select-count">{tx('{n} selecionada(s)', { n: selected.size })}</b>
+                <button
+                  type="button"
+                  className="fc-btn small"
+                  onClick={() => {
+                    click();
+                    setSelected(new Set(visible.map((c) => c.id)));
+                  }}
+                >
+                  {tx('Todas')}
+                </button>
+                <button
+                  type="button"
+                  className="fc-btn small"
+                  disabled={selected.size === 0}
+                  onClick={() => {
+                    click();
+                    setSelected(new Set());
+                  }}
+                >
+                  {tx('Limpar')}
+                </button>
+                <span className="fc-select-spacer" />
+                {groups.length > 0 && (
+                  <select
+                    className="fc-input fc-move-select"
+                    value=""
+                    disabled={selected.size === 0}
+                    onChange={(e) => moveSelected(e.target.value)}
+                  >
+                    <option value="">{tx('Mover para…')}</option>
+                    {groups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
+                    ))}
+                    <option value={NO_GROUP}>{tx('Sem grupo')}</option>
+                  </select>
+                )}
+                <button type="button" className="fc-btn primary small" disabled={selected.size === 0} onClick={createGroup}>
+                  ＋ {tx('Criar grupo')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {groups.length > 0 && (
+            <div className="fc-group-chips">
+              <button
+                type="button"
+                className={filterKey === 'all' ? 'active' : ''}
+                onClick={() => {
+                  click();
+                  setGroupFilter('all');
+                }}
+              >
+                {tx('Todas')} <span>{cards.length}</span>
+              </button>
+              {groups.map((g) =>
+                renaming && renaming.id === g.id ? (
+                  <input
+                    key={g.id}
+                    className="fc-input fc-group-rename"
+                    value={renaming.name}
+                    maxLength={30}
+                    autoFocus
+                    onChange={(e) => setRenaming({ id: g.id, name: e.target.value })}
+                    onBlur={() => {
+                      fc.renameGroup(deck.id, g.id, renaming.name);
+                      setRenaming(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') e.currentTarget.blur();
+                    }}
+                  />
+                ) : (
+                  <span key={g.id} className={`fc-group-chip ${filterKey === g.id ? 'active' : ''}`}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        click();
+                        setGroupFilter(g.id);
+                      }}
+                      onDoubleClick={() => setRenaming({ id: g.id, name: g.name })}
+                      title={tx('Clique para ver · duplo clique para renomear')}
+                    >
+                      {g.name} <span>{cards.filter((c) => c.groupId === g.id).length}</span>
+                    </button>
+                    <button type="button" className="fc-group-x" onClick={() => removeGroup(g)} title={tx('Excluir grupo')}>
+                      ×
+                    </button>
+                  </span>
+                )
+              )}
+              {ungroupedCount > 0 && (
+                <button
+                  type="button"
+                  className={filterKey === NO_GROUP ? 'active' : ''}
+                  onClick={() => {
+                    click();
+                    setGroupFilter(NO_GROUP);
+                  }}
+                >
+                  {tx('Sem grupo')} <span>{ungroupedCount}</span>
+                </button>
+              )}
+            </div>
           )}
 
           <div className="fc-card-list">
@@ -828,29 +1210,45 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
                   onCancel={() => setEditingId(null)}
                 />
               ) : (
-                <div key={c.id} className="fc-card-row" onDoubleClick={() => setEditingId(c.id)}>
+                <div
+                  key={c.id}
+                  className={`fc-card-row ${selecting ? 'selectable' : ''} ${selected.has(c.id) ? 'selected' : ''}`}
+                  onClick={
+                    selecting
+                      ? () => {
+                          click();
+                          toggleSelect(c.id);
+                        }
+                      : undefined
+                  }
+                  onDoubleClick={selecting ? undefined : () => setEditingId(c.id)}
+                >
+                  {selecting && <span className={`fc-check ${selected.has(c.id) ? 'on' : ''}`}>{selected.has(c.id) ? '✓' : ''}</span>}
                   <div className="fc-card-text">
                     <strong>{c.front}</strong>
                     <span>{c.back}</span>
                   </div>
+                  {filterKey === 'all' && groupKey(c) !== NO_GROUP && <span className="fc-group-tag">{groupName(c.groupId)}</span>}
                   <span className={`fc-status ${cardStatus(c, fc.today)}`} title={c.due ? tx('Próxima revisão: {d}', { d: c.due }) : ''}>
                     {tx(STATUS_LABEL[cardStatus(c, fc.today)])}
                   </span>
-                  <div className="fc-row-actions">
-                    <button type="button" onClick={() => setEditingId(c.id)} title={tx('Editar')}>
-                      ✏️
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        click('delete');
-                        fc.deleteCard(c.id);
-                      }}
-                      title={tx('Excluir carta')}
-                    >
-                      🗑
-                    </button>
-                  </div>
+                  {!selecting && (
+                    <div className="fc-row-actions">
+                      <button type="button" onClick={() => setEditingId(c.id)} title={tx('Editar')}>
+                        ✏️
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          click('delete');
+                          fc.deleteCard(c.id);
+                        }}
+                        title={tx('Excluir carta')}
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  )}
                 </div>
               )
             )}
@@ -886,9 +1284,92 @@ function CardEditRow({ card, onSave, onCancel }) {
 }
 
 // =========================================================
+// ESCOLHER GRUPOS ANTES DE ESTUDAR
+// =========================================================
+function GroupChooser({ fc, deck, color, click, onBack, onStart }) {
+  const groups = (deck && deck.groups) || [];
+  const cards = deck ? fc.cards.filter((c) => c.deckId === deck.id) : [];
+  const known = new Set(groups.map((g) => g.id));
+  const keyOf = (c) => (c.groupId && known.has(c.groupId) ? c.groupId : NO_GROUP);
+  const ungrouped = cards.filter((c) => keyOf(c) === NO_GROUP).length;
+  const options = [
+    ...groups.map((g) => ({ id: g.id, name: g.name })),
+    ...(ungrouped > 0 ? [{ id: NO_GROUP, name: tx('Sem grupo') }] : [])
+  ];
+  // Lembra a última escolha deste deck
+  const [picked, setPicked] = useState(() => {
+    const last = Array.isArray(deck?.studyGroups) ? deck.studyGroups.filter((id) => options.some((o) => o.id === id)) : [];
+    return new Set(last.length ? last : options.map((o) => o.id));
+  });
+  const [all, setAll] = useState(Boolean(deck?.studyAll));
+
+  if (!deck) return null;
+  const ids = [...picked];
+  const queueSize = ids.length ? fc.buildQueue(deck.id, { groups: ids, all }).length : 0;
+  const toggle = (id) => {
+    click();
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const start = () => {
+    if (!queueSize) return;
+    fc.updateDeck(deck.id, { studyGroups: ids, studyAll: all });
+    onStart({ groups: ids, all });
+  };
+
+  return (
+    <div className="fc-scroll fc-groups-pick" style={{ '--fc-deck': color }}>
+      <div className="fc-bar">
+        <button type="button" className="fc-btn ghost" onClick={onBack}>
+          ← {deck.emoji || '🎴'} {deck.name}
+        </button>
+      </div>
+      <h4 className="fc-pick-title">{tx('Quais grupos você quer estudar agora?')}</h4>
+      <div className="fc-pick-list">
+        {options.map((o) => {
+          const inGroup = cards.filter((c) => keyOf(c) === o.id);
+          const toStudy = fc.buildQueue(deck.id, { groups: [o.id] }).length;
+          return (
+            <label key={o.id} className={`fc-pick-row ${picked.has(o.id) ? 'on' : ''}`}>
+              <input type="checkbox" checked={picked.has(o.id)} onChange={() => toggle(o.id)} />
+              <span className="fc-pick-name">{o.name}</span>
+              <span className="fc-pick-count">
+                {tx('{s} para estudar · {t} cartas', { s: toStudy, t: inGroup.length })}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+      <div className="fc-pick-quick">
+        <button type="button" className="fc-btn small" onClick={() => { click(); setPicked(new Set(options.map((o) => o.id))); }}>
+          {tx('Todos')}
+        </button>
+        <button type="button" className="fc-btn small" onClick={() => { click(); setPicked(new Set()); }}>
+          {tx('Nenhum')}
+        </button>
+      </div>
+      <label className="fc-pick-all">
+        <input type="checkbox" checked={all} onChange={(e) => { click(); setAll(e.target.checked); }} />
+        <span>
+          <b>{tx('Treino livre')}</b>
+          <small>{tx('Estuda todas as cartas dos grupos, mesmo as que ainda não chegaram no dia de revisar.')}</small>
+        </span>
+      </label>
+      <button type="button" className="fc-btn primary fc-pick-start" disabled={!queueSize} onClick={start}>
+        ▶ {queueSize ? tx('Estudar {n} carta(s)', { n: queueSize }) : tx('Nada para estudar nesses grupos')}
+      </button>
+    </div>
+  );
+}
+
+// =========================================================
 // SESSÃO DE ESTUDO
 // =========================================================
-function StudySession({ fc, deck, skill, queue: initialQueue, color, click, onExit, onAgain }) {
+function StudySession({ fc, deck, skill, queue: initialQueue, color, click, onExit, onAgain, studyOpts = {} }) {
   const [queue, setQueue] = useState(initialQueue);
   const [pos, setPos] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -990,7 +1471,7 @@ function StudySession({ fc, deck, skill, queue: initialQueue, color, click, onEx
           <button type="button" className="fc-btn" onClick={onExit}>
             ← {tx('Voltar aos decks')}
           </button>
-          {fc.buildQueue(deck ? deck.id : null).length > 0 && (
+          {fc.buildQueue(deck ? deck.id : null, studyOpts).length > 0 && (
             <button type="button" className="fc-btn primary" onClick={onAgain}>
               ▶ {tx('Continuar estudando')}
             </button>

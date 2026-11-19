@@ -9,7 +9,8 @@ import {
   isCompletedToday,
   isRecurringDueOn,
   recurrenceProgress,
-  recurrenceTarget
+  recurrenceTarget,
+  TASK_XP
 } from './TaskUpdate.js';
 
 // Nomes dos dias vêm do próprio navegador, no idioma escolhido (0 = domingo)
@@ -214,6 +215,14 @@ function TaskRow({ task, todayKey, draggable, dragState, onToggle, onEdit, onDel
         )}
       </div>
 
+      {/* Recompensa da tarefa (fica apagada depois de recebida) */}
+      <span
+        className={`ck-xp ${task.xpGiven === (task.isRecurring ? todayKey : 'once') ? 'got' : ''}`}
+        title={tx('Concluir esta tarefa rende {n} XP', { n: TASK_XP })}
+      >
+        +{TASK_XP} XP
+      </span>
+
       <div className="ck-task-actions">
         <button type="button" className="ck-icon-btn" onClick={() => onEdit(task)} title={tx("Editar")}>
           ✏️
@@ -344,7 +353,7 @@ function TaskEditor({ initial, isNew, todayKey, onSave, onDelete, onClose, playS
           />
           <textarea
             className="ck-input"
-            rows={3}
+            rows={9}
             placeholder={tx("Descrição ou notas (opcional)")}
             value={draft.description || ''}
             onChange={(e) => set({ description: e.target.value })}

@@ -18,7 +18,8 @@ import { ThemeModal } from './atualizacao2_0/Themes.jsx';
 import { HeroStage, HeroMenu } from './atualizacao2_0/Hero.jsx';
 import { DEFAULT_HERO } from './atualizacao2_0/HeroModels.js';
 import { useCustomThemes, getThemeById, onAccentColor } from './atualizacao2_0/Themes.js';
-import { useProfileStoredState, collectBackupExtras, applyBackupExtras } from './atualizacao2_0/ProfileStorage.js';
+import { useProfileStoredState, collectBackupExtras, applyBackupExtras, collectFullStorage, restoreFullStorage } from './atualizacao2_0/ProfileStorage.js';
+import { sfx } from './modes/arvore/lib/sound.js';
 import { globalUndo, globalRedo } from './atualizacao2_0/GlobalUndo.js';
 import UndoToast from './atualizacao2_0/UndoToast.jsx';
 import ColorDeckModal from './atualizacao2_0/ColorDeck.jsx';
@@ -205,6 +206,7 @@ export default function App() {
     setDiamonds,
     diamondLog,
     adjustDiamonds,
+    grantTaskDiamond,
     spendDiamonds,
     setDiamondsTo,
     dailyMissions,
@@ -224,7 +226,14 @@ export default function App() {
   } = useGameData();
 
   // Checklists de cada perfil (antes eram os mesmos para todos)
-  const taskState = useTaskUpdate(activeProfileId);
+  // Tarefas rendem 2 XP; completar uma lista inteira rende 1 diamante
+  const taskState = useTaskUpdate(activeProfileId, {
+    onTaskXp: (xp, title) => grantBonusXp(xp, `✅ Tarefa: ${title}`, 'Tarefas'),
+    onListComplete: (listTitle) => {
+      grantTaskDiamond(listTitle);
+      sfx.play('grow');
+    }
+  });
   // Flashcards: sessões de estudo rendem XP (na categoria da habilidade ligada ao deck)
   const mode = useMode();
   const inSkills = mode === 'skills';
@@ -232,15 +241,6 @@ export default function App() {
   const flashcards = useFlashcards(activeProfileId, {
     onReward: (xp, deckName, skill) => grantBonusXp(xp, `🎴 Flashcards: ${deckName}`, skill?.category || 'Flashcards')
   });
-  // Árvore e outros modos rendem XP do herói (a Árvore não tem mais pontos próprios)
-  const grantXpRef = useRef(grantBonusXp);
-  useEffect(() => {
-    grantXpRef.current = grantBonusXp;
-  });
-  useEffect(
-    () => registerModeActions('heroXp', { grant: (xp, title, category) => grantXpRef.current(xp, title, category) }),
-    []
-  );
   // Neurônios e galhos da Árvore podem se ligar a uma habilidade
   const skillsRef = useRef(skills);
   useEffect(() => {
@@ -1208,13 +1208,16 @@ const handleSaveEdit = (e) => {
     // criados, idioma)
     const extras = collectBackupExtras((baseExport.profiles || []).map((p) => p.id));
     const exportObject = {
+      app: 'ORBE-G',
       ...baseExport,
-      backupFormat: 3,
-      ...extras
+      backupFormat: 4,
+      ...extras,
+      // cópia completa de tudo o que o programa guarda (é o que vale ao importar)
+      fullStorage: collectFullStorage()
     };
 
     const now = new Date();
-    const fileName = `skill-tree-backup-${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}.json`;
+    const fileName = `orbe-g-backup-${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}.json`;
 
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportObject, null, 2));
     const downloadAnchor = document.createElement('a');
@@ -1250,6 +1253,27 @@ const handleSaveEdit = (e) => {
             put('eu-sou-arvore-offsets', parsedData.offsets || {});
             put('eu-sou-arvore-folders-all-v1', parsedData.foldersMap || {});
             window.location.reload();
+            return;
+          }
+
+          // Backup completo (formato 4): volta tudo exatamente como estava
+          if (parsedData && parsedData.fullStorage && typeof parsedData.fullStorage === 'object') {
+            const ok = await ask({
+              icon: '💾',
+              title: tx('Restaurar o backup?'),
+              message: tx('Tudo o que está no programa agora será trocado pelo que está no arquivo: perfis, habilidades, tarefas, flashcards, Neurônios, Santuário e configurações.'),
+              yes: tx('Restaurar'),
+              no: tx('Cancelar')
+            });
+            if (!ok) return;
+            if (restoreFullStorage(parsedData.fullStorage)) {
+              playSound('train');
+              setIsSettingsModalOpen(false);
+              window.location.reload();
+            } else {
+              playSound('error');
+              inform({ title: tx('Backup inválido'), message: tx('Este arquivo não parece ser um backup do programa.') });
+            }
             return;
           }
 

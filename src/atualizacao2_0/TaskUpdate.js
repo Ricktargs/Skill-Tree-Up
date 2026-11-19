@@ -113,9 +113,15 @@ const normalizeTask = (t) => {
     recurrenceInterval: t.recurrenceInterval || 1,
     recurrenceDays: Array.isArray(t.recurrenceDays) ? t.recurrenceDays : [],
     recurrenceCurrent: t.recurrenceCurrent || 0,
-    lastCompletedDate: t.lastCompletedDate || null
+    lastCompletedDate: t.lastCompletedDate || null,
+    // XP já dado por esta tarefa: 'once' (normal) ou a data (recorrente, uma vez por dia)
+    xpGiven: t.xpGiven || null
   };
 };
+
+// Recompensas: cada tarefa concluída rende 2 XP; completar a lista inteira rende 1 💎
+export const TASK_XP = 2;
+const xpKeyFor = (task, todayKey) => (task.isRecurring ? todayKey : 'once');
 
 // Cada perfil tem as próprias listas (antes eram as mesmas para todos)
 const loadLists = (profileId) => {
@@ -125,6 +131,8 @@ const loadLists = (profileId) => {
     return saved.map((list) => ({
       id: list.id || uid('list'),
       title: list.title || 'Lista',
+      // dia em que a lista inteira foi completada e rendeu o diamante
+      diamondOn: list.diamondOn || null,
       tasks: Array.isArray(list.tasks) ? list.tasks.map(normalizeTask) : []
     }));
   } catch (e) {
@@ -146,8 +154,13 @@ const sanitizeView = (raw) => {
   }
 };
 
-export function useTaskUpdate(profileId) {
+export function useTaskUpdate(profileId, { onTaskXp, onListComplete } = {}) {
   const [isOpen, setIsOpen] = useState(false);
+  // callbacks sempre atuais (vêm do App, que muda a cada render)
+  const rewardRef = useRef({ onTaskXp, onListComplete });
+  useEffect(() => {
+    rewardRef.current = { onTaskXp, onListComplete };
+  });
   const [isAlertDismissed, setIsAlertDismissed] = useState(false);
 
   const [language, setLanguage] = useState(() => {
@@ -333,33 +346,51 @@ export function useTaskUpdate(profileId) {
 
   const toggleTask = (taskId) => {
     if (!currentList) return;
+    const t = currentList.tasks.find((x) => x.id === taskId);
+    if (!t) return;
     const nowIso = new Date().toISOString();
-    updateTasksOfList(currentList.id, (tasks) =>
-      tasks.map((t) => {
-        if (t.id !== taskId) return t;
-        if (t.isRecurring) {
-          const target = recurrenceTarget(t);
-          const progress = recurrenceProgress(t, todayKey);
-          // Concluída hoje → clicar de novo desmarca (antes ficava travada)
-          const nextProgress = progress >= target ? 0 : progress + 1;
-          return {
-            ...t,
-            recurrenceCurrent: nextProgress,
-            completed: nextProgress >= target,
-            lastCompletedDate: nextProgress > 0 ? todayKey : null,
-            updatedAt: nowIso
-          };
-        }
-        const completed = !t.completed;
-        return {
-          ...t,
-          completed,
-          completedAt: completed ? nowIso : null,
-          lastCompletedDate: completed ? todayKey : null,
-          updatedAt: nowIso
-        };
-      })
+    let next;
+    if (t.isRecurring) {
+      const target = recurrenceTarget(t);
+      const progress = recurrenceProgress(t, todayKey);
+      // Concluída hoje → clicar de novo desmarca (antes ficava travada)
+      const nextProgress = progress >= target ? 0 : progress + 1;
+      next = {
+        ...t,
+        recurrenceCurrent: nextProgress,
+        completed: nextProgress >= target,
+        lastCompletedDate: nextProgress > 0 ? todayKey : null,
+        updatedAt: nowIso
+      };
+    } else {
+      const completed = !t.completed;
+      next = {
+        ...t,
+        completed,
+        completedAt: completed ? nowIso : null,
+        lastCompletedDate: completed ? todayKey : null,
+        updatedAt: nowIso
+      };
+    }
+
+    // XP: só na primeira vez que conclui (desmarcar e marcar de novo não dá mais)
+    const nowDone = isTaskDone(next, todayKey);
+    const xpKey = xpKeyFor(t, todayKey);
+    const giveXp = nowDone && t.xpGiven !== xpKey;
+    if (giveXp) next = { ...next, xpGiven: xpKey };
+
+    const tasks = currentList.tasks.map((x) => (x.id === taskId ? next : x));
+    // Diamante: a lista inteira concluída (no máximo uma vez por dia por lista)
+    const giveDiamond =
+      nowDone && tasks.length > 0 && currentList.diamondOn !== todayKey && tasks.every((x) => isTaskDone(x, todayKey));
+
+    const listId = currentList.id;
+    applyChange((prev) =>
+      prev.map((l) => (l.id === listId ? { ...l, tasks, diamondOn: giveDiamond ? todayKey : l.diamondOn || null } : l))
     );
+    const { onTaskXp, onListComplete } = rewardRef.current;
+    if (giveXp && onTaskXp) onTaskXp(TASK_XP, t.title, currentList.title);
+    if (giveDiamond && onListComplete) onListComplete(currentList.title);
   };
 
   const updateTask = (taskId, fields) => {

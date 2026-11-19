@@ -775,6 +775,12 @@ export function useGameData() {
     setDiamondLog((prev) => [makeLogEntry(applied, 'manual', { label }), ...prev]);
   };
 
+  // Lista de tarefas completada: +1 diamante
+  const grantTaskDiamond = (listTitle) => {
+    setDiamonds((d) => d + 1);
+    setDiamondLog((prev) => [makeLogEntry(1, 'task', { label: listTitle }), ...prev]);
+  };
+
   // Gasta diamantes (ex.: upgrades do personagem). Devolve false se não houver saldo.
   const spendDiamonds = (amount, label) => {
     const cost = Math.round(Number(amount) || 0);
@@ -1233,6 +1239,7 @@ const trainSkill = (skillId) => {
     setDiamonds,
     diamondLog,
     adjustDiamonds,
+    grantTaskDiamond,
     spendDiamonds,
     setDiamondsTo,
     dailyMissions,

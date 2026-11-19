@@ -1873,6 +1873,55 @@ html[data-ui-theme='nanquim'] .fc-interval-help {
 html[data-ui-theme='nanquim'] .fc-btn.ghost-line {
     color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
 }
+html[data-ui-theme='nanquim'] .fc-order {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-deck-ghost {
+    background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%));
+    border: 2px solid var(--fc-deck, rgb(56, 189, 248));
+    color: var(--nq-ink);
+    box-shadow: 0 18px 40px rgb(var(--nq-shade-rgb) / 0.158)
+}
+html[data-ui-theme='nanquim'] .fc-select-bar {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-select-hint {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-check {
+    border: 2px solid var(--nq-line-strong);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-group-chips > button, html[data-ui-theme='nanquim'] .fc-group-chip > button {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.09);
+    background: rgb(var(--nq-shade-rgb) / 0.036);
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-group-chip > .fc-group-x {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-group-chip > .fc-group-x:hover {
+    color: color-mix(in srgb, rgb(248, 113, 113) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .fc-pick-title {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-pick-row {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.063);
+    background: rgb(var(--nq-shade-rgb) / 0.027)
+}
+html[data-ui-theme='nanquim'] .fc-pick-name {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-pick-count {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
+html[data-ui-theme='nanquim'] .fc-pick-all {
+    color: var(--nq-ink)
+}
+html[data-ui-theme='nanquim'] .fc-pick-all small {
+    color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
+}
 
 /* ===== src/atualizacao2_0/Hero.css ===== */
 html[data-ui-theme='nanquim'] .vx-face {

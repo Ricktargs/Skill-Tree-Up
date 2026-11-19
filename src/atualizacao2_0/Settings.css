@@ -363,3 +363,8 @@
 }
 
 .st-range { width: 160px; accent-color: var(--theme-accent, #38bdf8); }
+
+/* Celular: idiomas só com o nome (sem bandeira) */
+@media (max-width: 760px) {
+  .st-lang-flag { display: none; }
+}

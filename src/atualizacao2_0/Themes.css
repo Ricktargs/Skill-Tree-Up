@@ -645,4 +645,4 @@
 .th-simple .th-desc { font-size: 0.72rem; opacity: 0.7; line-height: 1.25; }
 .th-simple .th-check,
 .th-simple .th-edit-badge,
-.th-simple .th-fav-badge { position: absolute; top: 6px; right: 8px; }
+.th-simple .th-fav-badge { position: absolute; top: 6px; right: 8px; left: auto; bottom: auto; }

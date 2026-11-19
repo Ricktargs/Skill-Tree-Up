@@ -193,3 +193,33 @@ export const applyBackupExtras = (data, activeProfileId) => {
     console.error('Erro ao restaurar dados extras do backup:', e);
   }
 };
+
+// ---------- Backup completo (formato 4) ----------
+// Uma cópia de TUDO o que o programa guarda no navegador: perfis, habilidades,
+// missões, tarefas, flashcards, Pomodoro, Neurônios, Santuário, temas, sons,
+// idioma... Assim nada fica de fora, mesmo coisas novas que forem criadas depois.
+export const collectFullStorage = () => {
+  const all = {};
+  try {
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (key !== null) all[key] = localStorage.getItem(key);
+    }
+  } catch (e) {}
+  return all;
+};
+
+// Volta tudo exatamente como estava no backup (o que não estava nele é removido).
+export const restoreFullStorage = (all) => {
+  if (!all || typeof all !== 'object') return false;
+  const entries = Object.entries(all).filter(([, v]) => typeof v === 'string');
+  if (!entries.length) return false;
+  try {
+    localStorage.clear();
+    entries.forEach(([key, value]) => localStorage.setItem(key, value));
+    return true;
+  } catch (e) {
+    console.error('Erro ao restaurar o backup completo:', e);
+    return false;
+  }
+};

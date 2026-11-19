@@ -20,6 +20,7 @@ import { BASE_Y, groundY, smoothPath, treeGeometry } from "../lib/growth";
 import { canopyCircles } from "../lib/canopy";
 import { hashString } from "../lib/ids";
 import { loadJSON, saveJSON } from "../lib/storage";
+import { sfx } from "../lib/sound";
 import { ForestRoots, ForestTrunks } from "./TreeArt";
 import { HeroModel } from "../../../atualizacao2_0/Hero.jsx";
 import { DEFAULT_HERO, normalizeHero } from "../../../atualizacao2_0/HeroModels.js";
@@ -1189,7 +1190,7 @@ export const BranchHandles = memo(function BranchHandles({ nodes, dims, events, 
 
 /** Barra do modo galhos: adicionar, remover, aleatorizar. Sem nomes nem notas. */
 export function BranchTools() {
-  const { data, commit, logPoints } = useArvore();
+  const { data, commit } = useArvore();
   const { branchMode, branch, editing } = useSanctuaryState();
   const tree = data.tree;
   const sel = branch ? findBranch(tree, branch) : null;
@@ -1224,7 +1225,7 @@ export function BranchTools() {
     const id = generateId();
     const name = `Galho ${countBranches(tree) + 1}`;
     commit((d) => createSubbranch(d, parentId, { id, name, color: colorForId(id) }));
-    logPoints(15, "Galho criado");
+    sfx.play("grow");
     setLive({ branch: id });
   };
   async function removeSelected() {

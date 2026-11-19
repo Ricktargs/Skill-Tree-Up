@@ -24,10 +24,7 @@ const soundOn = () => {
 };
 
 // Plim fofo: três notas subindo, suaves, com um brilho por cima
-function playChime() {
-  const Ctx = window.AudioContext || window.webkitAudioContext;
-  if (!Ctx) return null;
-  const ctx = new Ctx();
+function playChime(ctx) {
   const start = () => {
     const t0 = ctx.currentTime + 0.02;
     const master = ctx.createGain();
@@ -57,10 +54,22 @@ function playChime() {
       });
     });
   };
-  // Navegadores só liberam áudio depois de alguma interação; se não der, fica em silêncio
-  if (ctx.state === 'suspended') ctx.resume().then(start).catch(() => {});
-  else start();
+  start();
   return ctx;
+}
+
+// Navegadores (Chrome, Edge, Safari...) bloqueiam som antes do primeiro clique
+// ou tecla na página. Abrindo pelo index.html ou pelo site, o áudio começa
+// "suspenso" e o plim ficava mudo. Aqui ele tenta tocar; se estiver bloqueado,
+// toca assim que a pessoa clicar ou apertar uma tecla durante a abertura.
+function makeAudio() {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return null;
+  try {
+    return new Ctx();
+  } catch {
+    return null;
+  }
 }
 
 export default function Splash() {
@@ -70,17 +79,54 @@ export default function Splash() {
   useEffect(() => {
     if (!show) return undefined;
     const end = setTimeout(() => setShow(false), DURATION);
-    const chime = soundOn()
+    const wantSound = soundOn();
+    const ctx = wantSound ? makeAudio() : null;
+    audio.current = ctx;
+    let played = false;
+    let due = false; // já passou da hora do plim
+    const ring = () => {
+      if (played || !ctx) return;
+      if (ctx.state === 'running') {
+        played = true;
+        playChime(ctx);
+      }
+    };
+    // tenta liberar o áudio já (funciona quando o navegador permite)
+    if (ctx && ctx.state === 'suspended') ctx.resume().then(() => due && ring()).catch(() => {});
+    const chime = ctx
       ? setTimeout(() => {
-          audio.current = playChime();
+          due = true;
+          ring();
         }, CHIME_AT * 1000)
       : null;
+    // primeiro clique/tecla/toque: libera o som e toca o plim (mesmo pulando a abertura)
+    const unlock = () => {
+      if (!ctx || played) return;
+      ctx
+        .resume()
+        .then(ring)
+        .catch(() => {});
+    };
     const skip = () => setShow(false);
+    window.addEventListener('pointerdown', unlock, true);
+    window.addEventListener('touchstart', unlock, true);
+    window.addEventListener('keydown', unlock, true);
     window.addEventListener('keydown', skip, { once: true });
     return () => {
       clearTimeout(end);
       if (chime) clearTimeout(chime);
+      window.removeEventListener('pointerdown', unlock, true);
+      window.removeEventListener('touchstart', unlock, true);
+      window.removeEventListener('keydown', unlock, true);
       window.removeEventListener('keydown', skip);
+      // áudio que nem chegou a tocar não fica aberto à toa
+      if (ctx && !played) {
+        try {
+          ctx.close();
+        } catch {
+          /* nada */
+        }
+      }
     };
   }, [show]);
 

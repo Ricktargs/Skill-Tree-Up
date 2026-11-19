@@ -1,5 +1,5 @@
 /* =========================================================
-   ABERTURA DO ORBE-G — limpa, fundo branco e letras fortes
+   ABERTURA DO ORBE-G — limpa, fundo vermelho e letras brancas fortes
    (no espírito das aberturas de estúdio de jogos)
    Linha do tempo (2,5 s):
    0,00–0,90  palavras aparecem uma a uma
@@ -14,7 +14,7 @@
   z-index: 2147483000;
   display: grid;
   place-items: center;
-  background: #ffffff;
+  background: #ef323d;
   cursor: pointer;
   animation: orbe-out 0.3s ease-in 2.2s forwards;
   -webkit-user-select: none;
@@ -38,7 +38,7 @@
   font-weight: 800;
   font-size: clamp(18px, 3.6vw, 34px);
   letter-spacing: 0.01em;
-  color: #1d1d1f;
+  color: #ffffff;
   white-space: nowrap;
   transform-origin: 50% 60%;
   animation: orbe-grow 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) 1.32s forwards;
@@ -76,7 +76,7 @@
   overflow: hidden;
   max-width: 0;
   opacity: 0;
-  color: #e8384f;
+  color: #ffffff;
   animation: orbe-dash 0.3s ease-out 1.3s forwards;
 }
 
@@ -87,7 +87,7 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   margin-top: 30px; /* espaço para a sigla, que cresce */
-  color: #8a8a8f;
+  color: rgba(255, 255, 255, 0.82);
   opacity: 0;
   animation: orbe-fade 0.4s ease 1.7s forwards;
   text-align: center;
@@ -106,7 +106,7 @@
   100% { max-width: 0; opacity: 0; }
 }
 @keyframes orbe-ini {
-  to { color: #e8384f; }
+  to { color: #ffffff; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.12); }
 }
 @keyframes orbe-dash {
   to { max-width: 0.7em; opacity: 1; }

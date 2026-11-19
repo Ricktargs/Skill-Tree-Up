@@ -190,3 +190,11 @@ html[data-ui-theme='nanquim'] .mode-switcher .mode-btn.active { background: var(
 html[data-ui-theme='nanquim'][data-nq-follow='true'] .mode-switcher .mode-btn.active {
   background: var(--nq-foliage) !important;
 }
+
+/* Flashcards: botão principal (Estudar, Criar grupo...) com o fundo da cor do tema */
+html[data-ui-theme='nanquim'] .fc-btn.primary {
+  background: var(--fc-accent, var(--theme-accent)) !important;
+  color: var(--theme-on-accent) !important;
+  border-color: transparent !important;
+}
+html[data-ui-theme='nanquim'] .fc-btn.primary:disabled { opacity: 0.45; }

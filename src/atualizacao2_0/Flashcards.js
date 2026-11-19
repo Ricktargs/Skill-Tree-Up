@@ -13,7 +13,12 @@ export const NEW_PER_SESSION = 15;
 export const DAILY_XP_CAP = 80;
 export const MASTERED_DAYS = 21;
 
-const EMPTY = { decks: [], cards: [], stats: { streak: 0, lastStudyDay: '', daily: {} } };
+const EMPTY = { decks: [], cards: [], stats: { streak: 0, lastStudyDay: '', daily: {} }, prefs: { deckSort: 'manual' } };
+
+// Ordem dos decks na tela inicial
+export const DECK_SORTS = ['manual', 'name', 'study', 'recent'];
+// Chave para as cartas que não estão em nenhum grupo
+export const NO_GROUP = '__none';
 
 export const uid = (prefix) => `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
@@ -175,21 +180,58 @@ export const cardsFromSkill = (skill, tx = plainTx, moduleId = 'default') => {
   return out;
 };
 
-// "frente ; verso" (ou TAB, " :: ", " | ") — uma carta por linha
-export const parseBulk = (text) =>
-  String(text || '')
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const sep = ['\t', ' :: ', ' ; ', ';', ' | '].find((s) => line.includes(s));
-      if (!sep) return null;
-      const i = line.indexOf(sep);
-      const front = line.slice(0, i).trim();
-      const back = line.slice(i + sep.length).trim().replace(/\\n/g, '\n');
-      return front && back ? { front, back } : null;
-    })
-    .filter(Boolean);
+// Importar em lote: "pergunta | resposta" (também aceita "pergunta :: resposta").
+// Tudo antes do primeiro | ou :: é a frente; tudo depois é o verso, mesmo com
+// espaços e linhas puladas. Cada linha que tem | ou :: começa uma carta nova.
+// Para uma pergunta com várias linhas, separe as cartas com uma linha "---":
+// aí cada bloco vira uma carta inteira (frente e verso podem ter várias linhas).
+const BULK_SEP = /\s*(?:\||::)\s*/;
+const CARD_BREAK = /^[ \t]*-{3,}[ \t]*$/m;
+// tira linhas em branco das pontas e espaços no fim das linhas; "\n" escrito vira quebra
+const tidy = (t) =>
+  t
+    .replace(/\n/g, '\n')
+    .replace(/[ \t]+$/gm, '')
+    .replace(/^\n+|\n+$/g, '')
+    .trim();
+
+const splitCard = (block) => {
+  const m = BULK_SEP.exec(block);
+  if (!m) return null;
+  const front = tidy(block.slice(0, m.index));
+  const back = tidy(block.slice(m.index + m[0].length));
+  return front && back ? { front, back } : null;
+};
+
+export const parseBulk = (text) => {
+  const src = String(text || '').replace(/\r\n?/g, '\n');
+  if (!BULK_SEP.test(src)) return [];
+
+  // Com "---": um bloco = uma carta
+  if (CARD_BREAK.test(src)) {
+    return src
+      .split(new RegExp(CARD_BREAK.source, 'gm'))
+      .map(splitCard)
+      .filter(Boolean);
+  }
+
+  // Sem "---": cada linha com | ou :: abre uma carta; as linhas seguintes
+  // (inclusive em branco) continuam o verso até a próxima carta.
+  // O que vier antes da primeira carta entra na frente dela.
+  const cards = [];
+  let lead = [];
+  let cur = null;
+  src.split('\n').forEach((line) => {
+    if (/\||::/.test(line)) {
+      if (cur) cards.push(cur);
+      cur = [...lead, line];
+      lead = [];
+    } else if (cur) cur.push(line);
+    else lead.push(line);
+  });
+  if (cur) cards.push(cur);
+  return cards.map((lines) => splitCard(lines.join('\n'))).filter(Boolean);
+};
 
 const sanitize = (raw) => {
   const v = raw && typeof raw === 'object' ? raw : {};
@@ -200,6 +242,9 @@ const sanitize = (raw) => {
       streak: Number(v.stats?.streak) || 0,
       lastStudyDay: v.stats?.lastStudyDay || '',
       daily: v.stats?.daily && typeof v.stats.daily === 'object' ? v.stats.daily : {}
+    },
+    prefs: {
+      deckSort: DECK_SORTS.includes(v.prefs?.deckSort) ? v.prefs.deckSort : 'manual'
     }
   };
 };
@@ -302,6 +347,70 @@ export function useFlashcards(profileId, { onReward } = {}) {
   const updateDeck = (deckId, fields) =>
     update((d) => ({ ...d, decks: d.decks.map((x) => (x.id === deckId ? { ...x, ...fields } : x)) }));
 
+  // Arrastar um deck: tira de onde estava e coloca no lugar de outro
+  const moveDeck = (fromId, toId) => {
+    if (!fromId || !toId || fromId === toId) return;
+    update((d) => {
+      const from = d.decks.findIndex((x) => x.id === fromId);
+      const to = d.decks.findIndex((x) => x.id === toId);
+      if (from < 0 || to < 0) return d;
+      const decks = [...d.decks];
+      const [moved] = decks.splice(from, 1);
+      decks.splice(to, 0, moved);
+      return { ...d, decks };
+    });
+  };
+  // Grava uma ordem inteira (ex.: ao arrastar com a lista ordenada por nome)
+  const setDeckOrder = (ids) =>
+    update((d) => {
+      const pos = new Map(ids.map((id, i) => [id, i]));
+      const decks = [...d.decks].sort((a, b) => (pos.get(a.id) ?? 1e9) - (pos.get(b.id) ?? 1e9));
+      return { ...d, decks };
+    });
+  const setDeckSort = (deckSort) => update((d) => ({ ...d, prefs: { ...d.prefs, deckSort } }));
+
+  // ---------- Grupos de cartas (dentro de um deck) ----------
+  const groupsOf = (deckId) => {
+    const deck = data.decks.find((x) => x.id === deckId);
+    return Array.isArray(deck?.groups) ? deck.groups : [];
+  };
+  const addGroup = (deckId, cardIds = []) => {
+    const groups = groupsOf(deckId);
+    // "Grupo N" com o primeiro número livre
+    let n = groups.length + 1;
+    const names = new Set(groups.map((g) => g.name));
+    while (names.has(`Grupo ${n}`)) n += 1;
+    const group = { id: uid('grp'), name: `Grupo ${n}` };
+    const ids = new Set(cardIds);
+    update((d) => ({
+      ...d,
+      decks: d.decks.map((x) => (x.id === deckId ? { ...x, groups: [...(x.groups || []), group] } : x)),
+      cards: d.cards.map((c) => (ids.has(c.id) ? { ...c, groupId: group.id } : c))
+    }));
+    return group.id;
+  };
+  const renameGroup = (deckId, groupId, name) => {
+    const clean = String(name || '').trim();
+    if (!clean) return;
+    update((d) => ({
+      ...d,
+      decks: d.decks.map((x) =>
+        x.id === deckId ? { ...x, groups: (x.groups || []).map((g) => (g.id === groupId ? { ...g, name: clean.slice(0, 30) } : g)) } : x
+      )
+    }));
+  };
+  // Excluir o grupo não apaga as cartas: elas ficam "sem grupo"
+  const deleteGroup = (deckId, groupId) =>
+    update((d) => ({
+      ...d,
+      decks: d.decks.map((x) => (x.id === deckId ? { ...x, groups: (x.groups || []).filter((g) => g.id !== groupId) } : x)),
+      cards: d.cards.map((c) => (c.groupId === groupId ? { ...c, groupId: null } : c))
+    }));
+  const setCardsGroup = (cardIds, groupId) => {
+    const ids = new Set(cardIds);
+    update((d) => ({ ...d, cards: d.cards.map((c) => (ids.has(c.id) ? { ...c, groupId: groupId || null } : c)) }));
+  };
+
   const deleteDeck = (deckId) =>
     update((d) => ({ ...d, decks: d.decks.filter((x) => x.id !== deckId), cards: d.cards.filter((c) => c.deckId !== deckId) }));
 
@@ -403,10 +512,21 @@ export function useFlashcards(profileId, { onReward } = {}) {
   );
 
   // Fila de estudo: revisões vencidas primeiro, depois novas (limitadas)
-  const buildQueue = (deckId) => {
-    const pool = data.cards.filter((c) => !deckId || c.deckId === deckId);
+  // `groups`: só as cartas desses grupos (NO_GROUP = sem grupo); aí as novas não têm limite,
+  // porque o grupo já é o "pedaço" que a pessoa escolheu estudar.
+  // `all`: treino livre — todas as cartas dos grupos, mesmo as que ainda não venceram.
+  const buildQueue = (deckId, { groups = null, all = false } = {}) => {
+    let pool = data.cards.filter((c) => !deckId || c.deckId === deckId);
+    if (groups) {
+      const deck = data.decks.find((x) => x.id === deckId);
+      const known = new Set((deck?.groups || []).map((g) => g.id));
+      const want = new Set(groups);
+      pool = pool.filter((c) => want.has(c.groupId && known.has(c.groupId) ? c.groupId : NO_GROUP));
+    }
+    if (all) return pool.map((c) => c.id);
     const due = pool.filter((c) => isDue(c, today)).sort((a, b) => (a.due || '').localeCompare(b.due || ''));
-    const fresh = pool.filter(isNewCard).slice(0, NEW_PER_SESSION);
+    const freshAll = pool.filter(isNewCard);
+    const fresh = groups ? freshAll : freshAll.slice(0, NEW_PER_SESSION);
     return [...due, ...fresh].map((c) => c.id);
   };
 
@@ -430,6 +550,14 @@ export function useFlashcards(profileId, { onReward } = {}) {
     today,
     decks: data.decks,
     cards: data.cards,
+    deckSort: data.prefs.deckSort,
+    setDeckSort,
+    moveDeck,
+    setDeckOrder,
+    addGroup,
+    renameGroup,
+    deleteGroup,
+    setCardsGroup,
     stats: data.stats,
     todayStats,
     streak,

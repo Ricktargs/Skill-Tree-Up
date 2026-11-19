@@ -11,6 +11,7 @@ const SOURCE_META = {
   mission: { icon: '📜', label: 'Missão' },
   bonus: { icon: '🎉', label: 'Bônus' },
   manual: { icon: '🛠️', label: 'Ajuste' },
+  task: { icon: '✅', label: 'Tarefas' },
   upgrade: { icon: '⬆️', label: 'Upgrade' }
 };
 
@@ -61,6 +62,7 @@ const groupByDay = (entries) => {
 const entryTitle = (e) => {
   if (e.source === 'mission') return e.text || tx('Missão concluída');
   if (e.source === 'bonus') return tx('Bônus: todas as missões do dia');
+  if (e.source === 'task') return tx('Lista completa: {name}', { name: e.label || '' });
   return tx(e.label || 'Ajuste manual');
 };
 
@@ -68,6 +70,7 @@ const entrySubtitle = (e) => {
   if (e.source === 'mission') return e.skillName ? `${e.skillName} · ${tx('Missão diária')}` : tx('Missão diária');
   if (e.source === 'bonus') return e.missionsCount ? tx('{n} missões concluídas', { n: e.missionsCount }) : tx('Missões do dia completas');
   if (e.source === 'upgrade') return tx('Upgrade de personagem');
+  if (e.source === 'task') return tx('Todas as tarefas da lista concluídas');
   return tx('Painel de ajustes');
 };
 
@@ -152,6 +155,7 @@ export function DiamondHistoryModal({ isOpen, onClose, diamondLog = [], diamonds
     mission: diamondLog.filter((e) => e.source === 'mission').length,
     bonus: diamondLog.filter((e) => e.source === 'bonus').length,
     manual: diamondLog.filter((e) => e.source === 'manual').length,
+    task: diamondLog.filter((e) => e.source === 'task').length,
     upgrade: diamondLog.filter((e) => e.source === 'upgrade').length
   };
 
@@ -177,6 +181,7 @@ export function DiamondHistoryModal({ isOpen, onClose, diamondLog = [], diamonds
           ['all', 'Tudo'],
           ['mission', '📜 Missões'],
           ['bonus', '🎉 Bônus'],
+          ['task', '✅ Tarefas'],
           ['manual', '🛠️ Ajustes'],
           ['upgrade', '⬆️ Upgrades']
         ].map(([value, label]) =>

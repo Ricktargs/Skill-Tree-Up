@@ -973,3 +973,27 @@ textarea.ck-input { resize: vertical; min-height: 60px; }
 .ck-list-item.task-drop .ck-list-name::after {
   content: ' ⤵';
 }
+
+/* Recompensa da tarefa: +2 XP à direita */
+.ck-xp {
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 16px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: var(--ck-accent);
+  background: color-mix(in srgb, var(--ck-accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ck-accent) 35%, transparent);
+}
+.ck-xp.got {
+  opacity: 0.35;
+  text-decoration: line-through;
+}
+
+/* Caixa de descrição do editor: 3x mais alta */
+.ck-editor-body textarea.ck-input { min-height: 180px; }

@@ -7,15 +7,6 @@ import { cloneDeep, isValidTree } from "../lib/tree";
 import { repairData } from "../lib/folders";
 import { generateId } from "../lib/ids";
 import { sfx } from "../lib/sound";
-import { getModeActions } from "../../../shared/modeBridge.js";
-
-const XP_SYNC_KEY = "eu-sou-arvore-xp-sync";
-const grantXp = (xp, title) => {
-  const bridge = getModeActions("heroXp");
-  if (!bridge || !xp) return false;
-  bridge.grant(xp, title, "Árvore");
-  return true;
-};
 
 function loadInitialData() {
   const savedTree = loadJSON(STORAGE_KEYS.tree, null);
@@ -120,29 +111,14 @@ export default function ArvoreProvider({ children }) {
     pointsRef.current = points;
   }, [points]);
 
-  // Uma vez por perfil: os pontos que a Árvore já tinha viram XP
-  useEffect(() => {
-    if (loadJSON(XP_SYNC_KEY, null) === "done") return undefined;
-    const id = setInterval(() => {
-      const total = pointsRef.current;
-      // espera o herói (Habilidades) estar pronto para receber o XP
-      if (total <= 0 || grantXp(total, "🌳 Pontos da Árvore convertidos em XP")) {
-        saveJSON(XP_SYNC_KEY, "done");
-        clearInterval(id);
-      }
-    }, 500);
-    return () => clearInterval(id);
-  }, []);
-
   const commit = useCallback((fn) => dispatch({ type: "commit", fn }), []);
   const undo = useCallback(() => dispatch({ type: "undo" }), []);
   const redo = useCallback(() => dispatch({ type: "redo" }), []);
 
-  // A Árvore não tem mais pontos próprios: cada evento vira XP do herói
+  // O Santuário não dá XP (nem pontos): aqui fica só o som de crescer
   const logPoints = useCallback((pts, descricao) => {
     if (!pts) return;
     sfx.play("grow");
-    grantXp(pts, `🌳 Árvore: ${descricao}`);
     setPointsLog((log) => [
       {
         id: generateId(),

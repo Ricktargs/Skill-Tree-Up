@@ -134,3 +134,7 @@ body.lang-translating {
 body.lang-ready {
   opacity: 1 !important;
 }
+/* Celular: idiomas só com o nome (sem bandeira) */
+@media (max-width: 760px) {
+  .up-idioma-flag { display: none; }
+}
