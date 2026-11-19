@@ -962,7 +962,13 @@ const handleSaveMiniEdit = (idx, oldText) => {
     if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
   };
 
+  const lastHoldTouchRef = useRef(0);
   const startHoldAction = (actionFn) => {
+    // No celular o toque dispara "touchstart" e depois um "mousedown" de imitação:
+    // sem isso cada toque no − / + contava duas vezes.
+    const ev = typeof window !== 'undefined' ? window.event : null;
+    if (ev && ev.type === 'touchstart') lastHoldTouchRef.current = Date.now();
+    else if (ev && ev.type === 'mousedown' && Date.now() - lastHoldTouchRef.current < 900) return;
     stopHold();
     actionFn();
 

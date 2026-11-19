@@ -335,3 +335,105 @@
 @media (max-width: 760px) {
   .np-pf-row { flex-direction: column; }
 }
+
+/* =========================================================
+   CELULAR — editor de notas em TELA CHEIA com layout próprio
+   Retrato: lista OU nota (botão "‹ Notas" volta)
+   Paisagem: lista estreita + nota lado a lado
+   ========================================================= */
+.np-back { display: none; }
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  .np-panel {
+    left: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    z-index: 9500 !important;
+    border-right: none !important;
+    box-shadow: none !important;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    box-sizing: border-box;
+    animation: np-in-up 0.18s ease-out;
+  }
+  @keyframes np-in-up { from { transform: translateY(16px); opacity: 0; } }
+  .np-head { padding: 8px 10px !important; gap: 8px !important; }
+  .np-head h2 { font-size: 17px !important; }
+  .np-head .nr-window-close { width: 38px; height: 38px; }
+  .np-panel input,
+  .np-panel select,
+  .np-panel textarea { font-size: 16px !important; } /* iPhone não dá zoom ao tocar */
+  .np-row { min-height: 40px; font-size: 14.5px !important; }
+  .np-actions .btn { min-height: 38px; }
+  .np-move-select { max-width: 100%; }
+  .np-preset-window { max-height: calc(100% - 16px); }
+  .np-preset-backdrop { padding: 8px !important; align-items: stretch; }
+}
+
+/* Retrato: uma coisa de cada vez, ocupando a tela inteira */
+@media (max-width: 760px) and (orientation: portrait) {
+  .np-head small { display: none; }
+  .np-body { flex-direction: column !important; }
+  .np-side {
+    width: auto !important;
+    max-height: none !important;
+    flex: 1 !important;
+    min-height: 0;
+    border-right: none !important;
+    border-bottom: none !important;
+    padding: 10px 12px !important;
+  }
+  .np-editor { flex: 1 !important; }
+  .np-panel.np-view-list .np-editor { display: none !important; }
+  .np-panel.np-view-note .np-side { display: none !important; }
+  .np-panel.np-view-note .np-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+    padding: 7px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .np-panel.np-view-note .np-head h2 { font-size: 15px !important; opacity: 0.7; }
+  .np-editor > .nr-editor { padding: 8px 12px !important; }
+  .np-neuron-bar { flex-wrap: wrap; padding: 6px 12px !important; gap: 6px !important; }
+  .np-note-folder { padding: 6px 12px 0 !important; }
+  .np-tip { display: none; }
+}
+
+/* Paisagem: lista à esquerda e nota à direita */
+@media (max-height: 520px) and (orientation: landscape) {
+  .np-body { flex-direction: row !important; }
+  .np-side { width: 220px !important; max-height: none !important; border-right: 1px solid var(--line) !important; border-bottom: none !important; }
+  .np-head { padding-top: 6px !important; padding-bottom: 6px !important; }
+  .np-tip { display: none; }
+  /* a nota rola inteira (o texto não fica espremido entre as barras) */
+  .np-editor { overflow-y: auto !important; display: block !important; }
+  .np-note-folder { padding: 4px 12px 0 !important; }
+  .np-neuron-bar { padding: 4px 12px !important; }
+  .np-editor > .nr-editor { flex: none !important; height: auto !important; min-height: 0 !important; overflow: visible !important; padding: 6px 12px !important; }
+  .np-editor .nr-editor-wrap { flex: none !important; overflow: visible !important; height: auto !important; }
+  .np-editor .nr-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+  .np-editor .nr-text { flex: none !important; height: auto !important; min-height: calc(100dvh - 120px) !important; overflow: visible !important; }
+  .np-editor .nr-footer { overflow: visible !important; }
+}
+
+/* ✒️ e a troca de modos não ficam por cima do editor aberto */
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  body:has(.np-panel) .notes-fab,
+  body:has(.np-panel) .mode-switcher { display: none !important; }
+}

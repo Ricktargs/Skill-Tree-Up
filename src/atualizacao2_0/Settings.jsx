@@ -6,7 +6,7 @@ import { useUiTheme, setVisual, setDark, VISUAL_THEMES } from '../shared/uiTheme
 import { useModeActions } from '../shared/modeBridge.js';
 import { useSoundSettings, setSoundSettings, sfx } from '../modes/arvore/lib/sound.js';
 import { isDesktopApp, useDesktopSettings } from '../shared/desktop.js';
-import { APP_VERSION, DOWNLOADS, PLATFORM, PLATFORM_LABEL, RELEASES_PAGE, checkForUpdate, hasUpdate, installUpdate, openDownload, useUpdate, visitorSystem } from '../shared/updater.js';
+import { APP_VERSION, DOWNLOADS, IS_IOS_HOME, PLATFORM, PLATFORM_LABEL, RELEASES_PAGE, checkForUpdate, downloadFor, hasUpdate, installUpdate, openDownload, useUpdate, visitorSystem } from '../shared/updater.js';
 import { startTutorial } from '../shared/tutorial.js';
 
 // Interruptor no padrão das Configurações
@@ -181,12 +181,12 @@ export function SettingsModal({
                     title={d.file}
                     onClick={() => {
                       click();
-                      openDownload(d.url);
+                      downloadFor(id);
                     }}
                   >
                     <span className="st-download-ico">{d.icon}</span>
                     <span>{d.label}</span>
-                    {visitorSystem === id && <small>{PLATFORM === id ? tx('este app') : tx('seu sistema')}</small>}
+                    {visitorSystem === id && <small>{PLATFORM === id || (id === 'iphone' && IS_IOS_HOME) ? tx('este app') : tx('seu sistema')}</small>}
                   </button>
                 ))}
               </div>

@@ -11,7 +11,7 @@ import { getMode, setMode } from '../modes/modeState.js';
 import { setNotesPanelOpen } from './notesPanel.js';
 import { isNewUser, markWelcomeDone } from './firstRun.js';
 import { startTutorial, stopTutorial, useTutorialOpen } from './tutorial.js';
-import { DOWNLOADS, PLATFORM, openDownload, visitorSystem } from './updater.js';
+import { DOWNLOADS, IS_IOS_HOME, PLATFORM, downloadFor, visitorSystem } from './updater.js';
 import { tx, useLanguage } from '../i18n/index.jsx';
 import { sfx } from '../modes/arvore/lib/sound.js';
 
@@ -327,7 +327,7 @@ function Welcome({ onTutorial, onSkip }) {
             ▶ {tx('Ver tutorial')}
           </button>
         </div>
-        {PLATFORM === 'web' && (
+        {PLATFORM === 'web' && !IS_IOS_HOME && (
           <div className="ob-download">
             <div>
               <strong>⬇ {tx('Baixar o app')}</strong>
@@ -341,7 +341,7 @@ function Welcome({ onTutorial, onSkip }) {
                   className={`ui-dialog-btn ${visitorSystem === id ? 'primary' : ''}`}
                   onClick={() => {
                     sfx.play('tick');
-                    openDownload(d.url);
+                    downloadFor(id);
                   }}
                 >
                   {d.icon} {d.label}

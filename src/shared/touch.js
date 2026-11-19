@@ -21,6 +21,8 @@ export const IS_TOUCH = detect();
 const HOLD_MS = 480;
 const MOVE_TOLERANCE = 10;
 const EDITABLE = 'input, textarea, select, [contenteditable="true"], [contenteditable=""], .ProseMirror';
+// Botões em que segurar já tem função (repetir − / +, andar no Santuário)
+const OWN_HOLD = '.icon-button, .plus-button, .sanc-pad, [data-no-hold]';
 
 function holdRing(x, y) {
   const el = document.createElement('div');
@@ -68,7 +70,7 @@ export function installTouch() {
       if (e.touches.length !== 1) return cancel();
       const t = e.touches[0];
       const target = e.target instanceof Element ? e.target : null;
-      if (!target || target.closest(EDITABLE)) return cancel();
+      if (!target || target.closest(EDITABLE) || target.closest(OWN_HOLD)) return cancel();
       cancel();
       press = { x: t.clientX, y: t.clientY, target, timer: setTimeout(fire, HOLD_MS) };
       return undefined;
@@ -124,12 +126,21 @@ export function installTouch() {
   let pinch = null; // { el, d, coef, cap, ids }
   const dist = () => {
     const [a, b] = [...touches.values()];
-    return Math.hypot(a.x - b.x, a.y - b.y);
+    return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
   };
   const mid = () => {
     const [a, b] = [...touches.values()];
-    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    return a && b ? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } : { x: 0, y: 0 };
   };
+  // todos os dedos saíram da tela: nada de dedo "fantasma" para a próxima pinça
+  const reset = (e) => {
+    if (e.touches && e.touches.length === 0) {
+      touches.clear();
+      pinch = null;
+    }
+  };
+  document.addEventListener('touchend', reset, { capture: true, passive: true });
+  document.addEventListener('touchcancel', reset, { capture: true, passive: true });
   window.addEventListener(
     'pointerdown',
     (e) => {

@@ -10,6 +10,7 @@
 // =========================================================
 import { useSyncExternalStore } from 'react';
 import { desktop, isDesktopApp, openLink } from './desktop.js';
+import { ask, inform } from './Dialog.jsx';
 
 /* global __APP_VERSION__, __BUILD_ID__ */
 export const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
@@ -21,8 +22,15 @@ const DL = `https://github.com/${REPO}/releases/latest/download`;
 export const DOWNLOADS = {
   windows: { label: 'Windows', icon: '🪟', file: 'ORBE-G-Instalador.exe', url: `${DL}/ORBE-G-Instalador.exe` },
   mac: { label: 'Mac', icon: '🍎', file: 'ORBE-G-Mac.dmg', url: `${DL}/ORBE-G-Mac.dmg` },
-  android: { label: 'Android', icon: '🤖', file: 'ORBE-G-Android.apk', url: `${DL}/ORBE-G-Android.apk` }
+  android: { label: 'Android', icon: '🤖', file: 'ORBE-G-Android.apk', url: `${DL}/ORBE-G-Android.apk` },
+  // iPhone: a Apple só deixa instalar fora da App Store pela Tela de Início (Safari)
+  iphone: { label: 'iPhone', icon: '📱', file: 'Tela de Início (Safari)', url: null }
 };
+export const SITE_URL = 'https://skill-tree-up.vercel.app';
+const UA = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+const IS_IOS = /iphone|ipad|ipod/i.test(UA) || (/macintosh/i.test(UA) && typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1);
+// Aberto pelo ícone da Tela de Início do iPhone
+export const IS_IOS_HOME = IS_IOS && typeof window !== 'undefined' && (window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches));
 export const RELEASES_PAGE = `https://github.com/${REPO}/releases/latest`;
 
 const capacitor = typeof window !== 'undefined' ? window.Capacitor : null;
@@ -39,13 +47,14 @@ export const PLATFORM_LABEL = {
   mac: 'App para Mac',
   linux: 'App para Linux',
   android: 'App para Android',
-  web: 'Navegador (site)'
+  web: IS_IOS_HOME ? 'App do iPhone (Tela de Início)' : 'Navegador (site)'
 }[PLATFORM];
 
 // Sistema de quem está no site (para destacar o download certo)
 export const visitorSystem = (() => {
   if (PLATFORM !== 'web') return PLATFORM;
-  const ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+  const ua = UA;
+  if (IS_IOS) return 'iphone';
   if (/android/i.test(ua)) return 'android';
   if (/mac os x|macintosh/i.test(ua) && !/iphone|ipad/i.test(ua)) return 'mac';
   if (/windows/i.test(ua)) return 'windows';
@@ -136,6 +145,41 @@ export function installUpdate() {
     // abre no navegador do celular, que baixa o APK novo e oferece instalar por cima
     window.location.href = d.url;
   } else openLink(d.url);
+}
+
+// Como instalar no iPhone (pelo Safari, sem App Store)
+export async function showIphoneHelp() {
+  const inSafari = IS_IOS && !/crios|fxios|edgios/i.test(UA);
+  const steps = [
+    'No iPhone o ORBE-G é instalado direto do site: ganha ícone na Tela de Início, abre em tela cheia como app e se atualiza sozinho.',
+    '',
+    `1. Abra no Safari: ${SITE_URL.replace('https://', '')}`,
+    '2. Toque em Compartilhar (o quadrado com a seta ↑).',
+    '3. Toque em “Adicionar à Tela de Início” e depois em “Adicionar”.'
+  ].join('\n');
+  if (IS_IOS_HOME) {
+    await inform({ title: '📱 Você já está no app do iPhone', message: 'Este ORBE-G já foi instalado pela Tela de Início. As atualizações chegam sozinhas.' });
+    return;
+  }
+  if (inSafari) {
+    await inform({ title: '📱 Instalar no iPhone', message: steps });
+    return;
+  }
+  const copy = await ask({ title: '📱 Instalar no iPhone', message: steps, yes: 'Copiar link do site', no: 'Fechar' });
+  if (!copy) return;
+  try {
+    await navigator.clipboard.writeText(SITE_URL);
+    await inform({ title: 'Link copiado!', message: `Cole no Safari do iPhone: ${SITE_URL}` });
+  } catch {
+    await inform({ title: 'Link do site', message: SITE_URL });
+  }
+}
+
+// Botão de download de um sistema (iPhone mostra o passo a passo)
+export function downloadFor(id) {
+  if (id === 'iphone') return showIphoneHelp();
+  const d = DOWNLOADS[id];
+  return d && d.url ? openDownload(d.url) : openDownload(RELEASES_PAGE);
 }
 
 // Abre um link de download (no Android o navegador do celular cuida do arquivo)

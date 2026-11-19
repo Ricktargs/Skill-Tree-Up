@@ -19,6 +19,17 @@ const DRAG_THRESHOLD = 6;
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 3.5;
 
+// Celular: começa mais perto (o mundo inteiro numa tela pequena fica minúsculo)
+// — retrato bem mais perto, paisagem um pouco. Centro: o chão perto da árvore.
+function initialView() {
+  if (!IS_TOUCH || typeof window === "undefined") return { zoom: 1, x: 0, y: 0 };
+  const portrait = window.innerHeight > window.innerWidth;
+  const zoom = portrait ? 2.3 : 1.35;
+  const cx = 570;
+  const cy = portrait ? 400 : 380;
+  return { zoom, x: cx * (1 - zoom), y: cy * (1 - zoom) };
+}
+
 function isTyping(target) {
   return target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable);
 }
@@ -51,7 +62,7 @@ export default function TreeCanvas({ activeIds, onNodeClick, onOpenBranch }) {
   const { data, commit } = useArvore();
   const { tree, records, offsets, foldersMap } = data;
 
-  const [view, setView] = useState({ zoom: 1, x: 0, y: 0 });
+  const [view, setView] = useState(initialView);
   const [hoveredId, setHoveredId] = useState(null);
   const [drag, setDrag] = useState(null);
   const [swapSourceId, setSwapSourceId] = useState(null);
@@ -116,7 +127,7 @@ export default function TreeCanvas({ activeIds, onNodeClick, onOpenBranch }) {
   }, []);
 
   const resetView = useCallback(() => {
-    setView({ zoom: 1, x: 0, y: 0 });
+    setView(initialView());
     showBadge();
   }, [showBadge]);
 

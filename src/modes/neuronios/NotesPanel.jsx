@@ -79,9 +79,20 @@ export default function NotesPanel() {
   useEffect(() => writeJSON(OPEN_KEY, [...openFolders]), [openFolders]);
   useEffect(() => writeJSON(PRESETS_OPEN_KEY, presetsOpen), [presetsOpen]);
 
+  // Celular: tela cheia; no retrato mostra a lista OU a nota (com "‹ Notas" para voltar)
+  const [phoneView, setPhoneView] = useState(() => (readJSON(ACTIVE_KEY, null) ? 'note' : 'list'));
+  const openNote = (id) => {
+    setActiveId(id);
+    setPhoneView('note');
+  };
+
   // A busca dos Neurônios pode pedir para abrir uma nota aqui
   useEffect(() => {
-    const on = (e) => e.detail && e.detail.id && setActiveId(e.detail.id);
+    const on = (e) => {
+      if (!e.detail || !e.detail.id) return;
+      setActiveId(e.detail.id);
+      setPhoneView('note');
+    };
     window.addEventListener('np-open-note', on);
     return () => window.removeEventListener('np-open-note', on);
   }, []);
@@ -149,7 +160,7 @@ export default function NotesPanel() {
     sfx.play('open');
     setQuery('');
     if (n.folderId) openPath(n.folderId);
-    if (preset.openAfter !== false) setActiveId(n.id);
+    if (preset.openAfter !== false) openNote(n.id);
   };
   const removePreset = async (preset) => {
     const ok = await ask({
@@ -170,7 +181,7 @@ export default function NotesPanel() {
     const n = store.addNote({ isNeuron: false, folderId: selectedFolder, title: 'Nova nota' });
     if (selectedFolder) openPath(selectedFolder);
     sfx.play('open');
-    setActiveId(n.id);
+    openNote(n.id);
   };
   const newFolder = () => {
     const f = store.addFolder('Nova pasta', selectedFolder);
@@ -354,7 +365,7 @@ export default function NotesPanel() {
       style={{ '--depth': depth }}
       onClick={() => {
         sfx.play('tick');
-        setActiveId(n.id);
+        openNote(n.id);
         setSelectedFolder(folderOf(n));
       }}
       title={`${isNeuron(n) ? 'Neurônio (aparece no mapa)' : 'Nota (não aparece no mapa)'} · botão direito troca o emoji`}
@@ -479,8 +490,13 @@ export default function NotesPanel() {
   const neuronCount = notes.filter(isNeuron).length;
 
   return (
-    <aside className={`arvore-root nr-root np-panel ${dark ? 'dark-mode' : ''}`} aria-label="Editor de notas">
+    <aside className={`arvore-root nr-root np-panel np-view-${note ? phoneView : 'list'} ${dark ? 'dark-mode' : ''}`} aria-label="Editor de notas">
       <div className="np-head">
+        {note && phoneView === 'note' && (
+          <button type="button" className="np-back" onClick={() => setPhoneView('list')} aria-label="Voltar para a lista de notas">
+            ‹ Notas
+          </button>
+        )}
         <h2>✏️ Notas</h2>
         <small>
           {notes.length - neuronCount} nota(s) · {neuronCount} neurônio(s)
@@ -641,12 +657,13 @@ export default function NotesPanel() {
                 store={store}
                 onOpen={(id) => {
                   sfx.play('open');
-                  setActiveId(id);
+                  openNote(id);
                 }}
                 onDelete={(n) => {
                   sfx.play('delete');
                   store.deleteNote(n.id);
                   setActiveId(null);
+                  setPhoneView('list');
                 }}
               />
             </>
