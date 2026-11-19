@@ -1952,6 +1952,8 @@ html[data-ui-theme='nanquim'] .fc-intervals-open small {
     color: color-mix(in srgb, var(--nq-ink) 9%, var(--nq-muted))
 }
 html[data-ui-theme='nanquim'] .fc-iv-backdrop {
+    --theme-modal-bg: var(--g-modal, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 32%));
+    --theme-border: var(--g-border, var(--nq-line-strong));
     background: rgb(var(--nq-shade-rgb) / 0.108)
 }
 html[data-ui-theme='nanquim'] .fc-iv-window {

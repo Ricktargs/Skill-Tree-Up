@@ -15,7 +15,7 @@
   display: grid;
   place-items: center;
   background: #ef323d;
-  cursor: pointer;
+  cursor: default;
   animation: orbe-out 0.3s ease-in 2.2s forwards;
   -webkit-user-select: none;
   user-select: none;

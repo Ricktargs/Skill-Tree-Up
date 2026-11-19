@@ -1263,6 +1263,11 @@ select.fc-input { resize: none; cursor: pointer; }
 .fc-intervals-open small { font-size: 0.7rem; color: #94a3b8; }
 
 .fc-iv-backdrop {
+  /* abre fora do app (portal): pega as cores do tema escolhido no <html> */
+  --theme-accent: var(--g-accent, #38bdf8);
+  --theme-on-accent: var(--g-on-accent, #0b0f1a);
+  --theme-modal-bg: var(--g-modal, #121927);
+  --theme-border: var(--g-border, #1e293b);
   position: fixed;
   inset: 0;
   z-index: 2147483000;

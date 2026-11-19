@@ -648,6 +648,7 @@
   .nr-root .top-center h1 { font-size: 20px; letter-spacing: 3px; }
   .nr-filters { padding: 0 12px 8px; flex-wrap: wrap; }
   .nr-search { width: 100% !important; }
+  .nr-search-wrap { width: 100%; }
   .nr-tag-filter { flex-basis: 100%; }
   .nr-graph-tools { left: 10px; bottom: 10px; }
   .nr-title { font-size: 18px !important; }
@@ -959,3 +960,49 @@
 /* Opacidade do marca-texto */
 .nr-alpha { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
 .nr-alpha input { width: 100%; accent-color: var(--accent); }
+
+/* ---------- Lista da busca (notas e neurônios) ---------- */
+.nr-search-wrap { position: relative; flex-shrink: 0; z-index: 60; }
+.nr-search-drop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(62vh, 520px);
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--surface) var(--grain);
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: 0 16px 44px rgb(0 0 0 / 0.28);
+  animation: nr-sd-in 0.12s ease-out;
+}
+@keyframes nr-sd-in { from { opacity: 0; transform: translateY(-4px); } }
+.nr-sd-section + .nr-sd-section { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line-strong); }
+.nr-sd-title { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 3px 8px 4px; }
+.nr-sd-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.nr-sd-item.on { background: var(--wash-strong); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+.nr-sd-ico { width: 18px; flex-shrink: 0; display: grid; place-items: center; font-size: 14px; }
+.nr-sd-dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 1px var(--line-strong); }
+.nr-sd-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.nr-sd-name { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nr-sd-sub { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nr-sd-item mark { background: color-mix(in srgb, var(--accent) 30%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+.nr-sd-kind { flex-shrink: 0; font-size: 10.5px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--muted); white-space: nowrap; }
+.nr-sd-kind.is-neuron { color: var(--text); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.nr-sd-empty { padding: 14px 10px; font-size: 13px; color: var(--muted); text-align: center; }
+.nr-sd-foot { margin-top: 6px; padding: 6px 8px 2px; border-top: 1px solid var(--line); font-size: 10.5px; color: var(--muted); }

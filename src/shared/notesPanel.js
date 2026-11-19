@@ -13,6 +13,16 @@ export const setNotesPanelOpen = (value) => {
   open = next;
   emit();
 };
+// Abre o editor de notas já mostrando uma nota (ex.: escolhida na busca dos Neurônios)
+export const openNoteInPanel = (id) => {
+  try {
+    localStorage.setItem('nr-notes-active', JSON.stringify(id));
+  } catch {
+    /* só não lembra */
+  }
+  setNotesPanelOpen(true);
+  window.dispatchEvent(new CustomEvent('np-open-note', { detail: { id } }));
+};
 export const toggleNotesPanel = () => setNotesPanelOpen((v) => !v);
 export const isNotesPanelOpen = () => open;
 

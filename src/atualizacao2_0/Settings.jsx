@@ -5,6 +5,8 @@ import { useMode, MODES } from '../modes/modeState.js';
 import { useUiTheme, setVisual, setDark, VISUAL_THEMES } from '../shared/uiTheme.js';
 import { useModeActions } from '../shared/modeBridge.js';
 import { useSoundSettings, setSoundSettings, sfx } from '../modes/arvore/lib/sound.js';
+import { DOWNLOAD_URL, RELEASES_URL, isDesktopApp, openLink, useDesktopSettings } from '../shared/desktop.js';
+import { startTutorial } from '../shared/tutorial.js';
 
 // Interruptor no padrão das Configurações
 function Toggle({ title, desc, checked, onChange }) {
@@ -48,6 +50,7 @@ export function SettingsModal({
   const growth = useModeActions('arvoreGrowth');
   const neuronios = useModeActions('neuronios');
   const sound = useSoundSettings();
+  const [desk, setDesk] = useDesktopSettings();
   if (!isOpen) return null;
   const modeName = (MODES.find((m) => m.id === mode) || {}).name;
 
@@ -93,6 +96,79 @@ export function SettingsModal({
                   <span>{l.native}</span>
                 </button>
               ))}
+            </div>
+          </section>
+
+          {/* App de PC e tutorial */}
+          <section className="st-section">
+            <h4>💻 {tx('App de PC e tutorial')}</h4>
+            {isDesktopApp && (
+              <>
+                <Toggle
+                  title={tx('Manter aberto na bandeja ao fechar')}
+                  desc={tx('Fechar a janela deixa o ORBE-G perto do relógio; para sair de vez use "Sair" no ícone da bandeja')}
+                  checked={desk ? desk.closeToTray : true}
+                  onChange={(v) => {
+                    click();
+                    setDesk({ closeToTray: v });
+                  }}
+                />
+                <Toggle
+                  title={tx('Iniciar junto com o PC')}
+                  desc={desk && desk.canStartWithPc === false ? tx('Só funciona no app instalado') : tx('Abre escondido na bandeja quando o Windows liga')}
+                  checked={desk ? desk.openAtLogin : false}
+                  onChange={(v) => {
+                    click();
+                    setDesk({ openAtLogin: v });
+                  }}
+                />
+              </>
+            )}
+            <div className="st-row">
+              <div className="st-row-text">
+                <strong>{isDesktopApp ? tx('Baixar a versão mais nova') : tx('Baixar o ORBE-G para PC')}</strong>
+                <span>{tx('Instalador para Windows, com ícone na área de trabalho')}</span>
+              </div>
+              <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="st-btn"
+                  onClick={() => {
+                    click();
+                    openLink(DOWNLOAD_URL);
+                  }}
+                >
+                  ⬇ {tx('Baixar')}
+                </button>
+                <button
+                  type="button"
+                  className="st-btn"
+                  title={RELEASES_URL}
+                  onClick={() => {
+                    click();
+                    openLink(RELEASES_URL);
+                  }}
+                >
+                  🔗 {tx('Página')}
+                </button>
+              </span>
+            </div>
+            <div className="st-row">
+              <div className="st-row-text">
+                <strong>{tx('Tutorial')}</strong>
+                <span>{tx('Passeio rápido pelos 3 modos: Habilidades, Santuário e Neurônios')}</span>
+              </div>
+              <button
+                type="button"
+                className="st-btn"
+                onClick={() => {
+                  click();
+                  onClose();
+                  startTutorial();
+                }}
+              >
+                ▶ {tx('Ver tutorial')}
+              </button>
             </div>
           </section>
 

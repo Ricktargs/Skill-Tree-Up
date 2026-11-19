@@ -25,7 +25,9 @@ const IGNORED = [
   /^app_active_mode/,
   /^eu-sou-arvore/,
   // preferências de aparência dos Neurônios (forças do mapa, cor do lápis/marca-texto)
-  /^nr-/
+  /^nr-/,
+  // boas-vindas / tutorial já vistos
+  /^orbe-welcome/
 ];
 
 // Timers extras: só a configuração conta (iniciar/pausar/tocar não entra no histórico)
@@ -76,6 +78,7 @@ const neuroniosComparable = (raw) => {
         return copy;
       }),
       folders: v.folders || [],
+      presets: v.presets || [],
       tagColors: (v.view && v.view.tagColors) || {}
     });
   } catch (e) {

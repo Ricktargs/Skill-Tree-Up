@@ -4,7 +4,7 @@
 // As palavras aparecem escritas, depois o resto de cada uma some
 // e as iniciais se juntam em "ORBE-G", que fica em destaque.
 // Um "plim" fofo toca quando a sigla se forma.
-// Clique ou qualquer tecla pula a abertura.
+// Não dá para pular: a abertura toca inteira, com o som, até sumir.
 // =========================================================
 import React, { useEffect, useRef, useState } from 'react';
 import './Splash.css';
@@ -58,10 +58,9 @@ function playChime(ctx) {
   return ctx;
 }
 
-// Navegadores (Chrome, Edge, Safari...) bloqueiam som antes do primeiro clique
-// ou tecla na página. Abrindo pelo index.html ou pelo site, o áudio começa
-// "suspenso" e o plim ficava mudo. Aqui ele tenta tocar; se estiver bloqueado,
-// toca assim que a pessoa clicar ou apertar uma tecla durante a abertura.
+// No app de PC (Electron) o som sempre toca. No navegador, Chrome/Edge podem
+// bloquear som antes de qualquer clique na página — aí o plim fica mudo
+// (regra do navegador). Clicar durante a abertura NÃO toca nem pula nada.
 function makeAudio() {
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx) return null;
@@ -99,26 +98,9 @@ export default function Splash() {
           ring();
         }, CHIME_AT * 1000)
       : null;
-    // primeiro clique/tecla/toque: libera o som e toca o plim (mesmo pulando a abertura)
-    const unlock = () => {
-      if (!ctx || played) return;
-      ctx
-        .resume()
-        .then(ring)
-        .catch(() => {});
-    };
-    const skip = () => setShow(false);
-    window.addEventListener('pointerdown', unlock, true);
-    window.addEventListener('touchstart', unlock, true);
-    window.addEventListener('keydown', unlock, true);
-    window.addEventListener('keydown', skip, { once: true });
     return () => {
       clearTimeout(end);
       if (chime) clearTimeout(chime);
-      window.removeEventListener('pointerdown', unlock, true);
-      window.removeEventListener('touchstart', unlock, true);
-      window.removeEventListener('keydown', unlock, true);
-      window.removeEventListener('keydown', skip);
       // áudio que nem chegou a tocar não fica aberto à toa
       if (ctx && !played) {
         try {
@@ -145,7 +127,7 @@ export default function Splash() {
 
   if (!show) return null;
   return (
-    <div className="orbe-splash" onClick={() => setShow(false)} role="presentation" aria-label="ORBE-G">
+    <div className="orbe-splash" role="presentation" aria-label="ORBE-G">
       <div className="orbe-stage">
         <div className="orbe-logo" aria-hidden="true">
           {WORDS.map((w, i) => (

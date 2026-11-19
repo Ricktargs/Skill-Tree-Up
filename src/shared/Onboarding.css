@@ -1,0 +1,110 @@
+/* =========================================================
+   BOAS-VINDAS + TUTORIAL (usa a janela padrão .ui-dialog,
+   que já segue o tema Nanquim / Gameficado)
+   ========================================================= */
+.ob-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 3000001;
+  cursor: default;
+}
+.ob-dim {
+  position: absolute;
+  inset: 0;
+  background: rgb(10 14 22 / 0.58);
+  animation: uiDialogFade 0.2s ease;
+}
+/* buraco iluminado em volta do alvo */
+.ob-hole {
+  position: absolute;
+  border-radius: 14px;
+  box-shadow: 0 0 0 9999px rgb(10 14 22 / 0.58), 0 0 0 3px var(--nq-accent, #38bdf8), 0 0 24px 4px color-mix(in srgb, var(--nq-accent, #38bdf8) 55%, transparent);
+  transition: left 0.28s ease, top 0.28s ease, width 0.28s ease, height 0.28s ease;
+  pointer-events: none;
+}
+html[data-ui-theme='gamificado'] .ob-hole {
+  box-shadow: 0 0 0 9999px rgb(4 8 16 / 0.62), 0 0 0 3px var(--g-accent, #38bdf8), 0 0 24px 4px color-mix(in srgb, var(--g-accent, #38bdf8) 55%, transparent);
+}
+
+.ob-card {
+  position: absolute;
+  width: min(340px, calc(100vw - 24px));
+  box-sizing: border-box;
+  gap: 8px;
+  padding: 16px 18px 16px;
+  opacity: 0;
+  transition: left 0.28s ease, top 0.28s ease, opacity 0.18s ease;
+  animation: none;
+}
+.ob-card.show { opacity: 1; }
+.ob-card h3 { font-size: 19px; }
+.ob-card .ui-dialog-message { font-size: 13.5px; }
+.ob-card .ui-dialog-actions { margin-top: 4px; }
+
+.ob-top { display: flex; align-items: center; gap: 8px; width: 100%; }
+.ob-mode {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dlg-accent);
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--dlg-accent) 45%, transparent);
+}
+.ob-count { font-size: 11.5px; color: var(--dlg-muted); }
+.ob-x {
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: var(--dlg-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.ob-x:hover { color: var(--dlg-ink); background: var(--dlg-paper-2); }
+.ob-emoji { font-size: 30px; line-height: 1; }
+
+.ob-dots { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.ob-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dlg-line);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.ob-dots i.done { background: color-mix(in srgb, var(--dlg-accent) 55%, transparent); }
+.ob-dots i.on { background: var(--dlg-accent); transform: scale(1.35); }
+
+/* ---------- Boas-vindas ---------- */
+.ob-welcome { width: min(440px, 100%); }
+.ob-welcome-logo {
+  font-family: Georgia, 'Palatino Linotype', serif;
+  font-size: 30px;
+  letter-spacing: 6px;
+  color: var(--dlg-accent);
+}
+html[data-ui-theme='gamificado'] .ob-welcome-logo { font-family: inherit; font-weight: 900; }
+.ob-welcome .ui-dialog-btn { max-width: 190px; }
+.ob-download {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px dashed var(--dlg-line);
+  background: var(--dlg-paper-2);
+  text-align: left;
+}
+.ob-download > div { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.ob-download strong { font-size: 14px; }
+.ob-download span { font-size: 12px; color: var(--dlg-muted); line-height: 1.4; }
+.ob-download .ui-dialog-btn { flex: 0 0 auto; }
+
+@media (max-width: 520px) {
+  .ob-download { flex-direction: column; align-items: stretch; text-align: center; }
+}

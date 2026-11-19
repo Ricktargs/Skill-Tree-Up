@@ -6,6 +6,8 @@ import './neuronios.css';
 import Graph from './Graph.jsx';
 import EditorPane from './Editor.jsx';
 import ColorPicker from './ColorPicker.jsx';
+import SearchBox from './SearchBox.jsx';
+import { openNoteInPanel } from '../../shared/notesPanel.js';
 import { DEFAULT_FORCES, FORCE_LIMITS, glowColor, glowSize, loadForces, richness, saveForces } from './forces.js';
 import { isNeuron, plainText, tagColor, useNeuronios } from './store.js';
 import { useUiTheme } from '../../shared/uiTheme.js';
@@ -349,16 +351,15 @@ export default function Neuronios() {
               </div>
             )}
           </div>
-          <input
-            ref={searchRef}
-            className="search-input nr-search"
-            placeholder="Buscar neurônios…  ( / ou Espaço )"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && highlightIds && highlightIds.size) {
-                open([...highlightIds][0], true);
-              }
+          <SearchBox
+            inputRef={searchRef}
+            query={query}
+            setQuery={setQuery}
+            store={store}
+            onPickNeuron={(id) => open(id, true)}
+            onPickNote={(id) => {
+              sfx.play('open');
+              openNoteInPanel(id);
             }}
           />
           <div className="nr-tag-filter" role="group" aria-label="Filtrar por tags">

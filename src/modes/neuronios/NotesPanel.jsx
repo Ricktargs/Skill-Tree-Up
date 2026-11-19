@@ -6,9 +6,9 @@ import './notesPanel.css';
 import { NeuronEditor } from './Editor.jsx';
 import ColorPicker from './ColorPicker.jsx';
 import EmojiPicker from './EmojiPicker.jsx';
+import { PresetEditor, createFromPreset, emptyPreset, folderPaths } from './Presets.jsx';
 import { isNeuron, plainText, tagColor, useNeuronios } from './store.js';
 import { useUiTheme } from '../../shared/uiTheme.js';
-import { useMode } from '../modeState.js';
 import { setNotesPanelOpen } from '../../shared/notesPanel.js';
 import { ask } from '../../shared/Dialog.jsx';
 import { sfx } from '../arvore/lib/sound.js';
@@ -23,6 +23,7 @@ import { sfx } from '../arvore/lib/sound.js';
 
 const OPEN_KEY = 'nr-notes-open-folders';
 const ACTIVE_KEY = 'nr-notes-active';
+const PRESETS_OPEN_KEY = 'nr-notes-presets-open';
 const readJSON = (key, fallback) => {
   try {
     const v = JSON.parse(localStorage.getItem(key) || 'null');
@@ -52,23 +53,38 @@ function FolderIcon({ color, open }) {
 }
 
 const byTitle = (a, b) => (a.title || a.name || '').localeCompare(b.title || b.name || '', 'pt-BR');
+// Ordem manual (arrastando); o que nunca foi arrastado fica em ordem alfabética no fim
+const NO_ORDER = 1e12;
+const sortItems = (a, b) =>
+  (typeof a.order === 'number' ? a.order : NO_ORDER) - (typeof b.order === 'number' ? b.order : NO_ORDER) || byTitle(a, b);
 
 export default function NotesPanel() {
   const store = useNeuronios();
   const { notes, folders } = store;
   const dark = useUiTheme().dark;
-  const mode = useMode();
   const [activeId, setActiveId] = useState(() => readJSON(ACTIVE_KEY, null));
   const [openFolders, setOpenFolders] = useState(() => new Set(readJSON(OPEN_KEY, [])));
   const [selectedFolder, setSelectedFolder] = useState(null); // onde entram notas/pastas novas
   const [renaming, setRenaming] = useState(null); // { id, name }
   const [query, setQuery] = useState('');
-  const [dragOver, setDragOver] = useState(null); // id da pasta ('root' = sem pasta)
+  const [dropAt, setDropAt] = useState(null); // onde vai cair: { kind, id, where: 'before' | 'after' | 'inside' | 'root' }
+  const [draggingId, setDraggingId] = useState(null);
+  const [presetsOpen, setPresetsOpen] = useState(() => readJSON(PRESETS_OPEN_KEY, true));
+  const [presetEdit, setPresetEdit] = useState(null); // presset aberto na janela
+  const hoverOpenRef = useRef({ id: null, timer: null }); // abre a pasta ao segurar o arrasto em cima
   const [menu, setMenu] = useState(null); // botão direito: { kind: 'folder' | 'note', id, x, y }
   const dragRef = useRef(null); // { kind: 'note' | 'folder', id }
 
   useEffect(() => writeJSON(ACTIVE_KEY, activeId), [activeId]);
   useEffect(() => writeJSON(OPEN_KEY, [...openFolders]), [openFolders]);
+  useEffect(() => writeJSON(PRESETS_OPEN_KEY, presetsOpen), [presetsOpen]);
+
+  // A busca dos Neurônios pode pedir para abrir uma nota aqui
+  useEffect(() => {
+    const on = (e) => e.detail && e.detail.id && setActiveId(e.detail.id);
+    window.addEventListener('np-open-note', on);
+    return () => window.removeEventListener('np-open-note', on);
+  }, []);
 
   const note = activeId ? store.byId.get(activeId) : null;
   const folderIds = useMemo(() => new Set(folders.map((f) => f.id)), [folders]);
@@ -80,7 +96,7 @@ export default function NotesPanel() {
       if (e.key !== 'Escape') return;
       const el = document.activeElement;
       const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
-      if (typing || document.querySelector('.ui-dialog-backdrop, .modal-backdrop, .nr-color-pop')) return;
+      if (typing || document.querySelector('.ui-dialog-backdrop, .modal-backdrop, .nr-color-pop, .np-preset-backdrop')) return;
       e.preventDefault();
       e.stopImmediatePropagation();
       setNotesPanelOpen(false);
@@ -107,6 +123,49 @@ export default function NotesPanel() {
       return next;
     });
 
+  // A nota aberta sempre fica visível na lista (abre as pastas dela)
+  const activeFolder = note ? folderOf(note) : null;
+  useEffect(() => {
+    if (!activeFolder) return;
+    setOpenFolders((s) => {
+      const next = new Set(s);
+      let f = folders.find((x) => x.id === activeFolder);
+      let changed = false;
+      while (f) {
+        if (!next.has(f.id)) {
+          next.add(f.id);
+          changed = true;
+        }
+        f = folders.find((x) => x.id === f.parentId);
+      }
+      return changed ? next : s;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só quando muda a nota/pasta aberta
+  }, [activeId, activeFolder]);
+
+  // ---------- Pressets ----------
+  const applyPreset = (preset) => {
+    const n = createFromPreset(store, preset);
+    sfx.play('open');
+    setQuery('');
+    if (n.folderId) openPath(n.folderId);
+    if (preset.openAfter !== false) setActiveId(n.id);
+  };
+  const removePreset = async (preset) => {
+    const ok = await ask({
+      title: `Excluir o presset “${preset.name}”?`,
+      message: 'As notas já criadas com ele continuam onde estão.',
+      yes: 'Excluir presset',
+      danger: true
+    });
+    if (!ok) return;
+    sfx.play('delete');
+    store.deletePreset(preset.id);
+    setPresetEdit(null);
+  };
+  const paths = useMemo(() => folderPaths(folders), [folders]);
+  const pathOf = (id) => (paths.find((x) => x.id === id) || {}).label || '';
+
   const newNote = () => {
     const n = store.addNote({ isNeuron: false, folderId: selectedFolder, title: 'Nova nota' });
     if (selectedFolder) openPath(selectedFolder);
@@ -132,10 +191,85 @@ export default function NotesPanel() {
     if (selectedFolder === f.id) setSelectedFolder(null);
   };
 
-  // ---------- Arrastar notas e pastas para dentro de pastas ----------
+  // ---------- Arrastar: mover para pastas e mudar a ordem ----------
+  // Em cima de uma pasta: borda de cima/baixo = antes/depois, meio = dentro.
+  // Em cima de uma nota: metade de cima = antes, de baixo = depois.
+  const parentOfFolder = (f) => (f && f.parentId && folderIds.has(f.parentId) ? f.parentId : null);
+  const childrenOf = (kind, parentId) =>
+    kind === 'folder'
+      ? folders.filter((f) => parentOfFolder(f) === (parentId || null)).sort(sortItems)
+      : notes.filter((n) => folderOf(n) === (parentId || null)).sort(sortItems);
+  // "folderId" está dentro de "ancestorId" (ou é ela)?
+  const isWithin = (folderId, ancestorId) => {
+    let cur = folderId;
+    let guard = 0;
+    while (cur && guard++ < 50) {
+      if (cur === ancestorId) return true;
+      cur = parentOfFolder(folders.find((f) => f.id === cur));
+    }
+    return false;
+  };
+
+  const stopHoverOpen = () => {
+    clearTimeout(hoverOpenRef.current.timer);
+    hoverOpenRef.current = { id: null, timer: null };
+  };
+  const endDrag = () => {
+    dragRef.current = null;
+    stopHoverOpen();
+    setDraggingId(null);
+    setDropAt(null);
+  };
+  const sameDrop = (a, b) => a && b && a.kind === b.kind && a.id === b.id && a.where === b.where;
+  const showDrop = (t) => setDropAt((cur) => (sameDrop(cur, t) ? cur : t));
+
+  const targetFor = (e, kind, id) => {
+    const d = dragRef.current;
+    if (!d) return null;
+    const box = e.currentTarget.getBoundingClientRect();
+    const r = (e.clientY - box.top) / Math.max(1, box.height);
+    let t;
+    if (kind === 'folder') {
+      if (d.kind === 'note') t = { kind, id, where: 'inside' };
+      else t = { kind, id, where: r < 0.28 ? 'before' : r > 0.72 ? 'after' : 'inside' };
+    } else if (d.kind === 'note') {
+      if (d.id === id) return null;
+      t = { kind, id, where: r < 0.5 ? 'before' : 'after' };
+    } else {
+      // pasta solta em cima de uma nota: vai para a pasta dessa nota
+      const fid = folderOf(store.byId.get(id) || {});
+      t = fid ? { kind: 'folder', id: fid, where: 'inside' } : { kind: 'root', id: null, where: 'root' };
+    }
+    // pasta não entra nela mesma nem nas de dentro dela
+    if (d.kind === 'folder') {
+      const parent = t.where === 'inside' ? t.id : t.where === 'root' ? null : parentOfFolder(folders.find((f) => f.id === t.id));
+      if (t.id === d.id || (parent && isWithin(parent, d.id))) return null;
+    }
+    return t;
+  };
+
+  const place = (d, t) => {
+    let parent = null;
+    if (t.where === 'inside') parent = t.id;
+    else if (t.where !== 'root') parent = t.kind === 'folder' ? parentOfFolder(folders.find((f) => f.id === t.id)) : folderOf(store.byId.get(t.id) || {});
+    const ids = childrenOf(d.kind, parent)
+      .map((x) => x.id)
+      .filter((x) => x !== d.id);
+    let idx = ids.length;
+    if ((t.where === 'before' || t.where === 'after') && t.kind === d.kind) {
+      const i = ids.indexOf(t.id);
+      if (i >= 0) idx = t.where === 'before' ? i : i + 1;
+    }
+    ids.splice(idx, 0, d.id);
+    store.arrange(d.kind, d.id, parent, ids);
+    if (parent) openPath(parent);
+    sfx.play('drop');
+  };
+
   const dragProps = (kind, id) => ({
-    draggable: true,
+    draggable: renaming ? renaming.id !== id : true,
     onDragStart: (e) => {
+      e.stopPropagation();
       dragRef.current = { kind, id };
       e.dataTransfer.effectAllowed = 'move';
       try {
@@ -143,40 +277,80 @@ export default function NotesPanel() {
       } catch {
         /* alguns navegadores não aceitam */
       }
+      // deixa o navegador tirar a "foto" da linha antes de apagá-la
+      requestAnimationFrame(() => setDraggingId(id));
     },
-    onDragEnd: () => {
-      dragRef.current = null;
-      setDragOver(null);
-    }
+    onDragEnd: endDrag
   });
-  const dropProps = (folderId) => ({
+  const rowDropProps = (kind, id) => ({
     onDragOver: (e) => {
       if (!dragRef.current) return;
-      e.preventDefault();
+      const t = targetFor(e, kind, id);
       e.stopPropagation();
-      setDragOver(folderId || 'root');
+      if (!t) {
+        e.dataTransfer.dropEffect = 'none';
+        return;
+      }
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      showDrop(t);
+      // segurando em cima de uma pasta fechada: ela abre sozinha
+      if (kind === 'folder' && t.where === 'inside' && !openFolders.has(id)) {
+        if (hoverOpenRef.current.id !== id) {
+          stopHoverOpen();
+          hoverOpenRef.current = {
+            id,
+            timer: setTimeout(() => {
+              setOpenFolders((s) => new Set(s).add(id));
+              sfx.play('tick');
+            }, 600)
+          };
+        }
+      } else if (hoverOpenRef.current.id) stopHoverOpen();
     },
-    onDragLeave: () => setDragOver((d) => (d === (folderId || 'root') ? null : d)),
     onDrop: (e) => {
       const d = dragRef.current;
       if (!d) return;
       e.preventDefault();
       e.stopPropagation();
-      if (d.kind === 'note') store.moveNote(d.id, folderId);
-      else if (d.id !== folderId) store.moveFolder(d.id, folderId);
-      if (folderId) openPath(folderId);
-      sfx.play('drop');
-      dragRef.current = null;
-      setDragOver(null);
+      const t = targetFor(e, kind, id);
+      if (t) place(d, t);
+      endDrag();
     }
   });
+  // Pasta vazia (texto "arraste para cá") e espaço livre da lista
+  const insideDropProps = (folderId) => ({
+    onDragOver: (e) => {
+      const d = dragRef.current;
+      if (!d) return;
+      e.stopPropagation();
+      if (d.kind === 'folder' && folderId && isWithin(folderId, d.id)) return;
+      e.preventDefault();
+      showDrop(folderId ? { kind: 'folder', id: folderId, where: 'inside' } : { kind: 'root', id: null, where: 'root' });
+      if (hoverOpenRef.current.id) stopHoverOpen();
+    },
+    onDrop: (e) => {
+      const d = dragRef.current;
+      if (!d) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (!(d.kind === 'folder' && folderId && isWithin(folderId, d.id))) {
+        place(d, folderId ? { kind: 'folder', id: folderId, where: 'inside' } : { kind: 'root', id: null, where: 'root' });
+      }
+      endDrag();
+    }
+  });
+  const dropClass = (kind, id) => {
+    if (!dropAt || dropAt.kind !== kind || dropAt.id !== id) return '';
+    return dropAt.where === 'inside' ? 'drop' : `drop-${dropAt.where}`;
+  };
 
   // ---------- Itens da lista ----------
   const renderNote = (n, depth) => (
     <button
       key={n.id}
       type="button"
-      className={`np-row np-note ${n.id === activeId ? 'active' : ''}`}
+      className={`np-row np-note ${n.id === activeId ? 'active' : ''} ${dropClass('note', n.id)} ${draggingId === n.id ? 'dragging' : ''}`}
       style={{ '--depth': depth }}
       onClick={() => {
         sfx.play('tick');
@@ -189,6 +363,7 @@ export default function NotesPanel() {
         setMenu({ kind: 'note', id: n.id, x: e.clientX, y: e.clientY });
       }}
       {...dragProps('note', n.id)}
+      {...rowDropProps('note', n.id)}
     >
       {n.emoji ? (
         <span className="np-ico">{n.emoji}</span>
@@ -204,8 +379,8 @@ export default function NotesPanel() {
 
   const renderFolder = (f, depth) => {
     const isOpen = openFolders.has(f.id);
-    const subFolders = folders.filter((x) => x.parentId === f.id).sort(byTitle);
-    const inside = notes.filter((n) => folderOf(n) === f.id).sort(byTitle);
+    const subFolders = childrenOf('folder', f.id);
+    const inside = childrenOf('note', f.id);
     return (
       <div className="np-folder-wrap" key={f.id}>
         {renaming && renaming.id === f.id ? (
@@ -230,7 +405,7 @@ export default function NotesPanel() {
           />
         ) : (
           <div
-            className={`np-row np-folder ${selectedFolder === f.id ? 'selected' : ''} ${dragOver === f.id ? 'drop' : ''}`}
+            className={`np-row np-folder ${selectedFolder === f.id ? 'selected' : ''} ${dropClass('folder', f.id)} ${draggingId === f.id ? 'dragging' : ''}`}
             style={{ '--depth': depth }}
             role="button"
             tabIndex={0}
@@ -245,7 +420,7 @@ export default function NotesPanel() {
             }}
             title="Clique abre · duplo clique renomeia · botão direito muda a cor"
             {...dragProps('folder', f.id)}
-            {...dropProps(f.id)}
+            {...rowDropProps('folder', f.id)}
           >
             <span className="np-caret">{isOpen ? '▾' : '▸'}</span>
             <FolderIcon color={f.color} open={isOpen} />
@@ -284,7 +459,7 @@ export default function NotesPanel() {
               renderNote(n, depth + 1)
             ))}
             {!subFolders.length && !inside.length && (
-              <div className="np-empty-folder" style={{ '--depth': depth + 1 }}>
+              <div className="np-empty-folder" style={{ '--depth': depth + 1 }} {...insideDropProps(f.id)}>
                 Pasta vazia — arraste notas para cá
               </div>
             )}
@@ -298,12 +473,13 @@ export default function NotesPanel() {
   const found = q
     ? notes.filter((n) => (n.title || '').toLowerCase().includes(q) || plainText(n.content).toLowerCase().includes(q)).sort(byTitle)
     : null;
-  const rootFolders = folders.filter((f) => !f.parentId || !folderIds.has(f.parentId)).sort(byTitle);
-  const rootNotes = notes.filter((n) => !folderOf(n)).sort(byTitle);
+  const rootFolders = childrenOf('folder', null);
+  const rootNotes = childrenOf('note', null);
+  const presets = store.presets || [];
   const neuronCount = notes.filter(isNeuron).length;
 
   return (
-    <aside className={`arvore-root nr-root np-panel ${dark ? 'dark-mode' : ''} ${mode === 'skills' ? 'in-skills' : ''}`} aria-label="Editor de notas">
+    <aside className={`arvore-root nr-root np-panel ${dark ? 'dark-mode' : ''}`} aria-label="Editor de notas">
       <div className="np-head">
         <h2>✏️ Notas</h2>
         <small>
@@ -325,6 +501,41 @@ export default function NotesPanel() {
               ＋ Pasta
             </button>
           </div>
+          <div className="np-presets">
+            <button type="button" className="np-presets-toggle" onClick={() => setPresetsOpen((v) => !v)} aria-expanded={presetsOpen}>
+              <span className="np-caret">{presetsOpen ? '▾' : '▸'}</span>
+              <span className="np-label">📋 Pressets</span>
+              <small className="np-count">{presets.length || ''}</small>
+            </button>
+            {presetsOpen && (
+              <div className="np-presets-list">
+                {presets.map((ps) => (
+                  <div className="np-preset-item" key={ps.id}>
+                    <button
+                      type="button"
+                      className="np-preset-use"
+                      onClick={() => applyPreset(ps)}
+                      title={`Criar nota “${ps.name}”${ps.folderId && pathOf(ps.folderId) ? ` em ${pathOf(ps.folderId)}` : ''}`}
+                    >
+                      <span className="np-ico">{ps.emoji || '📋'}</span>
+                      <span className="np-label">{ps.name}</span>
+                      {ps.folderId && pathOf(ps.folderId) && <small className="np-preset-dest">📁 {pathOf(ps.folderId).split(' / ').pop()}</small>}
+                    </button>
+                    <button type="button" className="np-preset-edit" onClick={() => setPresetEdit(ps)} title="Editar presset">
+                      ✎
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="np-preset-new"
+                  onClick={() => setPresetEdit({ ...emptyPreset(), folderId: selectedFolder && folderIds.has(selectedFolder) ? selectedFolder : null })}
+                >
+                  ＋ Novo presset
+                </button>
+              </div>
+            )}
+          </div>
           <input className="search-input np-search" placeholder="Buscar notas…" value={query} onChange={(e) => setQuery(e.target.value)} />
           {selectedFolder && folderIds.has(selectedFolder) && !q && (
             <div className="np-where">
@@ -335,8 +546,11 @@ export default function NotesPanel() {
             </div>
           )}
           <div
-            className={`np-tree ${dragOver === 'root' ? 'drop' : ''}`}
-            {...dropProps(null)}
+            className={`np-tree ${dropAt && dropAt.where === 'root' ? 'drop' : ''}`}
+            {...insideDropProps(null)}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget)) setDropAt(null);
+            }}
             onClick={(e) => {
               if (e.target === e.currentTarget) setSelectedFolder(null);
             }}
@@ -359,13 +573,37 @@ export default function NotesPanel() {
               </>
             )}
           </div>
-          <small className="np-tip">Arraste para organizar · duplo clique renomeia · botão direito: cor da pasta / emoji da nota</small>
+          <small className="np-tip">Arraste para mover e mudar a ordem (segure em cima da pasta para abrir) · duplo clique renomeia · botão direito: cor da pasta / emoji da nota</small>
         </nav>
 
         {/* Editor (o mesmo dos Neurônios) */}
         <section className="np-editor">
           {note ? (
             <>
+              <div className="np-note-folder">
+                <span>📁</span>
+                <select
+                  className="np-move-select"
+                  value={folderOf(note) || ''}
+                  onChange={(e) => {
+                    const target = e.target.value || null;
+                    const ids = childrenOf('note', target)
+                      .map((x) => x.id)
+                      .filter((x) => x !== note.id);
+                    store.arrange('note', note.id, target, [note.id, ...ids]);
+                    if (target) openPath(target);
+                    sfx.play('drop');
+                  }}
+                  title="Mover esta nota para outra pasta"
+                >
+                  <option value="">Sem pasta</option>
+                  {paths.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className={`np-neuron-bar ${isNeuron(note) ? 'is-neuron' : ''}`}>
                 {isNeuron(note) ? (
                   <>
@@ -418,6 +656,21 @@ export default function NotesPanel() {
         </section>
       </div>
 
+      {presetEdit && (
+        <PresetEditor
+          key={presetEdit.id || 'new'}
+          preset={presetEdit}
+          folders={folders}
+          onClose={() => setPresetEdit(null)}
+          onDelete={removePreset}
+          onSave={(ps) => {
+            store.savePreset(ps);
+            sfx.play('grow');
+            setPresetEdit(null);
+            setPresetsOpen(true);
+          }}
+        />
+      )}
       {menu && menu.kind === 'folder' && (
         <ColorPicker
           x={menu.x}

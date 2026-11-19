@@ -113,6 +113,7 @@ const load = (pid) => {
     return {
       notes: Array.isArray(v.notes) ? v.notes.filter((n) => n && n.id) : [],
       folders: Array.isArray(v.folders) ? v.folders.filter((f) => f && f.id) : [],
+      presets: Array.isArray(v.presets) ? v.presets.filter((p) => p && p.id) : [],
       view: v.view && typeof v.view === 'object' ? v.view : {}
     };
   } catch (e) {
@@ -230,7 +231,10 @@ const actions = {
       x: fields.x,
       y: fields.y,
       ...(asNeuron ? {} : { isNeuron: false }),
-      ...(fields.folderId ? { folderId: fields.folderId } : {})
+      ...(fields.folderId ? { folderId: fields.folderId } : {}),
+      ...(fields.emoji ? { emoji: fields.emoji } : {}),
+      ...(fields.presetId ? { presetId: fields.presetId } : {}),
+      ...(typeof fields.order === 'number' ? { order: fields.order } : {})
     };
     setData((d) => ({ ...d, notes: [...d.notes, note] }));
     return note;
@@ -450,7 +454,48 @@ const actions = {
   updateFolder: (id, fields) =>
     setData((d) => ({ ...d, folders: (d.folders || []).map((f) => (f.id === id ? { ...f, ...fields } : f)) })),
   moveNote: (id, folderId) =>
-    setData((d) => ({ ...d, notes: d.notes.map((n) => (n.id === id ? { ...n, folderId: folderId || null } : n)) }))
+    setData((d) => ({ ...d, notes: d.notes.map((n) => (n.id === id ? { ...n, folderId: folderId || null } : n)) })),
+
+  // Arrastar: coloca a nota/pasta "id" dentro de "parentId" e grava a ordem
+  // de todos os irmãos (orderedIds já vem na ordem final, com o próprio id).
+  arrange: (kind, id, parentId, orderedIds) =>
+    setData((d) => {
+      const pos = new Map(orderedIds.map((x, i) => [x, i * 10]));
+      if (kind === 'folder') {
+        const folders = d.folders || [];
+        let p = parentId;
+        while (p) {
+          if (p === id) return d; // não entra nela mesma
+          p = (folders.find((f) => f.id === p) || {}).parentId;
+        }
+        return {
+          ...d,
+          folders: folders.map((f) => {
+            if (f.id === id) return { ...f, parentId: parentId || null, order: pos.get(f.id) };
+            return pos.has(f.id) ? { ...f, order: pos.get(f.id) } : f;
+          })
+        };
+      }
+      return {
+        ...d,
+        notes: d.notes.map((n) => {
+          if (n.id === id) return { ...n, folderId: parentId || null, order: pos.get(n.id) };
+          return pos.has(n.id) ? { ...n, order: pos.get(n.id) } : n;
+        })
+      };
+    }),
+
+  // ---------- Pressets: modelos de nota com pasta, título e texto prontos ----------
+  savePreset: (preset) => {
+    const p = { ...preset, id: preset.id || `ps_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` };
+    setData((d) => {
+      const list = d.presets || [];
+      const has = list.some((x) => x.id === p.id);
+      return { ...d, presets: has ? list.map((x) => (x.id === p.id ? p : x)) : [...list, p] };
+    });
+    return p;
+  },
+  deletePreset: (id) => setData((d) => ({ ...d, presets: (d.presets || []).filter((x) => x.id !== id) }))
 };
 
 // =========================================================
@@ -499,6 +544,7 @@ export function useNeuronios() {
     links,
     backlinks,
     folders: data.folders || [],
+    presets: data.presets || [],
     view: data.view,
     rev: state.rev,
     saveError: state.saveError,

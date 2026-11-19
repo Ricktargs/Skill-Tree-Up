@@ -1,3 +1,5 @@
+// Primeiro de tudo: descobre se é a primeira vez (antes de qualquer coisa salvar)
+import './shared/firstRun.js'
 import { installGlobalUndo } from './atualizacao2_0/GlobalUndo.js'
 installGlobalUndo()
 import { installDialogKeys } from './shared/Dialog.jsx'
@@ -17,12 +19,14 @@ import { installNanquimInline } from './shared/nanquimInline.js'
 installNanquimInline()
 import { LanguageProvider } from './atualizacao2_0/UpIdioma.jsx'
 import Splash from './shared/Splash.jsx'
+import Onboarding from './shared/Onboarding.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <LanguageProvider>
       <ModeRoot />
       <Splash />
+      <Onboarding />
     </LanguageProvider>
   </StrictMode>,
 )
