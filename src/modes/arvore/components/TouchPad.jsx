@@ -5,13 +5,15 @@
 import { useEffect, useRef } from "react";
 import { pressKey } from "../../../shared/touch.js";
 
-function PadButton({ k, label, className = "" }) {
+function PadButton({ k, code, label, className = "", repeat = false }) {
   const held = useRef(false);
   const release = () => {
     if (!held.current) return;
     held.current = false;
-    pressKey(k, false);
+    clearInterval(timer.current);
+    pressKey(k, false, code);
   };
+  const timer = useRef(0);
   useEffect(() => release, []); // soltar ao sair da tela
   return (
     <button
@@ -27,7 +29,9 @@ function PadButton({ k, label, className = "" }) {
           /* sem captura */
         }
         held.current = true;
-        pressKey(k, true);
+        pressKey(k, true, code);
+        // cavar: segurar continua batendo no bloco
+        if (repeat) timer.current = setInterval(() => pressKey(k, true, code), 190);
       }}
       onPointerUp={release}
       onPointerCancel={release}
@@ -48,6 +52,7 @@ export default function TouchPad() {
         <PadButton k="d" label="▶" className="right" />
         <PadButton k="s" label="▼" className="down" />
       </div>
+      <PadButton k="2" code="Numpad2" label="⛏" className="dig" repeat />
       <PadButton k=" " label="⤒" className="jump" />
     </div>
   );

@@ -12,7 +12,8 @@ import { TreeDefs, Ground, ForestRoots, ForestTrunks } from "./TreeArt";
 import { refuseExtraTrees, useGrowthPermissions } from "../lib/growthPermissions";
 import TouchPad from "./TouchPad.jsx";
 import { IS_TOUCH } from "../../../shared/touch.js";
-import { BranchHandles, BranchLanterns, BranchTools, MainTreeRoots, MainTreeWrap, SanctuaryBack, SanctuaryBackdrop, selectBranch, SanctuaryFront, SanctuaryHero, SanctuaryPanel, WorldGround, sanctuaryWorld, seasonOf, shownLayout, useSanctuary } from "./Sanctuary.jsx";
+import { registerModeActions } from "../../../shared/modeBridge.js";
+import { BranchHandles, BranchLanterns, BranchTools, MainTreeRoots, MainTreeWrap, WorldBlocks, SanctuaryBack, SanctuaryBackdrop, selectBranch, SanctuaryFront, SanctuaryHero, SanctuaryPanel, WorldGround, sanctuaryWorld, seasonOf, shownLayout, useSanctuary } from "./Sanctuary.jsx";
 
 const HOLD_MS = 1500;
 const DRAG_THRESHOLD = 6;
@@ -130,6 +131,8 @@ export default function TreeCanvas({ activeIds, onNodeClick, onOpenBranch }) {
     setView(initialView());
     showBadge();
   }, [showBadge]);
+  // menu do botão direito: "Centralizar a câmera"
+  useEffect(() => registerModeActions("arvoreView", { resetView }), [resetView]);
 
   /* ---------------- zoom (roda do mouse) ---------------- */
   useEffect(() => {
@@ -495,6 +498,8 @@ const TreeScene = memo(function TreeScene({
         </MainTreeRoots>
       )}
       {sanctuary ? <WorldGround world={world} /> : <Ground />}
+      {/* blocos do terreno (quebráveis) */}
+      {sanctuary && <WorldBlocks world={world} />}
       {sanctuary && <SanctuaryBack world={world} season={season} />}
       <MainTreeWrap world={sanctuary ? world : null}>
       {!sanctuary && <ForestRoots trees={trees} />}

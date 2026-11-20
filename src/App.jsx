@@ -16,6 +16,8 @@ import { useLanguage } from './atualizacao2_0/UpIdioma.jsx';
 import { SettingsModal, CommandsModal } from './atualizacao2_0/Settings.jsx';
 import SkillsManager from './atualizacao2_0/SkillsManager.jsx';
 import ModuleTabs from './atualizacao2_0/ModuleTabs.jsx';
+import AppIcon from './shared/AppIcon.jsx';
+import { registerAppActions } from './shared/globalContextMenu.js';
 import { ThemeModal } from './atualizacao2_0/Themes.jsx';
 import { HeroStage, HeroMenu } from './atualizacao2_0/Hero.jsx';
 import { DEFAULT_HERO } from './atualizacao2_0/HeroModels.js';
@@ -659,7 +661,6 @@ const handleSaveMiniEdit = (idx, oldText) => {
 
   const [shakingSkillId, setShakingSkillId] = useState(null);
   const [activeTasksSkill, setActiveTasksSkill] = useState(null);
-  const [isCustomMaxLevelInput, setIsCustomMaxLevelInput] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
   const [globalContextMenu, setGlobalContextMenu] = useState(null);
 
@@ -925,6 +926,24 @@ const handleSaveMiniEdit = (idx, oldText) => {
 
   const activeThemePreset = getThemeById(currentTheme, customThemes);
 
+  // Ações que o menu do botão direito (em qualquer lugar) pode chamar
+  useEffect(() => {
+    registerAppActions({
+      tasks: () => taskState.toggleModal(),
+      flashcards: () => flashcards.toggleModal(),
+      pomodoro: () => pomodoro.toggleModal(),
+      theme: () => setIsThemeModalOpen(true),
+      settings: () => setIsSettingsModalOpen(true),
+      commands: () => setIsCommandsModalOpen(true),
+      addSkill: () => setIsAddModalOpen(true),
+      organize: () => setIsLayoutEditorOpen(true),
+      folders: () => setIsCategoryFilterModalOpen(true),
+      missions: () => setIsMissionsModalOpen(true),
+      search: () => setIsSearchOpen(true),
+      profile: () => setIsProfileModalOpen(true)
+    });
+  });
+
   // Cores do tema Gameficado ficam no <html> para a Árvore, os Neurônios e as
   // janelas padrão usarem o mesmo tema nos três modos
   useEffect(() => {
@@ -941,7 +960,6 @@ const handleSaveMiniEdit = (idx, oldText) => {
   const activeDeckColors = getActiveDeckColors();
 
   const pendingMissionsCount = dailyMissions ? dailyMissions.filter((m) => !m.completed).length : 0;
-  const mailIcon = pendingMissionsCount > 0 ? '📫' : '📪';
 
   const getCardStyle = (isMax, skillColor) => {
     const styleObj = {
@@ -1554,7 +1572,7 @@ if (folderSortOrder === 'a-z') {
               setIsProfileModalOpen(true);
             }}
           >
-            👤
+            <AppIcon name="profile" />
           </button>
 
           <button
@@ -1565,7 +1583,7 @@ if (folderSortOrder === 'a-z') {
               pomodoro.toggleModal();
             }}
           >
-            ⏱️
+            <AppIcon name="pomodoro" />
           </button>
 
         </div>
@@ -1577,7 +1595,7 @@ if (folderSortOrder === 'a-z') {
           title={tx("Missões Diárias e Diamantes (M)")}
           style={{ position: 'relative' }}
         >
-          {mailIcon}
+          <AppIcon name={pendingMissionsCount > 0 ? 'missions' : 'missionsDone'} />
           {pendingMissionsCount > 0 && (
             <span className="subtle-mission-badge" title={tx('{n} missão(ões) para concluir!', { n: pendingMissionsCount })}>
               {pendingMissionsCount}
@@ -1603,7 +1621,7 @@ if (folderSortOrder === 'a-z') {
               }}
               style={{ position: 'relative' }}
             >
-              📋
+              <AppIcon name="tasks" />
               <TaskBadge taskState={taskState} />
             </button>
             <button
@@ -1616,7 +1634,7 @@ if (folderSortOrder === 'a-z') {
                 toggleNotesPanel();
               }}
             >
-              ✒️
+              <AppIcon name="notes" />
             </button>
             <button
               type="button"
@@ -1628,7 +1646,7 @@ if (folderSortOrder === 'a-z') {
               }}
               style={{ position: 'relative' }}
             >
-              🎴
+              <AppIcon name="flashcards" />
               {flashcards.badgeDue > 0 && (
                 <span className="subtle-mission-badge" title={tx('{n} carta(s) para estudar hoje', { n: flashcards.badgeDue })}>
                   {flashcards.badgeDue}
@@ -1659,7 +1677,7 @@ if (folderSortOrder === 'a-z') {
             title={tx("Organizar habilidades (L)")}
             onClick={() => { playSound('click'); setIsLayoutEditorOpen(true); }}
           >
-            ✏️
+            <AppIcon name="organize" />
           </button>
         )}
         <button
@@ -1667,7 +1685,7 @@ if (folderSortOrder === 'a-z') {
           title={uiTheme.dark ? tx("Modo diurno") : tx("Modo noturno")}
           onClick={() => { playSound('click'); toggleDark(); }}
         >
-          {uiTheme.dark ? '☀️' : '🌙'}
+          <AppIcon name={uiTheme.dark ? 'sun' : 'moon'} />
         </button>
         {/* ⚙️ com o 🎨 Customizar Tema logo embaixo */}
         <div className="top-nav-stack">
@@ -1676,7 +1694,7 @@ if (folderSortOrder === 'a-z') {
             title={updateAvailable ? `${tx("Configurações (Esc)")} · ${tx('Atualização disponível!')}` : tx("Configurações (Esc)")}
             onClick={() => { playSound('click'); setIsSettingsModalOpen(true); }}
           >
-            ⚙
+            <AppIcon name="settings" />
             {updateAvailable && <span className="update-dot" aria-label={tx('Atualização disponível!')} />}
           </button>
           <button
@@ -1684,7 +1702,7 @@ if (folderSortOrder === 'a-z') {
             title={tx("Customizar Tema (C)")}
             onClick={() => { playSound('click'); setIsThemeModalOpen(true); }}
           >
-            🎨
+            <AppIcon name="theme" />
           </button>
         </div>
       </div>
@@ -1934,11 +1952,12 @@ if (folderSortOrder === 'a-z') {
                         disabled={isMax}
                         title={isBlockedByChecklist ? tx("Conclua as tasks pendentes para subir de nível!") : tx("Aumentar Nível (+XP)")}
                         style={{
+                          '--plus-color': skillColor,
                           background: isMax
                             ? '#eab308'
                             : isBlockedByChecklist
                             ? '#334155'
-                            : `linear-gradient(180deg, ${skillColor} 0%, #1d4ed8 100%)`
+                            : `linear-gradient(155deg, ${skillColor} 0%, #1d4ed8 100%)`
                         }}
                       >
                         {isMax ? '✓' : '+'}
@@ -4183,107 +4202,6 @@ editingSkill.miniMissions.map((mm, idx) => {
             <div className="modal-header-row">
               <h2>{tx("Editar Habilidade:")}{' '}{editingSkill.title || editingSkill.name}</h2>
 <div className="header-action-row-right">
-  <div style={{ position: 'relative', display: 'inline-block' }}>
-    <button
-      type="button"
-      className="cancel-button"
-      style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setShowImportOptions(!showImportOptions);
-      }}
-    >
-      {tx("Importar Dados ▾")}
-    </button>
-
-    {showImportOptions && (
-      <>
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            zIndex: 99998,
-            background: 'transparent'
-          }}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setShowImportOptions(false);
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: '100%',
-            marginTop: '0.4rem',
-            background: '#1e293b',
-            border: '1px solid var(--theme-border, #334155)',
-            borderRadius: '8px',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
-            zIndex: 99999,
-            display: 'flex',
-            flexDirection: 'column',
-            minWidth: '170px',
-            overflow: 'hidden'
-          }}
-        >
-          <button
-            type="button"
-            className="context-menu-item"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setShowImportOptions(false);
-              importDataFileRef.current?.click();
-            }}
-          >
-            {tx("📁 Importar Arquivos")}
-          </button>
-
-          <button
-            type="button"
-            className="context-menu-item"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setShowImportOptions(false);
-              handleExportSkillData();
-            }}
-          >
-            {tx("📤 Exportar Arquivos")}
-          </button>
-
-          <button
-            type="button"
-            className="context-menu-item"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setShowImportOptions(false);
-              setWrittenDataText(generateTextFromSkill(editingSkill));
-              setIsWriteDataOpen(true);
-            }}
-          >
-            {tx("✏️ Escrever Dados")}
-          </button>
-        </div>
-      </>
-    )}
-
-    <input
-      type="file"
-      ref={importDataFileRef}
-      onChange={handleFileImport}
-      accept=".json,.txt"
-      style={{ display: 'none' }}
-    />
-  </div>
-
   <button
     type="button"
     className="delete-btn"
@@ -4311,262 +4229,364 @@ editingSkill.miniMissions.map((mm, idx) => {
             </div>
 
             <div className="horizontal-info-bar">
-              <div className="field-group flex-2">
-                <label>{tx("Nome da Habilidade")}</label>
-                <input
-                  type="text"
-                  value={editingSkill.title || editingSkill.name || ''}
-                  onChange={(e) =>
-                    setEditingSkill({ ...editingSkill, title: e.target.value, name: e.target.value })
-                  }
-                  required
-                />
-                <button
-                  type="button"
-                  className="mini-missions-envelope-btn"
-                  style={{ marginTop: '0.4rem', width: 'fit-content', padding: '0.35rem 0.7rem', fontSize: '1.1rem', cursor: 'pointer' }}
-                  onClick={() => {
-                    playSound('click');
-                    setMiniMissionsModalTab('list');
-                    setIsMiniMissionsModalOpen(true);
-                  }}
-                  title={tx("Gerenciar Mini Missões")}
-                >
-                  ✉
-                </button>
-              </div>
-
-              <div className="field-group flex-2">
-                <label>{tx("Categoria")}</label>
-                <input
-                  type="text"
-                  value={editingSkill.category}
-                  onChange={(e) =>
-                    setEditingSkill({ ...editingSkill, category: e.target.value })
-                  }
-                />
-                <button
-                  type="button"
-                  className="link-new-skill-btn"
-                  onClick={handleLinkNewSkillInSameCategory}
-                  title={tx("Criar outra habilidade com esta mesma categoria")}
-                >
-                  {tx("🔗 Interligar Nova Habilidade")}
-                </button>
-              </div>
-
-              <div className="field-group flex-1">
-                <label>{tx("Pasta Organizadora")}</label>
-                <select
-                  value={editingSkill.folder || 'Geral'}
-                  onChange={(e) =>
-                    setEditingSkill({ ...editingSkill, folder: e.target.value })
-                  }
-                  style={{ padding: '0.45rem', borderRadius: '6px', background: 'rgba(0, 0, 0, 0.3)', color: '#fff', border: '1px solid var(--theme-border, #334155)' }}
-                >
-                  {sortedAvailableFolders.map((f) => (
-                    <option key={f} value={f}>{tx(f)}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="field-group flex-1">
-                <label>{tx("Cor Temática")}</label>
-                <div className="color-selector">
-                  {activeDeckColors.map((c) => (
+              {/* Identidade: nome, mini missões e categoria */}
+              <div className="control-box ep-card ep-identity">
+                <div className="ep-field-col">
+                  <label className="lp-label" htmlFor="ep-skill-name">{tx("Nome da habilidade")}</label>
+                  <div className="ep-row">
+                    <div className="ep-input-wrap">
+                      <span className="ep-color-dot" style={{ background: editingSkill.color || '#3b82f6' }} aria-hidden="true" />
+                      <input
+                        id="ep-skill-name"
+                        className="ep-input"
+                        type="text"
+                        value={editingSkill.title || editingSkill.name || ''}
+                        onChange={(e) => setEditingSkill({ ...editingSkill, title: e.target.value, name: e.target.value })}
+                        placeholder={tx("Ex.: Violão, Inglês, Corrida…")}
+                        required
+                      />
+                    </div>
                     <button
                       type="button"
-                      key={c.hex}
-                      className={`color-dot ${editingSkill.color === c.hex ? 'selected' : ''}`}
-                      style={{ backgroundColor: c.hex }}
-                      onClick={() => { playSound('click'); setEditingSkill({ ...editingSkill, color: c.hex }); }}
-                      title={`${c.name || 'Cor'} (${c.hex})`}
-                    />
-                  ))}
-
-                  <button
-                    type="button"
-                    className="add-custom-color-dot-btn"
-                    onClick={() => handleOpenColorPickerModal('editing', editingSkill.color)}
-                    title={tx("Abrir gerenciador de cores e decks")}
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              <div className="control-box flex-1">
-                <div className="box-title-stacked">
-                  <span>{tx("Concluídos:")}</span>
-                  <strong>{tx("Lvl")}{' '}{editingSkill.level}</strong>
-                </div>
-                <div className="btn-group">
-                  <button
-                    type="button"
-                    className="icon-button"
-                    disabled={editingSkill.level <= 0}
-                    onMouseDown={() => startHoldAction(() => {
-                      playSound('click');
-                      downgradeSkill(editingSkill.id);
-                      setEditingSkill((prev) => ({
-                        ...prev,
-                        level: Math.max(0, prev.level - 1)
-                      }));
-                    })}
-                    onMouseUp={stopHold}
-                    onMouseLeave={stopHold}
-                    onTouchStart={() => startHoldAction(() => {
-                      playSound('click');
-                      downgradeSkill(editingSkill.id);
-                      setEditingSkill((prev) => ({
-                        ...prev,
-                        level: Math.max(0, prev.level - 1)
-                      }));
-                    })}
-                    onTouchEnd={stopHold}
-                    title={tx("Diminuir nível")}
-                  >
-                    −
-                  </button>
-
-                  <button
-                    type="button"
-                    className="icon-button"
-                    disabled={editingSkill.level >= editingSkill.maxLevel}
-                    onMouseDown={() => startHoldAction(() => {
-                      playSound('train');
-                      trainSkill(editingSkill.id);
-                      setEditingSkill((prev) => ({
-                        ...prev,
-                        level: Math.min(prev.maxLevel, prev.level + 1)
-                      }));
-                    })}
-                    onMouseUp={stopHold}
-                    onMouseLeave={stopHold}
-                    onTouchStart={() => startHoldAction(() => {
-                      playSound('train');
-                      trainSkill(editingSkill.id);
-                      setEditingSkill((prev) => ({
-                        ...prev,
-                        level: Math.min(prev.maxLevel, prev.level + 1)
-                      }));
-                    })}
-                    onTouchEnd={stopHold}
-                    title={tx("Aumentar nível")}
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              <div className="control-box flex-2">
-                <div className="max-lvl-header-row">
-                  <div className="title-with-custom-btn">
-                    <span>{tx("Nível Máximo:")}{' '}<strong>{editingSkill.maxLevel}</strong></span>
-                    <button
-                      type="button"
-                      className="edit-max-custom-btn"
-                      onClick={() => { playSound('click'); setIsCustomMaxLevelInput((prev) => !prev); }}
-                      title={tx("Digitar quantidade de níveis customizada")}
+                      className="ep-chip-btn mini-missions-envelope-btn"
+                      onClick={() => {
+                        playSound('click');
+                        setMiniMissionsModalTab('list');
+                        setIsMiniMissionsModalOpen(true);
+                      }}
+                      title={tx("Gerenciar Mini Missões")}
                     >
-                      {tx("Personalizar")}
+                      ✉ <span>{tx("Missões")}</span>
+                      {(editingSkill.miniMissions || []).length > 0 && <b className="ep-count">{(editingSkill.miniMissions || []).length}</b>}
                     </button>
                   </div>
-
-                  {isCustomMaxLevelInput ? (
-                    <input
-                      type="number"
-                      min="1"
-                      max="500"
-                      value={editingSkill.maxLevel}
-                      onChange={(e) => {
-                        const val = Math.max(1, Number(e.target.value));
-                        setEditingSkill((prev) => ({ ...prev, maxLevel: val }));
-                      }}
-                      className="custom-max-lvl-input"
-                      placeholder={tx("Qtd Níveis")}
-                      autoFocus
-                    />
-                  ) : (
-                    <select
-                      className="preset-level-dropdown mini"
-                      value={LEVEL_PRESETS.includes(editingSkill.maxLevel) ? editingSkill.maxLevel : ''}
-                      onChange={(e) => {
-                        playSound('click');
-                        if (e.target.value) {
-                          setEditingSkill((prev) => ({
-                            ...prev,
-                            maxLevel: Number(e.target.value)
-                          }));
-                        }
-                      }}
+                </div>
+                <div className="ep-field-col">
+                  <label className="lp-label" htmlFor="ep-skill-cat">{tx("Categoria")}</label>
+                  <div className="ep-row">
+                    <div className="ep-input-wrap">
+                      <input
+                        id="ep-skill-cat"
+                        className="ep-input"
+                        type="text"
+                        list="ep-categories"
+                        value={editingSkill.category || ''}
+                        onChange={(e) => setEditingSkill({ ...editingSkill, category: e.target.value })}
+                        placeholder={tx("Geral")}
+                      />
+                      <datalist id="ep-categories">
+                        {[...new Set(skills.map((s) => (s.category || '').trim()).filter(Boolean))].map((c) => (
+                          <option key={c} value={c} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <button
+                      type="button"
+                      className="ep-chip-btn link-new-skill-btn"
+                      onClick={handleLinkNewSkillInSameCategory}
+                      title={tx("Criar outra habilidade com esta mesma categoria")}
                     >
-                      <option value="" disabled>{tx("Padrões...")}</option>
-                      {LEVEL_PRESETS.map((num) => (
-                        <option key={num} value={num}>
-                          {num}{' '}{tx("Níveis")}
-                        </option>
+                      ＋ <span>{tx("Nova nesta categoria")}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Organização e visual: pasta e cor */}
+              <div className="control-box ep-card ep-style">
+                <div className="ep-field-col">
+                  <label className="lp-label" htmlFor="ep-skill-folder">{tx("Pasta")}</label>
+                  <div className="ep-input-wrap ep-select-wrap">
+                    <select
+                      id="ep-skill-folder"
+                      className="ep-input"
+                      value={editingSkill.folder || 'Geral'}
+                      onChange={(e) => setEditingSkill({ ...editingSkill, folder: e.target.value })}
+                    >
+                      {sortedAvailableFolders.map((f) => (
+                        <option key={f} value={f}>{tx(f)}</option>
                       ))}
                     </select>
-                  )}
+                  </div>
+                </div>
+                <div className="ep-field-col">
+                  <label className="lp-label">{tx("Cor")}</label>
+                  <div className="ep-colors color-selector">
+                    {activeDeckColors.map((c) => (
+                      <button
+                        type="button"
+                        key={c.hex}
+                        className={`color-dot ep-dot ${editingSkill.color === c.hex ? 'selected' : ''}`}
+                        style={{ backgroundColor: c.hex }}
+                        onClick={() => { playSound('click'); setEditingSkill({ ...editingSkill, color: c.hex }); }}
+                        title={`${c.name || 'Cor'} (${c.hex})`}
+                        aria-pressed={editingSkill.color === c.hex}
+                      />
+                    ))}
+                    <button
+                      type="button"
+                      className="add-custom-color-dot-btn ep-dot-add"
+                      onClick={() => handleOpenColorPickerModal('editing', editingSkill.color)}
+                      title={tx("Abrir gerenciador de cores e decks")}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Nível: concluídos e máximo no mesmo quadro (segure − / + para repetir) */}
+              <div className="control-box level-panel">
+                <div className="lp-row">
+                  <div className="lp-col">
+                    <span className="lp-label">{tx("Concluídos")}</span>
+                    <div className="lp-stepper">
+                      <button
+                        type="button"
+                        className="lp-btn"
+                        disabled={editingSkill.level <= 0}
+                        onMouseDown={() => startHoldAction(() => {
+                          playSound('click');
+                          downgradeSkill(editingSkill.id);
+                          setEditingSkill((prev) => ({ ...prev, level: Math.max(0, prev.level - 1) }));
+                        })}
+                        onMouseUp={stopHold}
+                        onMouseLeave={stopHold}
+                        onTouchStart={() => startHoldAction(() => {
+                          playSound('click');
+                          downgradeSkill(editingSkill.id);
+                          setEditingSkill((prev) => ({ ...prev, level: Math.max(0, prev.level - 1) }));
+                        })}
+                        onTouchEnd={stopHold}
+                        title={tx("Diminuir nível")}
+                        aria-label={tx("Diminuir nível")}
+                      >
+                        −
+                      </button>
+                      <span className="lp-value">
+                        <small>{tx("Lvl")}</small>
+                        {editingSkill.level}
+                      </span>
+                      <button
+                        type="button"
+                        className="lp-btn"
+                        disabled={editingSkill.level >= editingSkill.maxLevel}
+                        onMouseDown={() => startHoldAction(() => {
+                          playSound('train');
+                          trainSkill(editingSkill.id);
+                          setEditingSkill((prev) => ({ ...prev, level: Math.min(prev.maxLevel, prev.level + 1) }));
+                        })}
+                        onMouseUp={stopHold}
+                        onMouseLeave={stopHold}
+                        onTouchStart={() => startHoldAction(() => {
+                          playSound('train');
+                          trainSkill(editingSkill.id);
+                          setEditingSkill((prev) => ({ ...prev, level: Math.min(prev.maxLevel, prev.level + 1) }));
+                        })}
+                        onTouchEnd={stopHold}
+                        title={tx("Aumentar nível")}
+                        aria-label={tx("Aumentar nível")}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  <span className="lp-of" aria-hidden="true">{tx("de")}</span>
+
+                  <div className="lp-col">
+                    <span className="lp-label">{tx("Nível máximo")}</span>
+                    <div className="lp-stepper">
+                      <button
+                        type="button"
+                        className="lp-btn"
+                        disabled={editingSkill.maxLevel <= 1}
+                        onMouseDown={() => startHoldAction(() => {
+                          playSound('click');
+                          setEditingSkill((prev) => ({ ...prev, maxLevel: Math.max(1, prev.maxLevel - 1) }));
+                        })}
+                        onMouseUp={stopHold}
+                        onMouseLeave={stopHold}
+                        onTouchStart={() => startHoldAction(() => {
+                          playSound('click');
+                          setEditingSkill((prev) => ({ ...prev, maxLevel: Math.max(1, prev.maxLevel - 1) }));
+                        })}
+                        onTouchEnd={stopHold}
+                        title={tx("Diminuir nível máximo")}
+                        aria-label={tx("Diminuir nível máximo")}
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        className="lp-input"
+                        min="1"
+                        max="500"
+                        value={editingSkill.maxLevel}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => {
+                          const n = Math.round(Number(e.target.value));
+                          if (!Number.isFinite(n) || n < 1) return;
+                          setEditingSkill((prev) => ({ ...prev, maxLevel: Math.min(500, n) }));
+                        }}
+                        title={tx("Digite a quantidade de níveis")}
+                        aria-label={tx("Nível máximo")}
+                      />
+                      <button
+                        type="button"
+                        className="lp-btn"
+                        disabled={editingSkill.maxLevel >= 500}
+                        onMouseDown={() => startHoldAction(() => {
+                          playSound('click');
+                          setEditingSkill((prev) => ({ ...prev, maxLevel: Math.min(500, prev.maxLevel + 1) }));
+                        })}
+                        onMouseUp={stopHold}
+                        onMouseLeave={stopHold}
+                        onTouchStart={() => startHoldAction(() => {
+                          playSound('click');
+                          setEditingSkill((prev) => ({ ...prev, maxLevel: Math.min(500, prev.maxLevel + 1) }));
+                        })}
+                        onTouchEnd={stopHold}
+                        title={tx("Adicionar nível máximo")}
+                        aria-label={tx("Adicionar nível máximo")}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="btn-group">
-                  <button
-                    type="button"
-                    className="icon-button"
-                    disabled={editingSkill.maxLevel <= 1}
-                    onMouseDown={() => startHoldAction(() => {
-                      playSound('click');
-                      setEditingSkill((prev) => ({
-                        ...prev,
-                        maxLevel: Math.max(1, prev.maxLevel - 1)
-                      }));
-                    })}
-                    onMouseUp={stopHold}
-                    onMouseLeave={stopHold}
-                    onTouchStart={() => startHoldAction(() => {
-                      playSound('click');
-                      setEditingSkill((prev) => ({
-                        ...prev,
-                        maxLevel: Math.max(1, prev.maxLevel - 1)
-                      }));
-                    })}
-                    onTouchEnd={stopHold}
-                    title={tx("Diminuir nível máximo")}
-                  >
-                    −
-                  </button>
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onMouseDown={() => startHoldAction(() => {
-                      playSound('click');
-                      setEditingSkill((prev) => ({
-                        ...prev,
-                        maxLevel: prev.maxLevel + 1
-                      }));
-                    })}
-                    onMouseUp={stopHold}
-                    onMouseLeave={stopHold}
-                    onTouchStart={() => startHoldAction(() => {
-                      playSound('click');
-                      setEditingSkill((prev) => ({
-                        ...prev,
-                        maxLevel: prev.maxLevel + 1
-                      }));
-                    })}
-                    onTouchEnd={stopHold}
-                    title={tx("Adicionar nível máximo")}
-                  >
-                    +
-                  </button>
+                <div className="lp-bar" aria-hidden="true">
+                  <i style={{ width: `${Math.min(100, Math.round((editingSkill.level / Math.max(1, editingSkill.maxLevel)) * 100))}%` }} />
+                </div>
+
+                <div className="lp-presets" role="group" aria-label={tx("Níveis prontos")}>
+                  {LEVEL_PRESETS.map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      className={editingSkill.maxLevel === num ? 'on' : ''}
+                      onClick={() => {
+                        playSound('click');
+                        setEditingSkill((prev) => ({ ...prev, maxLevel: num }));
+                      }}
+                      title={tx("{n} níveis", { n: num })}
+                    >
+                      {num}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
 
             <div className="objectives-section-wrapper">
-<ModuleTabs skill={editingSkill} setSkill={setEditingSkill} playSound={playSound} />
+<ModuleTabs
+  skill={editingSkill}
+  setSkill={setEditingSkill}
+  playSound={playSound}
+  tools={(
+  <div className="mt-data" style={{ position: 'relative', display: 'inline-block' }}>
+    <button
+      type="button"
+      className="ep-chip-btn mt-data-btn"
+      title={tx("Importar, exportar ou escrever as metas e tarefas desta habilidade")}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setShowImportOptions(!showImportOptions);
+      }}
+    >
+      {tx("Importar / exportar")} ▾
+    </button>
+
+    {showImportOptions && (
+      <>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: 99998,
+            background: 'transparent'
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowImportOptions(false);
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            right: 0,
+            top: '100%',
+            marginTop: '0.4rem',
+            background: 'var(--theme-modal-bg, #1e293b)',
+            border: '1px solid var(--theme-border, #334155)',
+            borderRadius: '8px',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+            zIndex: 99999,
+            display: 'flex',
+            flexDirection: 'column',
+            minWidth: '170px',
+            overflow: 'hidden'
+          }}
+        >
+          <button
+            type="button"
+            className="context-menu-item"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowImportOptions(false);
+              importDataFileRef.current?.click();
+            }}
+          >
+            {tx("Importar arquivo")}
+          </button>
+
+          <button
+            type="button"
+            className="context-menu-item"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowImportOptions(false);
+              handleExportSkillData();
+            }}
+          >
+            {tx("Exportar arquivo")}
+          </button>
+
+          <button
+            type="button"
+            className="context-menu-item"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowImportOptions(false);
+              setWrittenDataText(generateTextFromSkill(editingSkill));
+              setIsWriteDataOpen(true);
+            }}
+          >
+            {tx("Escrever dados")}
+          </button>
+        </div>
+      </>
+    )}
+
+    <input
+      type="file"
+      ref={importDataFileRef}
+      onChange={handleFileImport}
+      accept=".json,.txt"
+      style={{ display: 'none' }}
+    />
+  </div>
+  )}
+/>
               <div className="horizontal-levels-grid">
                 {Array.from({ length: editingSkill.maxLevel }).map((_, idx) => {
                   const lvlNum = idx + 1;
@@ -4574,44 +4594,67 @@ editingSkill.miniMissions.map((mm, idx) => {
                   const isCurrentActive = lvlNum === targetActiveLevel;
                   const isPassed = lvlNum <= editingSkill.level;
                   const tasksForLvl = editingSkill.levelTasks?.[lvlNum] || [];
+                  const doneTasks = tasksForLvl.filter((t) => t.done).length;
+                  const hasInfo = Boolean((editingSkill.levelInfos?.[lvlNum] || '').trim());
+                  // + Item: cria e já coloca o cursor na tarefa nova
+                  const addTask = () => {
+                    handleAddTaskToLevel(lvlNum);
+                    setTimeout(() => {
+                      const list = document.querySelectorAll(`[data-lv="${lvlNum}"] .subtask-row input[type="text"]`);
+                      if (list.length) list[list.length - 1].focus();
+                    }, 30);
+                  };
 
                   return (
                     <div
                       key={lvlNum}
-                      className={`level-card-item ${isCurrentActive ? 'active-level' : ''} ${isPassed ? 'passed-level' : ''}`}
+                      data-lv={lvlNum}
+                      className={`level-card-item lv-card ${isCurrentActive ? 'active-level' : ''} ${isPassed ? 'passed-level' : ''}`}
+                      style={{ '--lv-color': editingSkill.color || '#3b82f6' }}
                     >
-<div className="level-card-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-  <span className="level-card-badge">{tx("Nível")}{' '}{lvlNum}</span>
+<div className="level-card-header lv-head">
+  <span className="lv-num" aria-hidden="true">{isPassed ? '✓' : lvlNum}</span>
+  <span className="lv-title">{tx("Nível")}{' '}{lvlNum}</span>
+  {isCurrentActive && <span className="lv-status now">{tx("Em progresso")}</span>}
+  {isPassed && <span className="lv-status done">{tx("Concluído")}</span>}
 
-  {/* Botão info - abre a janela de Info/Descritivo */}
+  {/* Info/Descritivo do nível */}
   <button
     type="button"
-    className="btn-level-info"
+    className={`btn-level-info lv-info ${hasInfo ? 'has' : ''}`}
     onClick={() => setLevelInfoModal({ isOpen: true, levelNumber: lvlNum })}
+    title={hasInfo ? tx("Ver / editar o descritivo deste nível") : tx("Escrever um descritivo para este nível")}
+    aria-label={tx("Info do nível")}
   >
-    info
+    i
   </button>
-
-  {isCurrentActive && <span className="current-indicator">{tx("EM PROGRESSO")}</span>}
-  {isPassed && <span className="passed-indicator">{tx("CONCLUÍDO")}</span>}
 </div>
 
                       <textarea
+                        className="lv-goal"
                         rows={2}
                         placeholder={tx('Meta principal do Nível {n}', { n: lvlNum })}
                         value={editingSkill.levelDescriptions?.[lvlNum] || ''}
                         onChange={(e) => handleLevelDescChange(lvlNum, e.target.value)}
                       />
 
-                      <div className="subtasks-editor">
-                        <div className="subtasks-header">
-                          <span>{tx("Sub-tarefas (")}{tasksForLvl.length}):</span>
+                      <div className="subtasks-editor lv-tasks">
+                        <div className="subtasks-header lv-tasks-head">
+                          <span className="lv-tasks-title">
+                            {tx("Sub-tarefas")}
+                            {tasksForLvl.length > 0 && <b>{doneTasks}/{tasksForLvl.length}</b>}
+                          </span>
+                          {tasksForLvl.length > 0 && (
+                            <span className="lv-tasks-bar" aria-hidden="true">
+                              <i style={{ width: `${Math.round((doneTasks / tasksForLvl.length) * 100)}%` }} />
+                            </span>
+                          )}
                           <button
                             type="button"
-                            className="add-task-mini-btn"
-                            onClick={() => handleAddTaskToLevel(lvlNum)}
+                            className="add-task-mini-btn lv-add"
+                            onClick={addTask}
                           >
-                            {tx("+ Item")}
+                            ＋ {tx("Item")}
                           </button>
                         </div>
                         <div className="subtasks-inputs-list">
@@ -4631,6 +4674,13 @@ editingSkill.miniMissions.map((mm, idx) => {
                                 onChange={(e) =>
                                   handleUpdateTaskText(lvlNum, task.id, e.target.value)
                                 }
+                                onKeyDown={(e) => {
+                                  // Enter: próxima tarefa (sem salvar a janela)
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    addTask();
+                                  }
+                                }}
                               />
                               <button
                                 type="button"

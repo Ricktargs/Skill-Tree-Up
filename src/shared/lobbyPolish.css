@@ -1,0 +1,630 @@
+/* =========================================================
+   LOBBY (Habilidades) + QUADRO DE NÍVEL DO EDITAR HABILIDADE
+   ========================================================= */
+
+/* ---------- sem barra de rolagem do lado (continua rolando) ---------- */
+html,
+body,
+#root .app-screen,
+#root .skills-list {
+  scrollbar-width: none;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root .app-screen::-webkit-scrollbar,
+#root .skills-list::-webkit-scrollbar {
+  display: none;
+}
+#root .skills-list {
+  padding-right: 0 !important;
+}
+
+/* ---------- 💎 Diamantes e ⚙️ da habilidade na cor do tema ---------- */
+html[data-ui-theme] #root .diamonds-box {
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 16%, var(--theme-modal-bg, #0f172a)) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent, #38bdf8) 55%, transparent) !important;
+}
+html[data-ui-theme] #root .diamonds-box.dh-clickable:hover {
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 28%, var(--theme-modal-bg, #0f172a)) !important;
+  border-color: var(--theme-accent, #38bdf8) !important;
+}
+html[data-ui-theme] #root .gear-button {
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 20%, var(--theme-modal-bg, #0f172a)) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent, #38bdf8) 50%, transparent) !important;
+  color: var(--opt-fg, #e2e8f0) !important;
+}
+html[data-ui-theme] #root .gear-button:hover {
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 36%, var(--theme-modal-bg, #0f172a)) !important;
+  border-color: var(--theme-accent, #38bdf8) !important;
+}
+
+/* ---------- ＋ subir nível: degradê vertical vivo (cor da habilidade em
+   cima, um tom vizinho embaixo), cantos arredondados e cruz clarinha ---------- */
+html[data-ui-theme] #root .action-button-stack .plus-button:not(:disabled) {
+  --pc: var(--plus-color, var(--skill-accent, #3b82f6));
+  /* sem suporte a cor relativa: mistura com um anil */
+  background: linear-gradient(180deg,
+      color-mix(in srgb, var(--pc) 88%, #ffffff) 0%,
+      color-mix(in srgb, var(--pc) 45%, #4f46e5) 100%) !important;
+  color: color-mix(in srgb, var(--pc) 12%, #ffffff) !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 4px 10px color-mix(in srgb, var(--pc) 35%, transparent) !important;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18) !important;
+  font-weight: 900 !important;
+  transition: filter 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease !important;
+}
+@supports (color: oklch(from red l c h)) {
+  html[data-ui-theme] #root .action-button-stack .plus-button:not(:disabled) {
+    background: linear-gradient(180deg,
+        oklch(from var(--pc) calc(l + 0.06) c calc(h + 12)) 0%,
+        oklch(from var(--pc) calc(l - 0.08) calc(c * 0.95) calc(h - 70)) 100%) !important;
+  }
+}
+html[data-ui-theme] #root .action-button-stack .plus-button:not(:disabled):hover {
+  filter: brightness(1.08) saturate(1.05);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 0 0 3px color-mix(in srgb, var(--theme-accent, #38bdf8) 22%, transparent),
+    0 6px 14px color-mix(in srgb, var(--pc) 45%, transparent) !important;
+}
+html[data-ui-theme] #root .action-button-stack .plus-button:not(:disabled):active {
+  transform: translateY(1px) scale(0.96);
+}
+
+/* com tarefas pendentes: mesma cor, só mais apagada (continua pulsando) */
+html[data-ui-theme] #root .action-button-stack .plus-button.blocked-pulse:not(:disabled) {
+  filter: saturate(0.5);
+  opacity: 0.8;
+}
+
+/* ---------- Quadro de nível (Concluídos + Nível máximo) ---------- */
+html #root .horizontal-info-bar > .control-box.level-panel {
+  flex: 2.4 1 330px !important;
+  max-width: none !important;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 8px;
+  padding: 0.65rem 0.85rem;
+}
+.lp-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+.lp-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.lp-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.65;
+}
+.lp-of {
+  padding-bottom: 8px;
+  font-size: 0.75rem;
+  opacity: 0.5;
+}
+.lp-stepper {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--theme-border, #334155);
+  background: rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+.lp-btn {
+  width: 32px;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.12s;
+}
+.lp-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 25%, transparent);
+}
+.lp-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.lp-value,
+.lp-input {
+  min-width: 52px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  border-left: 1px solid var(--theme-border, #334155);
+  border-right: 1px solid var(--theme-border, #334155);
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+.lp-value small {
+  font-size: 0.65rem;
+  font-weight: 700;
+  opacity: 0.6;
+}
+.lp-input {
+  width: 58px;
+  padding: 0 !important;
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  outline: none;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.lp-input::-webkit-outer-spin-button,
+.lp-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.lp-input:focus {
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 14%, transparent) !important;
+}
+.lp-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  overflow: hidden;
+}
+.lp-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--theme-accent, #38bdf8);
+  transition: width 0.25s ease;
+}
+.lp-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.lp-presets button {
+  min-width: 30px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--theme-border, #334155);
+  background: transparent;
+  color: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.12s, background 0.12s, border-color 0.12s;
+}
+.lp-presets button:hover {
+  opacity: 1;
+  border-color: var(--theme-accent, #38bdf8);
+}
+.lp-presets button.on {
+  opacity: 1;
+  border-color: var(--theme-accent, #38bdf8);
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 24%, transparent);
+}
+
+/* celular: o quadro ocupa a linha toda */
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  html #root .full-screen-edit > .horizontal-info-bar > .level-panel {
+    grid-column: 1 / -1 !important;
+  }
+  .lp-btn { width: 40px; }
+  .lp-stepper { height: 40px; }
+  .lp-input { font-size: 16px !important; }
+  .lp-presets button { height: 28px; min-width: 36px; }
+}
+
+/* ---------- Editar habilidade: quadros de Identidade e Pasta/Cor
+   (mesmo visual do quadro de nível) ---------- */
+html #root .horizontal-info-bar {
+  align-items: stretch !important;
+  gap: 10px !important;
+}
+html #root .horizontal-info-bar > .control-box.ep-card {
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 10px;
+  padding: 0.65rem 0.85rem;
+  max-width: none !important;
+}
+html #root .horizontal-info-bar > .control-box.ep-identity { flex: 3 1 360px !important; }
+html #root .horizontal-info-bar > .control-box.ep-style { flex: 2 1 240px !important; }
+.ep-field-col { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ep-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.ep-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--theme-border, #334155);
+  background: rgba(0, 0, 0, 0.22);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ep-input-wrap:focus-within {
+  border-color: var(--theme-accent, #38bdf8);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent, #38bdf8) 18%, transparent);
+}
+.ep-color-dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  margin-left: 11px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12), 0 0 8px currentColor;
+}
+html #root .ep-input {
+  flex: 1;
+  min-width: 0;
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 0 10px !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: inherit;
+  font: inherit;
+  font-size: 0.9rem !important;
+  font-weight: 600;
+  outline: none;
+}
+.ep-identity .ep-field-col:first-child .ep-input { font-size: 0.98rem !important; font-weight: 700; }
+.ep-select-wrap select.ep-input { cursor: pointer; padding-right: 6px !important; }
+
+html #root .ep-chip-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px !important;
+  margin: 0 !important;
+  padding: 0 10px !important;
+  width: auto !important;
+  border-radius: 10px !important;
+  border: 1px solid var(--theme-border, #334155) !important;
+  background: transparent !important;
+  color: inherit !important;
+  font-size: 0.78rem !important;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+html #root .ep-chip-btn:hover {
+  border-color: var(--theme-accent, #38bdf8) !important;
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 16%, transparent) !important;
+}
+.ep-count {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--theme-accent, #38bdf8);
+  color: var(--theme-on-accent, #0b1220);
+  font-size: 0.65rem;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* cores: bolinhas em linha, a escolhida com anel na cor do tema */
+html #root .ep-colors {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px !important;
+  min-height: 34px;
+  padding: 0 !important;
+}
+html #root .ep-colors .ep-dot {
+  width: 22px !important;
+  height: 22px !important;
+  border-radius: 50% !important;
+  border: 2px solid transparent !important;
+  transform: none !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  transition: box-shadow 0.15s, transform 0.12s !important;
+}
+html #root .ep-colors .ep-dot:hover { transform: scale(1.12) !important; }
+html #root .ep-colors .ep-dot.selected {
+  box-shadow: 0 0 0 2px var(--theme-modal-bg, #0f172a), 0 0 0 4px var(--theme-accent, #38bdf8) !important;
+}
+html #root .ep-colors .ep-dot-add {
+  width: 22px !important;
+  height: 22px !important;
+  border-radius: 50% !important;
+  border: 1px dashed color-mix(in srgb, var(--opt-fg, #e2e8f0) 45%, transparent) !important;
+  background: transparent !important;
+  color: inherit !important;
+  font-size: 0.85rem !important;
+  line-height: 1 !important;
+  padding: 0 !important;
+}
+html #root .ep-colors .ep-dot-add:hover { border-color: var(--theme-accent, #38bdf8) !important; border-style: solid !important; }
+
+/* celular: cada quadro numa linha, campos maiores */
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  html #root .full-screen-edit > .horizontal-info-bar > .ep-card {
+    grid-column: 1 / -1 !important;
+    display: flex !important;
+  }
+  html #root .full-screen-edit .ep-input-wrap { height: 42px; }
+  html #root .full-screen-edit .ep-chip-btn { height: 42px !important; }
+  html #root .full-screen-edit .ep-chip-btn span { display: none; }
+  html #root .full-screen-edit .ep-input { font-size: 16px !important; height: 100% !important; }
+  html #root .full-screen-edit .ep-colors .ep-dot,
+  html #root .full-screen-edit .ep-colors .ep-dot-add { width: 30px !important; height: 30px !important; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  html #root .full-screen-edit > .horizontal-info-bar > .ep-identity,
+  html #root .full-screen-edit > .horizontal-info-bar > .ep-style { grid-column: span 2 !important; }
+}
+
+/* ---------- Metas e níveis: botão de dados no cabeçalho ---------- */
+.mt-head { align-items: center !important; }
+.mt-tools { margin-left: auto; }
+.mt-hint + .mt-tools { margin-left: 12px; }
+.mt-head .mt-hint { margin-left: auto; }
+html #root .mt-data-btn { height: 30px !important; font-size: 0.75rem !important; }
+
+/* ---------- Cartões de nível (mesma linguagem dos quadros de cima) ---------- */
+html #root .horizontal-levels-grid {
+  gap: 10px !important;
+}
+html #root .level-card-item.lv-card {
+  display: flex !important;
+  flex-direction: column;
+  gap: 8px !important;
+  padding: 0.7rem 0.75rem !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--theme-border, #334155) !important;
+  background: rgba(0, 0, 0, 0.2) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: border-color 0.15s, background 0.15s;
+}
+html #root .level-card-item.lv-card:hover {
+  border-color: color-mix(in srgb, var(--theme-accent, #38bdf8) 45%, var(--theme-border, #334155)) !important;
+}
+html #root .level-card-item.lv-card.active-level {
+  border-color: var(--theme-accent, #38bdf8) !important;
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 8%, rgba(0, 0, 0, 0.2)) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent, #38bdf8) 12%, transparent) !important;
+}
+html #root .level-card-item.lv-card.passed-level {
+  background: color-mix(in srgb, var(--lv-color) 7%, rgba(0, 0, 0, 0.2)) !important;
+}
+html #root .level-card-item.lv-card.passed-level .lv-goal,
+html #root .level-card-item.lv-card.passed-level .lv-tasks { opacity: 0.8; }
+
+html #root .lv-head {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  margin: 0 !important;
+  min-height: 26px;
+}
+.lv-num {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--theme-border, #334155);
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.active-level .lv-num {
+  border-color: var(--theme-accent, #38bdf8);
+  color: var(--theme-accent, #38bdf8);
+}
+.passed-level .lv-num {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--lv-color) 70%, var(--theme-modal-bg, #0f172a));
+  color: #ffffff;
+}
+.lv-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.lv-status {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.lv-status.now {
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 20%, transparent);
+  color: var(--theme-accent, #38bdf8);
+}
+.lv-status.done {
+  background: color-mix(in srgb, var(--lv-color) 22%, transparent);
+  color: color-mix(in srgb, var(--lv-color) 70%, #ffffff);
+}
+html #root .lv-info {
+  margin-left: auto !important;
+  width: 24px !important;
+  height: 24px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  border: 1px solid var(--theme-border, #334155) !important;
+  background: transparent !important;
+  color: inherit !important;
+  font: italic 700 0.78rem/1 Georgia, serif !important;
+  opacity: 0.65;
+  cursor: pointer;
+}
+html #root .lv-info:hover { opacity: 1; border-color: var(--theme-accent, #38bdf8) !important; }
+html #root .lv-info.has {
+  opacity: 1;
+  border-color: var(--theme-accent, #38bdf8) !important;
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 22%, transparent) !important;
+}
+
+html #root .lv-goal {
+  width: 100% !important;
+  min-height: 52px;
+  margin: 0 !important;
+  padding: 8px 10px !important;
+  border-radius: 10px !important;
+  border: 1px solid var(--theme-border, #334155) !important;
+  background: rgba(0, 0, 0, 0.22) !important;
+  color: inherit !important;
+  font-size: 0.86rem !important;
+  line-height: 1.35;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+}
+html #root .lv-goal:focus {
+  border-color: var(--theme-accent, #38bdf8) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent, #38bdf8) 16%, transparent) !important;
+}
+
+html #root .lv-tasks {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: none !important;
+}
+html #root .lv-tasks-head {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px !important;
+}
+.lv-tasks-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+.lv-tasks-title b { font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.lv-tasks-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+}
+.lv-tasks-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--lv-color);
+  transition: width 0.25s ease;
+}
+html #root .lv-add {
+  margin-left: auto !important;
+  height: 24px !important;
+  padding: 0 9px !important;
+  border-radius: 999px !important;
+  border: 1px dashed color-mix(in srgb, var(--theme-accent, #38bdf8) 60%, transparent) !important;
+  background: transparent !important;
+  color: var(--theme-accent, #38bdf8) !important;
+  font-size: 0.7rem !important;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+html #root .lv-add:hover {
+  border-style: solid !important;
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 14%, transparent) !important;
+}
+html #root .lv-card .subtasks-inputs-list { display: flex; flex-direction: column; gap: 4px; }
+html #root .lv-card .subtask-row {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 4px 0 8px !important;
+  border-radius: 8px !important;
+  border: 1px solid transparent !important;
+  background: rgba(0, 0, 0, 0.16) !important;
+}
+html #root .lv-card .subtask-row:focus-within {
+  border-color: color-mix(in srgb, var(--theme-accent, #38bdf8) 55%, transparent) !important;
+}
+html #root .lv-card .subtask-row input[type='text'] {
+  height: 100% !important;
+  padding: 0 4px !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+  font-size: 0.8rem !important;
+  outline: none;
+}
+html #root .lv-card .task-checkbox {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--lv-color);
+  cursor: pointer;
+}
+html #root .lv-card .subtask-row:has(.task-checkbox:checked) input[type='text'] {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+html #root .lv-card .remove-task-btn {
+  width: 22px !important;
+  height: 22px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: inherit !important;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.12s, background 0.12s;
+}
+html #root .lv-card .subtask-row:hover .remove-task-btn,
+html #root .lv-card .subtask-row:focus-within .remove-task-btn { opacity: 0.6; }
+html #root .lv-card .remove-task-btn:hover { opacity: 1 !important; background: rgba(239, 68, 68, 0.3) !important; }
+@media (hover: none) {
+  html #root .lv-card .remove-task-btn { opacity: 0.55; }
+}
+@media (max-width: 760px) {
+  html #root .lv-card .subtask-row { height: 38px; }
+  html #root .lv-card .subtask-row input[type='text'] { font-size: 16px !important; }
+  html #root .lv-goal { font-size: 16px !important; }
+  html #root .lv-add { height: 30px !important; }
+}

@@ -85,20 +85,50 @@ function PixelFace({ rows, palette }) {
   );
 }
 
+// Separa braços e pernas pelos blocos (cada classe tem os seus, sem nome):
+// pernas = blocos estreitos embaixo, perto do meio; braços = blocos dos
+// lados (com o que a mão segura, como cajado e espada). O resto é o corpo.
+function splitLimbs(blocks) {
+  const groups = { body: [], legL: [], legR: [], armL: [], armR: [] };
+  blocks.forEach((b, i) => {
+    const [w, h, , x, y, , , extra = {}] = b;
+    if (extra.wave !== undefined || /wing/.test(extra.cls || '')) return groups.body.push(i);
+    const ax = Math.abs(x);
+    if (y - h / 2 >= 38 && w <= 16 && ax >= 3 && ax <= 14) return groups[x < 0 ? 'legL' : 'legR'].push(i);
+    if ((ax >= 17 && w <= 16 && y >= -6 && y <= 50) || ax >= 27) return groups[x < 0 ? 'armL' : 'armR'].push(i);
+    return groups.body.push(i);
+  });
+  // ponto de giro: quadril (topo das pernas) e ombro (topo do braço)
+  const pivot = (ids, isArm) => {
+    const own = ids.filter((i) => !isArm || Math.abs(blocks[i][3]) < 27);
+    const use = own.length ? own : ids;
+    const top = Math.min(...use.map((i) => blocks[i][4] - blocks[i][1] / 2));
+    const x = use.reduce((sum, i) => sum + blocks[i][3], 0) / use.length;
+    return { x, y: top + (isArm ? 3 : 1) };
+  };
+  const out = { body: groups.body, limbs: [] };
+  [
+    ['legL', false],
+    ['legR', false],
+    ['armL', true],
+    ['armR', true]
+  ].forEach(([k, isArm]) => {
+    if (groups[k].length) out.limbs.push({ key: k, ids: groups[k], pivot: pivot(groups[k], isArm) });
+  });
+  return out;
+}
+
 // Os blocos de um personagem, com as cores DELE
-function HeroBody({ hero, cls }) {
+function HeroBody({ hero, cls, limbs = false }) {
   const heroClass = getHeroClass(cls || hero.cls);
   const look = getLook(hero, heroClass.id);
   const palette = buildPalette(heroClass, look);
   const gender = getGender(look, heroClass);
   const { blocks, face } = buildHeroParts(heroClass, look, gender, FACE_PATTERNS);
   const floating = heroClass.floating || heroClass.id === 'fairy';
-  return (
-    <div
-      className={`vx-idle ${floating ? 'floating' : ''}`}
-      style={{ '--vx-lift': `${heroClass.lift || 0}px`, '--vx-scale': heroClass.scale || 1 }}
-    >
-      {blocks.map(([w, h, d, x, y, z, color, extra = {}], i) => (
+  const box = (i) => {
+    const [w, h, d, x, y, z, color, extra = {}] = blocks[i];
+    return (
         <Box
           key={i}
           w={w}
@@ -115,20 +145,38 @@ function HeroBody({ hero, cls }) {
           color={resolveColor(color, palette)}
           face={extra.face ? <PixelFace rows={face} palette={palette} /> : null}
         />
-      ))}
+    );
+  };
+  // braços e pernas soltos só quando o personagem anda (Santuário)
+  const parts = limbs && !floating ? splitLimbs(blocks) : null;
+  return (
+    <div
+      className={`vx-idle ${floating ? 'floating' : ''}`}
+      style={{ '--vx-lift': `${heroClass.lift || 0}px`, '--vx-scale': heroClass.scale || 1 }}
+    >
+      {parts
+        ? [
+            ...parts.body.map(box),
+            ...parts.limbs.map((l) => (
+              <div key={l.key} className={`vx-limb vx-${l.key}`} style={{ transformOrigin: `${l.pivot.x}px ${l.pivot.y}px` }}>
+                {l.ids.map(box)}
+              </div>
+            ))
+          ]
+        : blocks.map((_, i) => box(i))}
     </div>
   );
 }
 
 // Personagem completo (cena 3D). `size` muda a escala (miniaturas do menu).
-export function HeroModel({ hero, cls, rotation = -30, hop = 0, size = 1, still = false }) {
+export function HeroModel({ hero, cls, rotation = -30, hop = 0, size = 1, still = false, limbs = false, pose = null }) {
   return (
-    <div className={`vx-model ${still ? 'still' : ''}`} style={{ '--vx-size': size }}>
+    <div className={`vx-model ${still ? 'still' : ''} ${pose ? `pose-${pose}` : ''}`} style={{ '--vx-size': size }}>
       <div className="vx-shadow" />
       <div className="vx-scene">
         <div className="vx-rot" style={{ transform: `rotateX(-14deg) rotateY(${rotation}deg)` }}>
           <div className={`vx-hop ${hop ? 'hopping' : ''}`} key={hop}>
-            <HeroBody hero={hero} cls={cls} />
+            <HeroBody hero={hero} cls={cls} limbs={limbs} />
           </div>
         </div>
       </div>

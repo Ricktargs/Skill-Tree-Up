@@ -48,8 +48,9 @@ export const ITEM_TYPES = {
   bgisland: { label: "a ilha de fundo", name: "Ilha voadora de fundo", icon: "🏝️", min: 0.4, max: 2.2, half: 220, flip: true, random: true, bg: true },
   fireflies: { label: "os vagalumes", name: "Vagalumes", icon: "✨", min: 0.5, max: 2.5, half: 60 },
   land: { label: "a terra", name: "Terra", icon: "⛰️", min: 0.5, max: 3, half: 170 },
+  grass: { label: "o matinho", name: "Matinho", icon: "🌿", min: 0.4, max: 2.6, half: 46, flip: true, random: true },
 };
-export const ADDABLE = ["land", "tree", "lake", "tent", "fire", "fireflies", "post"];
+export const ADDABLE = ["land", "grass", "tree", "lake", "tent", "fire", "fireflies", "post"];
 export const BG_ADDABLE = ["bgtree", "bgisland"];
 const isBg = (i) => Boolean(ITEM_TYPES[i.type]?.bg);
 const MAIN_X = 600; // onde a árvore principal é desenhada no layout
@@ -79,7 +80,7 @@ const defaultLayouts = (terraItems) => [
 
 /* ---------------- preferências (por perfil) ---------------- */
 const KEY = "eu-sou-arvore-santuario";
-const DEFAULT = { on: true, lanterns: true, season: "auto", active: 0 };
+const DEFAULT = { on: true, lanterns: true, season: "auto", active: 0, grass: true };
 
 const cleanItems = (list) => {
   let items = Array.isArray(list) ? list.filter((i) => i && ITEM_TYPES[i.type]) : defaultItems();
@@ -93,7 +94,7 @@ const read = () => {
   const v = { ...DEFAULT, ...(loadJSON(KEY, null) || {}) };
   let layouts;
   if (Array.isArray(v.layouts) && v.layouts.length === 3) {
-    layouts = v.layouts.map((l, i) => ({ kind: Object.keys(LAYOUT_KINDS)[i], items: cleanItems(l.items) }));
+    layouts = v.layouts.map((l, i) => ({ kind: Object.keys(LAYOUT_KINDS)[i], items: cleanItems(l.items), mined: Array.isArray(l.mined) ? l.mined : [] }));
   } else {
     // versões anteriores: o que já estava decorado vai para o layout Terra; perfil novo usa o padrão
     layouts = defaultLayouts(Array.isArray(v.items) ? cleanItems(v.items) : v.pos ? defaultItems(v.pos) : undefined);
@@ -104,6 +105,7 @@ const read = () => {
     on: TEXT_FEATURES ? v.on : true,
     lanterns: v.lanterns,
     season: v.season,
+    grass: v.grass !== false,
     layouts,
     active,
     viewing: null,
@@ -120,10 +122,11 @@ const get = () => {
 };
 const notify = () => listeners.forEach((l) => l());
 /** Muda e salva (o que está sendo visto, o lápis e a seleção não são salvos). */
+export const getSanctuaryPrefs = () => get();
 export function setSanctuary(patch) {
   state = { ...get(), ...patch };
-  const { on, lanterns, season, layouts, active } = state;
-  saveJSON(KEY, { on, lanterns, season, layouts, active });
+  const { on, lanterns, season, layouts, active, grass } = state;
+  saveJSON(KEY, { on, lanterns, season, layouts, active, grass });
   notify();
 }
 /** Muda sem salvar (enquanto arrasta). */
@@ -159,6 +162,56 @@ const setItems = (items, live = false) => {
   (live ? setLive : setSanctuary)({ layouts });
 };
 const currentItems = () => shownLayout(get()).items;
+const resetLayout = (kind) => {
+  const s = get();
+  const idx = shownIndex(s);
+  setSanctuary({ layouts: s.layouts.map((l, i) => (i === idx ? { ...l, items: defaultsFor(kind), mined: [] } : l)) });
+};
+
+/* ---------------- quebrar blocos (com a mão, por enquanto) ---------------- */
+// batidas em andamento (não salvas) e pedacinhos voando
+const dig = { hits: new Map(), bursts: [], version: 0 };
+const digListeners = new Set();
+const digNotify = () => {
+  dig.version += 1;
+  digListeners.forEach((l) => l());
+};
+const useDig = () =>
+  useSyncExternalStore(
+    (l) => {
+      digListeners.add(l);
+      return () => digListeners.delete(l);
+    },
+    () => dig.version
+  );
+/** Uma batida no bloco (c, r). Devolve true se quebrou. */
+export function hitBlock(world, c, r) {
+  const k = world.blocks.keyOf(c, r);
+  const type = world.blocks.blockType(c, r);
+  if (!type || world.blocks.isMined(c, r)) return false;
+  const need = BLOCK_TYPES[type]?.hits || 2;
+  const n = (dig.hits.get(k) || 0) + 1;
+  if (n < need) {
+    dig.hits.set(k, n);
+    sfx.play("branch");
+    digNotify();
+    return false;
+  }
+  dig.hits.delete(k);
+  const id = Date.now() + Math.random();
+  dig.bursts.push({ id, c, r, type });
+  setTimeout(() => {
+    dig.bursts = dig.bursts.filter((b) => b.id !== id);
+    digNotify();
+  }, 700);
+  const s = get();
+  const idx = shownIndex(s);
+  const layouts = s.layouts.map((l, i) => (i === idx ? { ...l, mined: [...(l.mined || []), k] } : l));
+  setSanctuary({ layouts });
+  sfx.play("rustle");
+  digNotify();
+  return true;
+}
 const updateItem = (id, patch, live = false) => setItems(currentItems().map((i) => (i.id === id ? { ...i, ...patch } : i)), live);
 export const removeItem = (id) => {
   if (!id || id === "main") return;
@@ -213,6 +266,21 @@ const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const smooth = (t) => t * t * (3 - 2 * t);
 const LEAF_PATH = "M 0,-5 C 3.5,-2 3.5,4 0,6.5 C -3.5,4 -3.5,-2 0,-5 Z";
 export const LAKE_W = 600;
+
+/* ---------------- blocos do terreno (estilo Terraria) ---------------- */
+export const BLOCK = 40; // tamanho de um bloco (unidades do desenho)
+const GRID_X0 = -4000; // a grade começa aqui (colunas alinhadas em qualquer layout)
+const BLOCK_ROWS = { terra: 7, voadora: 4, mar: 5 };
+// quantas batidas com a mão cada bloco aguenta
+export const BLOCK_TYPES = {
+  grass: { name: "Grama", hits: 2 },
+  dirt: { name: "Terra", hits: 2 },
+  sand: { name: "Areia", hits: 1 },
+  wood: { name: "Madeira", hits: 3 },
+  stone: { name: "Pedra", hits: 4 },
+  cracked: { name: "Pedra rachada", hits: 2 },
+  amethyst: { name: "Minério de ametista", hits: 5 },
+};
 const SEA = 676; // nível do mar (Ilha com mar)
 const EDGE = 150; // largura da descida nas pontas das ilhas
 const VOID = 2400; // "chão" fora da ilha voadora (não tem chão)
@@ -261,7 +329,7 @@ export function sanctuaryWorld(layout) {
       return !best || d < best.d ? { s, d } : best;
     }, null)?.s;
 
-  const top = (x) => {
+  const smoothTop = (x) => {
     if (kind === "terra") return base(x);
     const seg = segOf(x);
     if (!seg) return kind === "mar" ? SEA + 30 : VOID;
@@ -277,6 +345,109 @@ export function sanctuaryWorld(layout) {
     const seg = segOf(x) || nearestSeg(x);
     return { min: seg[0] + EDGE * 0.45, max: seg[1] - EDGE * 0.45 };
   };
+  // Água dos lagos (mesma conta do desenho do Lago): onde o herói afunda
+  const pools = items
+    .filter((i) => i.type === "lake")
+    .map((l) => {
+      const size = l.size || 1;
+      const W = LAKE_W * size;
+      const a = l.x - W / 2 + W * 0.16;
+      const b = l.x + W / 2 - W * 0.16;
+      const step = Math.max(8, 12 * size);
+      let lowest = -Infinity;
+      for (let px = a; px <= b; px += step) lowest = Math.max(lowest, smoothTop(px));
+      return { from: a - W * 0.02, to: b + W * 0.02, x0: l.x - W / 2, x1: l.x + W / 2, level: lowest + 8 * Math.min(1.4, size), size };
+    });
+  const water = (x) => pools.find((w) => x >= w.from && x <= w.to) || null;
+
+  // ---- blocos: colunas de BLOCK de largura; o chão vira degraus ----
+  const B = BLOCK;
+  const colOf = (x) => Math.floor((x - GRID_X0) / B);
+  const colX0 = (c) => GRID_X0 + c * B;
+  const colMid = (c) => colX0(c) + B / 2;
+  const range = kind === "terra" ? [[TERRA_MIN - 320, TERRA_MAX + 320]] : segments;
+  const inRange = (x) => range.some(([a, b]) => x >= a && x <= b);
+  const landMemo = new Map();
+  const isLand = (c) => {
+    if (landMemo.has(c)) return landMemo.get(c);
+    const xm = colMid(c);
+    const st = smoothTop(xm);
+    const ok =
+      inRange(xm) &&
+      !water(xm) &&
+      // o lago inteiro (com o barranco) fica sem blocos
+      !pools.some((w) => colX0(c) + B > w.x0 && colX0(c) < w.x1) &&
+      (kind === "terra" || (kind === "mar" ? st < SEA - 6 : st < VOID - 200));
+    landMemo.set(c, ok);
+    return ok;
+  };
+  const surf = (c) => Math.round(smoothTop(colMid(c)) / B) * B;
+  const rowsOf = (c) => {
+    const n = BLOCK_ROWS[kind] || 6;
+    if (kind !== "mar") return n;
+    return Math.max(1, Math.min(n, Math.floor((SEA + 30 - surf(c)) / B)));
+  };
+  // topo do chão: em degraus onde há blocos (as decorações apoiam aqui)
+  const top = (x) => {
+    const c = colOf(x);
+    return isLand(c) ? surf(c) : smoothTop(x);
+  };
+  const mined = new Set(Array.isArray(layout?.mined) ? layout.mined : []);
+  const keyOf = (c, r) => `${c},${r}`;
+  // o "fim do terreno": últimas colunas à direita (onde fica a ametista)
+  const lastLand = (() => {
+    const [, b] = range[range.length - 1] || [0, 0];
+    let c = colOf(b);
+    while (c > colOf(b) - 60 && !isLand(c)) c -= 1;
+    return c;
+  })();
+  const trees = items.filter((i) => i.type === "tree");
+  const sandy = (c) => pools.some((w) => colMid(c) > w.x0 - 2.5 * B && colMid(c) < w.x1 + 2.5 * B);
+  const blockType = (c, r) => {
+    if (!isLand(c) || r < 0 || r >= rowsOf(c)) return null;
+    const h = rand(c * 7.13 + r * 3.71 + 0.5);
+    const xm = colMid(c);
+    if (sandy(c) && r <= 1) return "sand";
+    if (sandy(c) && r === 2 && h < 0.5) return "sand";
+    // raízes viram madeira embaixo das árvores
+    if (r >= 1 && r <= 3 && Math.abs(xm - main.x) < 42 * (main.size || 1)) return "wood";
+    if (r >= 1 && r <= 2 && trees.some((t) => Math.abs(xm - t.x) < 24 * (t.size || 1))) return "wood";
+    if (r === 0) return "grass";
+    if (r <= 2) return r === 2 && h < 0.3 ? "stone" : "dirt";
+    if (r >= 3 && c >= lastLand - 7 && h < 0.5) return "amethyst";
+    return h < 0.18 ? "cracked" : "stone";
+  };
+  const isMined = (c, r) => mined.has(keyOf(c, r));
+  const solid = (c, r) => Boolean(blockType(c, r)) && !isMined(c, r);
+  // chão de verdade sob os pés (considera os blocos quebrados)
+  const groundBlock = (x) => {
+    const c = colOf(x);
+    if (!isLand(c)) return null;
+    const n = rowsOf(c);
+    for (let r = 0; r < n; r++) if (solid(c, r)) return surf(c) + r * B;
+    return surf(c) + n * B; // embaixo de tudo: rocha que não quebra
+  };
+  // contorno do chão em degraus (para o desenho da terra por baixo)
+  const outline = (from, to, step = 25) => {
+    const pts = [];
+    let x = from;
+    while (x <= to) {
+      const c = colOf(x);
+      if (isLand(c)) {
+        const x1 = Math.min(colX0(c) + B, to);
+        pts.push([Math.max(colX0(c), from), surf(c)], [x1, surf(c)]);
+        x = colX0(c) + B + 0.001;
+      } else {
+        pts.push([x, smoothTop(x)]);
+        x += step;
+      }
+    }
+    return pts;
+  };
+  const landCols = [];
+  range.forEach(([a, b]) => {
+    for (let c = colOf(a); c <= colOf(b); c++) if (isLand(c)) landCols.push(c);
+  });
   const main = items.find((i) => i.type === "main") || { x: MAIN_X, size: 1 };
   // o pé do tronco entra um pouco na terra: o corte no chão (GroundClip)
   // esconde o que fica enterrado, e o tronco sempre encosta no terreno
@@ -287,8 +458,13 @@ export function sanctuaryWorld(layout) {
     items,
     segments,
     top,
+    smoothTop,
     walk,
+    water,
+    pools,
     main,
+    blocks: { B, colOf, colX0, surf, rowsOf, blockType, isMined, solid, groundBlock, landCols, keyOf, mined },
+    outline,
     xL: kind === "terra" ? TERRA_MIN : Math.min(...xs),
     xR: kind === "terra" ? TERRA_MAX : Math.max(...xs),
     mainTransform: `translate(${main.x} ${mainBase}) scale(${(main.flip ? -1 : 1) * (main.size || 1)} ${main.size || 1}) translate(${-MAIN_X} ${-BASE_Y})`,
@@ -337,9 +513,8 @@ function Earth({ body, strokes, tufts }) {
 export const WorldGround = memo(function WorldGround({ world }) {
   const { kind, top, segments } = world;
   if (kind === "terra") {
-    const pts = [];
-    for (let x = TERRA_MIN - 1500; x <= TERRA_MAX + 1500; x += 25) pts.push([x, top(x)]);
-    const body = `${smoothPath(pts)} L ${TERRA_MAX + 1500} 4000 L ${TERRA_MIN - 1500} 4000 Z`;
+    const pts = world.outline(TERRA_MIN - 1500, TERRA_MAX + 1500);
+    const body = `M ${pts.map((q) => q.join(" ")).join(" L ")} L ${TERRA_MAX + 1500} 4000 L ${TERRA_MIN - 1500} 4000 Z`;
     return (
       <g className="ground" aria-hidden="true">
         <Earth body={body} strokes={groundStrokes(-1100, 2200, top, 14)} tufts={grassTufts(-700, 1950, top)} />
@@ -350,8 +525,7 @@ export const WorldGround = memo(function WorldGround({ world }) {
     <g className={`sanc-island ${kind}`} aria-hidden="true">
       {kind === "mar" && <rect className="sanc-sea-deep" x={-6000} y={SEA} width={14000} height="3000" />}
       {segments.map(([a, b], si) => {
-        const pts = [];
-        for (let x = a; x <= b + 0.1; x += 20) pts.push([x, top(x)]);
+        const pts = world.outline(a, b, 20);
         const under = [];
         const w = b - a;
         // voadora: a parte de baixo é uma rocha pendurada; com mar: fica sob a água
@@ -363,7 +537,8 @@ export const WorldGround = memo(function WorldGround({ world }) {
           const y0 = kind === "voadora" ? top(x) + 30 : SEA + 40;
           under.push([x, y0 + shape * depth + (rand(i + 3 + si * 7) - 0.5) * (kind === "voadora" ? 34 : 20)]);
         }
-        const body = smoothPath([...pts, ...under], true);
+        // topo em degraus (retas) + parte de baixo arredondada
+        const body = `M ${pts.map((q) => q.join(" ")).join(" L ")} ${smoothPath(under).replace(/^M/, "L")} Z`;
         // raízes e cipós pendurados embaixo da ilha voadora
         const hangs =
           kind === "voadora"
@@ -571,13 +746,120 @@ export function MainTreeRoots({ world, children }) {
   );
 }
 
+/* ---------------- blocos (estilo Terraria, traço de nanquim) ---------------- */
+const BLOCK_ORDER = ["grass", "dirt", "sand", "wood", "stone", "cracked", "amethyst"];
+const cell = (x, y, B) => `M ${x} ${y} h ${B} v ${B} h ${-B} Z`;
+export const WorldBlocks = memo(function WorldBlocks({ world }) {
+  useDig();
+  const bl = world.blocks;
+  const B = bl.B;
+  const byType = {};
+  const holes = [];
+  const shade = [];
+  bl.landCols.forEach((c) => {
+    const x = bl.colX0(c);
+    const y0 = bl.surf(c);
+    const n = bl.rowsOf(c);
+    for (let r = 0; r < n; r++) {
+      const t = bl.blockType(c, r);
+      if (!t) continue;
+      const y = y0 + r * B;
+      if (bl.isMined(c, r)) {
+        holes.push(cell(x, y, B));
+        continue;
+      }
+      (byType[t] = byType[t] || []).push(cell(x, y, B));
+      if (r > 0) (shade[r] = shade[r] || []).push(cell(x, y, B));
+    }
+  });
+  // rachaduras das batidas em andamento
+  const cracks = [];
+  dig.hits.forEach((n, k) => {
+    const [c, r] = k.split(",").map(Number);
+    const t = bl.blockType(c, r);
+    if (!t || bl.isMined(c, r)) return;
+    const need = BLOCK_TYPES[t]?.hits || 2;
+    const x = bl.colX0(c);
+    const y = bl.surf(c) + r * B;
+    const lines = [
+      `M ${x + B * 0.5} ${y + B * 0.5} l ${-B * 0.32} ${-B * 0.18} M ${x + B * 0.5} ${y + B * 0.5} l ${B * 0.28} ${-B * 0.3}`,
+      `M ${x + B * 0.5} ${y + B * 0.5} l ${B * 0.3} ${B * 0.2} M ${x + B * 0.5} ${y + B * 0.5} l ${-B * 0.12} ${B * 0.38}`,
+      `M ${x + B * 0.18} ${y + B * 0.32} l ${-B * 0.12} ${-B * 0.2} M ${x + B * 0.78} ${y + B * 0.2} l ${B * 0.14} ${-B * 0.12} M ${x + B * 0.8} ${y + B * 0.7} l ${B * 0.12} ${B * 0.1}`,
+      `M ${x + B * 0.38} ${y + B * 0.88} l ${-B * 0.16} ${B * 0.1} M ${x + B * 0.1} ${y + B * 0.6} l ${-B * 0.08} ${B * 0.04}`,
+    ];
+    const stage = Math.min(lines.length, Math.ceil((n / need) * lines.length));
+    cracks.push(<path key={k} className="blk-crack" d={lines.slice(0, stage).join(" ")} />);
+  });
+  return (
+    <g className="sanc-blocks" aria-hidden="true">
+      <defs>
+        {/* texturas: cada bloco do tamanho de uma célula (alinhadas à grade) */}
+        <pattern id="blk-grass" patternUnits="userSpaceOnUse" x={GRID_X0} y="0" width={B} height={B}>
+          <rect className="bt-dirt" width={B} height={B} />
+          <path className="bt-speck" d={`M ${B * 0.3} ${B * 0.62} h 2 M ${B * 0.7} ${B * 0.78} h 2 M ${B * 0.52} ${B * 0.9} h 1.5`} />
+          <path className="bt-grass" d={`M 0 0 H ${B} V ${B * 0.3} q ${-B * 0.1} ${B * 0.1} ${-B * 0.2} 0 q ${-B * 0.12} ${B * 0.14} ${-B * 0.26} 0 q ${-B * 0.1} ${B * 0.12} ${-B * 0.24} 0 q ${-B * 0.1} ${B * 0.1} ${-B * 0.3} 0 Z`} />
+          <path className="bt-blade" d={`M ${B * 0.15} 0 v ${-B * 0.12} M ${B * 0.45} 0 v ${-B * 0.16} M ${B * 0.78} 0 v ${-B * 0.1}`} />
+        </pattern>
+        <pattern id="blk-dirt" patternUnits="userSpaceOnUse" x={GRID_X0} y="0" width={B} height={B}>
+          <rect className="bt-dirt" width={B} height={B} />
+          <path className="bt-speck" d={`M ${B * 0.2} ${B * 0.25} h 2.5 M ${B * 0.68} ${B * 0.18} h 2 M ${B * 0.42} ${B * 0.55} h 2.5 M ${B * 0.8} ${B * 0.62} h 2 M ${B * 0.18} ${B * 0.82} h 2 M ${B * 0.6} ${B * 0.86} h 1.5`} />
+          <circle className="bt-pebble" cx={B * 0.72} cy={B * 0.38} r={B * 0.06} />
+        </pattern>
+        <pattern id="blk-sand" patternUnits="userSpaceOnUse" x={GRID_X0} y="0" width={B} height={B}>
+          <rect className="bt-sand" width={B} height={B} />
+          <path className="bt-sand-dot" d={`M ${B * 0.15} ${B * 0.2} h .8 M ${B * 0.5} ${B * 0.12} h .8 M ${B * 0.82} ${B * 0.3} h .8 M ${B * 0.3} ${B * 0.5} h .8 M ${B * 0.66} ${B * 0.58} h .8 M ${B * 0.12} ${B * 0.78} h .8 M ${B * 0.48} ${B * 0.86} h .8 M ${B * 0.86} ${B * 0.8} h .8`} />
+          <path className="bt-sand-wave" d={`M ${B * 0.1} ${B * 0.38} q ${B * 0.15} ${-B * 0.06} ${B * 0.3} 0 M ${B * 0.5} ${B * 0.7} q ${B * 0.15} ${-B * 0.06} ${B * 0.3} 0`} />
+        </pattern>
+        <pattern id="blk-wood" patternUnits="userSpaceOnUse" x={GRID_X0} y="0" width={B} height={B}>
+          <rect className="bt-wood" width={B} height={B} />
+          <path className="bt-plank" d={`M 0 ${B / 3} H ${B} M 0 ${(2 * B) / 3} H ${B} M ${B * 0.55} 0 V ${B / 3} M ${B * 0.25} ${B / 3} V ${(2 * B) / 3} M ${B * 0.7} ${(2 * B) / 3} V ${B}`} />
+          <path className="bt-grain" d={`M ${B * 0.06} ${B * 0.16} h ${B * 0.36} M ${B * 0.62} ${B * 0.2} h ${B * 0.3} M ${B * 0.32} ${B * 0.5} h ${B * 0.5} M ${B * 0.08} ${B * 0.84} h ${B * 0.5}`} />
+          <circle className="bt-knot" cx={B * 0.84} cy={B * 0.84} r={B * 0.05} />
+        </pattern>
+        <pattern id="blk-stone" patternUnits="userSpaceOnUse" x={GRID_X0} y="0" width={B} height={B}>
+          <rect className="bt-stone" width={B} height={B} />
+          <path className="bt-rock" d={`M ${B * 0.12} ${B * 0.18} q ${B * 0.16} ${-B * 0.08} ${B * 0.3} ${B * 0.04} q ${B * 0.06} ${B * 0.16} ${-B * 0.12} ${B * 0.2} q ${-B * 0.2} ${-B * 0.02} ${-B * 0.18} ${-B * 0.24} Z M ${B * 0.58} ${B * 0.52} q ${B * 0.2} ${-B * 0.06} ${B * 0.3} ${B * 0.08} q ${B * 0.02} ${B * 0.18} ${-B * 0.16} ${B * 0.2} q ${-B * 0.18} ${-B * 0.04} ${-B * 0.14} ${-B * 0.28} Z`} />
+          <path className="bt-line" d={`M ${B * 0.1} ${B * 0.72} l ${B * 0.18} ${B * 0.06} M ${B * 0.66} ${B * 0.16} l ${B * 0.16} ${-B * 0.04}`} />
+        </pattern>
+        <pattern id="blk-cracked" patternUnits="userSpaceOnUse" x={GRID_X0} y="0" width={B} height={B}>
+          <rect className="bt-stone dark" width={B} height={B} />
+          <path className="bt-crackline" d={`M ${B * 0.08} ${B * 0.2} l ${B * 0.22} ${B * 0.12} l ${B * 0.08} ${B * 0.2} l ${B * 0.26} ${B * 0.06} l ${B * 0.1} ${B * 0.26} M ${B * 0.38} ${B * 0.52} l ${-B * 0.14} ${B * 0.3} M ${B * 0.64} ${B * 0.58} l ${B * 0.26} ${-B * 0.16} M ${B * 0.72} ${B * 0.1} l ${-B * 0.06} ${B * 0.2}`} />
+        </pattern>
+        <pattern id="blk-amethyst" patternUnits="userSpaceOnUse" x={GRID_X0} y="0" width={B} height={B}>
+          <rect className="bt-stone dark" width={B} height={B} />
+          <path className="bt-gem" d={`M ${B * 0.2} ${B * 0.7} l ${B * 0.08} ${-B * 0.3} l ${B * 0.1} ${B * 0.3} Z M ${B * 0.5} ${B * 0.62} l ${B * 0.1} ${-B * 0.42} l ${B * 0.12} ${B * 0.42} Z M ${B * 0.66} ${B * 0.86} l ${B * 0.06} ${-B * 0.2} l ${B * 0.08} ${B * 0.2} Z M ${B * 0.14} ${B * 0.26} l ${B * 0.06} ${-B * 0.14} l ${B * 0.06} ${B * 0.14} Z`} />
+          <path className="bt-glint" d={`M ${B * 0.58} ${B * 0.28} v ${B * 0.1} M ${B * 0.27} ${B * 0.46} v ${B * 0.07}`} />
+        </pattern>
+      </defs>
+      {holes.length > 0 && <path className="blk-hole" d={holes.join(" ")} />}
+      {BLOCK_ORDER.map((t) => (byType[t] ? <path key={t} className={`blk blk-${t}`} d={byType[t].join(" ")} fill={`url(#blk-${t})`} /> : null))}
+      {/* mais fundo = mais escuro (como no Terraria) */}
+      {shade.map((list, r) => (list ? <path key={`s${r}`} className="blk-shade" d={list.join(" ")} style={{ opacity: Math.min(0.5, r * 0.075) }} /> : null))}
+      {cracks}
+      {dig.bursts.map((b) => {
+        const x = bl.colX0(b.c) + B / 2;
+        const y = bl.surf(b.c) + b.r * B + B / 2;
+        return (
+          <g key={b.id} className={`blk-burst bt-${b.type}`} transform={`translate(${x} ${y})`}>
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <rect key={i} className="blk-bit" x={-3} y={-3} width={6} height={6} style={{ "--bx": `${Math.cos(i * 1.05) * 26}px`, "--by": `${-14 - Math.abs(Math.sin(i * 1.7)) * 22}px` }} />
+            ))}
+          </g>
+        );
+      })}
+    </g>
+  );
+});
+
 /* ---------------- atrás da árvore principal ---------------- */
 export const SanctuaryBack = memo(function SanctuaryBack({ world, season }) {
-  const order = ["land", "lake", "tree", "tent", "fire", "post"];
+  const order = ["land", "lake", "tree", "tent", "fire", "post", "grass"];
   const items = world.items.filter((i) => order.includes(i.type)).sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type));
+  const scatter = useSanctuaryState().grass !== false;
   return (
     <g className="sanc-back">
       {season === "inverno" && <SnowCover world={world} />}
+      {scatter && <ScatterGrass world={world} season={season} />}
       {items.map((it) => (
         <Draggable key={it.id} item={it} world={world} pokeAt={it.type === "tree" ? { x: it.x, y: world.top(it.x) - 230 * (it.size || 1) } : null}>
           {it.type === "lake" && <Lake x={it.x} size={it.size || 1} top={world.top} season={season} />}
@@ -592,6 +874,11 @@ export const SanctuaryBack = memo(function SanctuaryBack({ world, season }) {
           {it.type === "fire" && <Fire x={it.x} size={it.size || 1} top={world.top} dir={it.flip ? -1 : 1} />}
           {it.type === "post" && <LanternPost x={it.x} size={it.size || 1} top={world.top} seed={hashString(it.id)} dir={it.flip ? -1 : 1} />}
           {it.type === "land" && <LandHandle x={it.x} size={it.size || 1} top={world.top} />}
+          {it.type === "grass" && (
+            <g transform={it.flip ? `translate(${2 * it.x} 0) scale(-1 1)` : undefined}>
+              <Grass id={it.id} x={it.x} size={it.size || 1} top={world.top} variant={it.seed || 0} season={season} flip={it.flip} />
+            </g>
+          )}
         </Draggable>
       ))}
     </g>
@@ -751,6 +1038,161 @@ const DecoTree = memo(function DecoTree({ id, x, size, top, variant = 0, noRoots
         ))}
       </g>
       <ForestTrunks trees={[tree]} selected={false} dimmed={false} events={{}} />
+    </g>
+  );
+});
+
+/* Matos: cada um nasce da terra exatamente onde está (segue morros,
+   rampas e a beira das ilhas). 5 tipos — o "Sortear" troca o tipo:
+   capim · arbusto · samambaia · trevo com flores · junco */
+export const GRASS_KINDS = ["capim", "arbusto", "samambaia", "trevo", "junco"];
+const Grass = memo(function Grass({ id, x, size, top, variant = 0, season, flip, kind: forced, still = false }) {
+  const seed = hashString(id) + variant;
+  const kind = forced || GRASS_KINDS[seed % GRASS_KINDS.length];
+  // no espelho, o chão continua o de verdade (x real = 2·x − x desenhado)
+  const ground = (bx) => top(flip ? 2 * x - bx : bx);
+  const half = (kind === "arbusto" ? 38 : kind === "trevo" ? 34 : kind === "junco" ? 26 : 46) * size;
+  const parts = [];
+
+  if (kind === "capim") {
+    const count = Math.round((9 + (seed % 7)) * Math.sqrt(size));
+    for (let i = 0; i < count; i++) {
+      const r = rand(seed + i * 3.1);
+      const bx = x + (r - 0.5) * 2 * half * (0.35 + 0.65 * rand(seed + i + 7));
+      const by = ground(bx) + 3;
+      const mid = 1 - Math.abs(bx - x) / (half + 1);
+      const h = (12 + rand(seed + i + 13) * 20) * size * (0.55 + 0.45 * mid);
+      const lean = (rand(seed + i + 21) - 0.5) * 16 * size;
+      const w = (1.6 + rand(seed + i + 29) * 1.6) * size;
+      parts.push(<path key={i} className={`sanc-blade s${i % 3}`} d={`M ${bx - w} ${by} Q ${bx + lean * 0.35} ${by - h * 0.55} ${bx + lean} ${by - h} Q ${bx + lean * 0.3 + w * 0.4} ${by - h * 0.5} ${bx + w} ${by} Z`} />);
+    }
+  } else if (kind === "arbusto") {
+    // moita redonda: bolas de folhagem apoiadas no chão
+    const n = 4 + (seed % 3);
+    for (let i = 0; i < n; i++) {
+      const t = n === 1 ? 0.5 : i / (n - 1);
+      const bx = x - half * 0.75 + t * half * 1.5 + (rand(seed + i) - 0.5) * 6 * size;
+      const r = (11 + rand(seed + i + 5) * 8) * size * (0.75 + 0.25 * Math.sin(Math.PI * t));
+      const by = ground(bx) + 2 - r * (0.55 + 0.25 * Math.sin(Math.PI * t));
+      parts.push(<circle key={i} className={`sanc-bush s${i % 3}`} cx={bx} cy={by} r={r} />);
+    }
+    if (seed % 2 === 0 && season !== "inverno") {
+      for (let i = 0; i < 3; i++) {
+        const bx = x + (rand(seed + i + 40) - 0.5) * half * 1.1;
+        parts.push(<circle key={`b${i}`} className="sanc-berry" cx={bx} cy={ground(bx) - (10 + rand(seed + i + 44) * 14) * size} r={1.8 * size} />);
+      }
+    }
+  } else if (kind === "samambaia") {
+    // folhas compridas curvadas, com folíolos dos dois lados
+    const n = 5 + (seed % 3);
+    const by = ground(x) + 2;
+    for (let i = 0; i < n; i++) {
+      const t = n === 1 ? 0.5 : i / (n - 1);
+      const ang = (-1.15 + t * 2.3) * (0.85 + rand(seed + i) * 0.2);
+      const len = (30 + rand(seed + i + 3) * 18) * size * (1 - Math.abs(t - 0.5) * 0.5);
+      const ex = x + Math.sin(ang) * len;
+      const ey = by - Math.cos(ang) * len * 0.9;
+      const cx = x + Math.sin(ang) * len * 0.35;
+      const cy = by - len * 0.85;
+      const leaflets = [];
+      for (let k = 1; k <= 6; k++) {
+        const u = k / 7;
+        const px = (1 - u) * (1 - u) * x + 2 * (1 - u) * u * cx + u * u * ex;
+        const py = (1 - u) * (1 - u) * by + 2 * (1 - u) * u * cy + u * u * ey;
+        const l = (7 - k) * 1.1 * size;
+        leaflets.push(`M ${px} ${py} l ${-l} ${-l * 0.45} M ${px} ${py} l ${l} ${-l * 0.45}`);
+      }
+      parts.push(
+        <g key={i}>
+          <path className="sanc-frond" d={`M ${x} ${by} Q ${cx} ${cy} ${ex} ${ey}`} />
+          <path className={`sanc-leaflets s${i % 3}`} d={leaflets.join(" ")} />
+        </g>
+      );
+    }
+  } else if (kind === "trevo") {
+    // tapetinho baixo de trevos com florzinhas
+    const n = Math.round(10 * Math.sqrt(size));
+    for (let i = 0; i < n; i++) {
+      const bx = x + (rand(seed + i * 1.7) - 0.5) * 2 * half;
+      const by = ground(bx) - (2 + rand(seed + i + 9) * 5) * size;
+      const r = (2.6 + rand(seed + i + 3) * 1.4) * size;
+      parts.push(
+        <g key={i} className={`sanc-clover s${i % 3}`}>
+          <circle cx={bx - r * 0.7} cy={by} r={r} />
+          <circle cx={bx + r * 0.7} cy={by} r={r} />
+          <circle cx={bx} cy={by - r * 0.8} r={r} />
+        </g>
+      );
+    }
+    if (season !== "inverno") {
+      for (let i = 0; i < 3 + (seed % 3); i++) {
+        const bx = x + (rand(seed + i + 70) - 0.5) * 1.6 * half;
+        const fy = ground(bx) - (9 + rand(seed + i + 74) * 7) * size;
+        parts.push(
+          <g key={`f${i}`}>
+            <line className="sanc-flower-stem" x1={bx} y1={ground(bx) + 1} x2={bx} y2={fy} />
+            <circle className={`sanc-flower ${i % 2 ? "alt" : ""}`} cx={bx} cy={fy} r={2.3 * size} />
+          </g>
+        );
+      }
+    }
+  } else {
+    // junco: hastes altas e finas, algumas com a "salsicha" marrom na ponta
+    const n = 5 + (seed % 4);
+    for (let i = 0; i < n; i++) {
+      const bx = x + (rand(seed + i * 2.3) - 0.5) * 2 * half;
+      const by = ground(bx) + 3;
+      const h = (34 + rand(seed + i + 11) * 26) * size;
+      const lean = (rand(seed + i + 17) - 0.5) * 12 * size;
+      parts.push(<path key={i} className="sanc-reed-stem" d={`M ${bx} ${by} Q ${bx + lean * 0.3} ${by - h * 0.6} ${bx + lean} ${by - h}`} style={{ strokeWidth: `${1.5 * size}px` }} />);
+      if (i % 2 === 0) parts.push(<ellipse key={`c${i}`} className="sanc-cattail" cx={bx + lean * 0.8} cy={by - h * 0.82} rx={2.2 * size} ry={6 * size} transform={`rotate(${lean * 1.2} ${bx + lean * 0.8} ${by - h * 0.82})`} />);
+    }
+  }
+
+  const hx = x - half - 6;
+  return (
+    <g className={`sanc-grass k-${kind} ${season || ""}`}>
+      {!still && <rect className="sanc-grass-hit" x={hx} y={ground(x) - 46 * size} width={2 * half + 12} height={50 * size} rx={10} />}
+      {parts}
+    </g>
+  );
+});
+
+/* Matos espalhados pela terra sozinhos (decoração, não dá para arrastar).
+   Fogem da água, da barraca e da fogueira; mudam de lugar ao mudar o layout. */
+const ScatterGrass = memo(function ScatterGrass({ world, season }) {
+  const { kind, segments, items } = world;
+  const ranges = kind === "terra" ? [[TERRA_MIN + 200, TERRA_MAX - 200]] : segments.map(([a, b]) => [a + EDGE * 0.7, b - EDGE * 0.7]);
+  const busy = items
+    .filter((i) => i.type === "tent" || i.type === "fire" || i.type === "lake")
+    .map((i) => {
+      const w = i.type === "lake" ? (LAKE_W * (i.size || 1)) / 2 + 30 : 70 * (i.size || 1);
+      return [i.x - w, i.x + w];
+    });
+  const out = [];
+  ranges.forEach(([a, b], ri) => {
+    let n = 0;
+    for (let x = a; x < b; x += 60 + rand(x * 0.37 + ri) * 95) {
+      if (busy.some(([l, r]) => x > l && x < r)) continue;
+      if (world.blocks && world.blocks.isMined(world.blocks.colOf(x), 0)) continue;
+      const seed = Math.floor(x * 13.7) + ri * 97;
+      const kinds = ["capim", "capim", "trevo", "arbusto", "samambaia", "junco"];
+      out.push({
+        id: `sg-${ri}-${n++}`,
+        x,
+        size: 0.42 + rand(seed + 3) * 0.38,
+        kind: kinds[Math.abs(seed) % kinds.length],
+        flip: rand(seed + 5) > 0.5,
+      });
+    }
+  });
+  return (
+    <g className="sanc-scatter" aria-hidden="true">
+      {out.map((g) => (
+        <g key={g.id} transform={g.flip ? `translate(${2 * g.x} 0) scale(-1 1)` : undefined}>
+          <Grass id={g.id} x={g.x} size={g.size} top={world.top} season={season} flip={g.flip} kind={g.kind} still />
+        </g>
+      ))}
     </g>
   );
 });
@@ -1008,14 +1450,30 @@ function Fireflies({ x, y, size, seed, count }) {
 }
 
 /* ---------------- o herói (anda com W A S D, pula com Espaço) ---------------- */
-const SPEED = 190; // unidades do desenho por segundo
-const DEPTH_SPEED = 70;
-const JUMP_SPEED = 300;
-const GRAVITY = 980;
+// Movimento com aceleração e freio (nada de começar/parar no seco),
+// gravidade de verdade (cai de beiradas e degraus) e pulo que fica mais
+// alto segurando o Espaço. Braços e pernas balançam no ritmo do passo.
+const MAX_SPEED = 205; // unidades do desenho por segundo
+const ACCEL = 1500; // ganho de velocidade no chão
+const DECEL = 1900; // freio ao soltar
+const AIR_CONTROL = 0.55; // no ar dá para corrigir, mas menos
+const DEPTH_SPEED = 80;
+const JUMP_SPEED = 480; // passa por cima de 2 blocos
+const GRAVITY = 1250;
+const FALL_MULT = 1.55; // cai mais rápido do que sobe (pulo mais "gostoso")
+const CUT_JUMP = 0.45; // soltou o Espaço subindo: o pulo encurta
+const COYOTE = 0.1; // ainda pula logo depois de sair da beirada
+const BUFFER = 0.12; // apertou um pouquinho antes de tocar o chão: pula ao tocar
+const STICK = 14; // descidas pequenas grudam no chão (rampas), maiores viram queda
+const WADE = 20; // quanto o herói afunda na água (unidades do desenho)
+const WATER_SPEED = 0.6; // na água anda mais devagar
 const DEPTH_MIN = -16;
 const DEPTH_MAX = 30;
 
 const isTyping = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
+// teclado numérico (e os números de cima, para quem não tem)
+const DIG_KEYS = { Numpad2: "down", Digit2: "down", Numpad4: "left", Numpad6: "right", Numpad8: "up" };
+const approach = (v, target, step) => (v < target ? Math.min(target, v + step) : Math.max(target, v - step));
 
 export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
   const { editing } = useSanctuaryState();
@@ -1026,12 +1484,14 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
     const b = world.walk(x);
     return clamp(x, b.min, b.max);
   });
-  const pos = useRef({ x: startX, z: 0, jump: 0, vy: 0 });
+  // y = altura dos pés no desenho (cresce para baixo); air = está no ar
+  const pos = useRef({ x: startX, z: 0, y: world.top(startX) + 4, vx: 0, vy: 0, air: false, coyote: 0, buffer: 0 });
   const keys = useRef(new Set());
   const raf = useRef(0);
   const last = useRef(0);
   const [facing, setFacing] = useState(0); // -1 esquerda · 0 de frente · 1 direita
-  const [walking, setWalking] = useState(false);
+  const [pose, setPose] = useState("idle"); // idle · walk · jump
+  const poseRef = useRef({ pose: "idle", facing: 0 });
   const [hero] = useState(() => normalizeHero(readProfileValue("rpg_hero_v1", getActiveProfileId(), DEFAULT_HERO)));
   const worldRef = useRef(world);
   const panRef = useRef(onPan);
@@ -1039,6 +1499,15 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
     worldRef.current = world;
     panRef.current = onPan;
   });
+
+  // chão sob os pés: na água é o fundo raso (nível da água + um pouco)
+  const groundAt = (x) => {
+    const w = worldRef.current;
+    const pool = w.water && w.water(x);
+    if (pool) return pool.level + WADE * Math.min(1.3, pool.size);
+    const gb = w.blocks && w.blocks.groundBlock(x);
+    return gb != null ? gb + 2 : w.top(x) + 4;
+  };
 
   // Posição na tela a partir da posição no desenho (acompanha zoom e arrasto)
   const place = useCallback(
@@ -1053,23 +1522,37 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
       const p = pos.current;
       const wb = w.walk(p.x);
       p.x = clamp(p.x, wb.min, wb.max);
+      // chão mudou por baixo (layout editado, terra nova): não fica enterrado
+      const ground = groundAt(p.x);
+      if (!p.air || (p.vy >= 0 && p.y > ground)) {
+        p.y = ground;
+        p.air = false;
+      }
       heroX = p.x;
-      const ground = w.top(p.x) + 4 + p.z;
-      const pt = new DOMPoint(p.x, ground - p.jump).matrixTransform(ctm);
+      const pt = new DOMPoint(p.x, p.y + p.z).matrixTransform(ctm);
       const r = wrap.getBoundingClientRect();
       const sx = pt.x - r.left;
       const sy = pt.y - r.top;
       box.style.left = `${sx}px`;
       box.style.top = `${sy}px`;
       box.style.setProperty("--sanc-hero-size", String(Math.max(0.3, ctm.a * 0.95 * (1 + p.z * 0.006))));
+      // na água: corta o que fica abaixo da superfície e mostra a ondinha
+      const pool = w.water && w.water(p.x);
+      const under = pool ? Math.max(0, p.y - pool.level) : 0;
+      box.classList.toggle("in-water", under > 2);
+      box.style.setProperty("--wade", `${(under * ctm.a).toFixed(1)}px`);
+      // passo mais rápido quando corre mais
+      const speed = Math.min(1, Math.abs(p.vx) / MAX_SPEED);
+      box.style.setProperty("--walk-dur", `${(0.52 - speed * 0.2).toFixed(3)}s`);
       box.style.zIndex = p.z > 8 ? "4" : "3";
       // câmera acompanha quando ele chega perto da borda da tela
       if (follow && panRef.current) {
-        const mx = r.width * 0.2;
+        const mx = r.width * 0.22;
         const my = r.height * 0.2;
         const dx = sx < mx ? mx - sx : sx > r.width - mx ? r.width - mx - sx : 0;
         const dy = sy < my ? my - sy : sy > r.height - my ? r.height - my - sy : 0;
-        if (dx || dy) panRef.current(dx, dy);
+        // segue suave (sem tranco)
+        if (dx || dy) panRef.current(dx * 0.35, dy * 0.35);
       }
     },
     [groupRef, containerRef]
@@ -1085,33 +1568,100 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
     return () => window.removeEventListener("resize", onResize);
   }, [place]);
 
-  // Laço de movimento: roda só enquanto alguma tecla está apertada ou ele está no ar
+  // só troca o desenho quando a pose ou o lado mudam (não a cada quadro)
+  const setLook = useCallback((nextPose, nextFacing) => {
+    const cur = poseRef.current;
+    if (cur.pose !== nextPose) {
+      cur.pose = nextPose;
+      setPose(nextPose);
+    }
+    if (nextFacing !== undefined && cur.facing !== nextFacing) {
+      cur.facing = nextFacing;
+      setFacing(nextFacing);
+    }
+  }, []);
+
+  // Laço de movimento: roda enquanto há tecla, velocidade ou ele está no ar
   const loopRef = useRef(null);
   const loop = useCallback(
     (t) => {
-      const dt = Math.min(0.05, (t - (last.current || t)) / 1000);
+      const dt = Math.min(0.04, (t - (last.current || t)) / 1000);
       last.current = t;
       const k = keys.current;
       const p = pos.current;
-      const dx = (k.has("d") ? 1 : 0) - (k.has("a") ? 1 : 0);
-      const dz = (k.has("s") ? 1 : 0) - (k.has("w") ? 1 : 0);
-      const b = worldRef.current.walk(p.x);
-      p.x = clamp(p.x + dx * SPEED * dt, b.min, b.max);
-      p.z = clamp(p.z + dz * DEPTH_SPEED * dt, DEPTH_MIN, DEPTH_MAX);
-      if (p.jump > 0 || p.vy > 0) {
-        p.vy -= GRAVITY * dt;
-        p.jump = Math.max(0, p.jump + p.vy * dt);
-        if (p.jump === 0) p.vy = 0;
+      const inX = (k.has("d") ? 1 : 0) - (k.has("a") ? 1 : 0);
+      const inZ = (k.has("s") ? 1 : 0) - (k.has("w") ? 1 : 0);
+
+      // ---- andar: acelera, freia e vira com suavidade ----
+      const control = p.air ? AIR_CONTROL : 1;
+      const wet = worldRef.current.water && worldRef.current.water(p.x);
+      const top = MAX_SPEED * (wet && !p.air ? WATER_SPEED : 1);
+      if (inX) {
+        const turning = Math.sign(p.vx) && Math.sign(p.vx) !== inX;
+        p.vx = approach(p.vx, inX * top, (turning ? DECEL : ACCEL) * control * dt);
+      } else {
+        p.vx = approach(p.vx, 0, DECEL * control * dt);
       }
+      p.z = clamp(p.z + inZ * DEPTH_SPEED * dt, DEPTH_MIN, DEPTH_MAX);
+
+      const w = worldRef.current;
+      const b = w.walk(p.x);
+      let nx = clamp(p.x + p.vx * dt, b.min, b.max);
+      if (nx === b.min || nx === b.max) p.vx = 0; // bateu na ponta
+      // parede de blocos: sobe sozinho 1 bloco; mais alto que isso, só pulando
+      if (p.vx) {
+        const probe = nx + Math.sign(p.vx) * 12;
+        const ahead = groundAt(probe);
+        const limit = p.air ? 3 : BLOCK * 1.05;
+        if (ahead < p.y - limit) {
+          nx = p.x;
+          p.vx = 0;
+        }
+      }
+      const before = groundAt(p.x);
+      p.x = nx;
+      const ground = groundAt(p.x);
+
+      // ---- gravidade ----
+      if (!p.air) {
+        const drop = ground - before; // > 0: o chão desceu
+        if (drop > STICK) {
+          p.air = true; // saiu de um degrau: começa a cair
+          p.vy = 0;
+          p.coyote = COYOTE;
+        } else {
+          p.y = ground; // rampa / subida: acompanha o chão
+        }
+      }
+      if (p.air) {
+        p.coyote = Math.max(0, p.coyote - dt);
+        const g = p.vy < 0 ? GRAVITY : GRAVITY * FALL_MULT; // vy < 0 = subindo
+        p.vy += g * dt;
+        p.y += p.vy * dt;
+        // só pousa caindo (no começo do pulo ele ainda está na altura do chão)
+        if (p.vy >= 0 && p.y >= ground) {
+          p.y = ground;
+          p.vy = 0;
+          p.air = false;
+          if (p.buffer > 0) startJump(p);
+        }
+      }
+      p.buffer = Math.max(0, p.buffer - dt);
+
       place(true);
-      if (dx !== 0 || dz !== 0 || p.jump > 0 || p.vy > 0) {
+      const moving = Math.abs(p.vx) > 12 || inZ !== 0;
+      setLook(p.air ? "jump" : moving ? "walk" : "idle", inX || (Math.abs(p.vx) > 12 ? Math.sign(p.vx) : undefined));
+
+      if (inX || inZ || Math.abs(p.vx) > 0.5 || p.air || p.buffer > 0) {
         raf.current = requestAnimationFrame(loopRef.current);
       } else {
+        p.vx = 0;
         raf.current = 0;
         last.current = 0;
       }
     },
-    [place]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- groundAt lê sempre worldRef
+    [place, setLook]
   );
   useEffect(() => {
     loopRef.current = loop;
@@ -1124,23 +1674,44 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
     }
   }, []);
 
+  // bater no bloco ao lado/embaixo (segurar a tecla continua batendo)
+  const lastDig = useRef(0);
+  const digTowards = useCallback((dir) => {
+    const now = performance.now();
+    if (now - lastDig.current < 170) return;
+    lastDig.current = now;
+    const w = worldRef.current;
+    const bl = w.blocks;
+    if (!bl) return;
+    const p = pos.current;
+    const c0 = bl.colOf(p.x);
+    const rowAt = (c, y) => Math.floor((y - bl.surf(c)) / bl.B);
+    let targets = [];
+    if (dir === "down") targets = [[c0, rowAt(c0, p.y - 2 + 1)]];
+    else if (dir === "up") targets = [[c0, rowAt(c0, p.y - BLOCK * 3.2)]];
+    else {
+      const c = c0 + (dir === "left" ? -1 : 1);
+      // na altura da cintura, depois da cabeça, depois do pé
+      targets = [[c, rowAt(c, p.y - BLOCK * 0.5)], [c, rowAt(c, p.y - BLOCK * 1.5)], [c, rowAt(c, p.y + 2)]];
+      setLook(poseRef.current.pose, dir === "left" ? -1 : 1);
+    }
+    const hit = targets.find(([c, r]) => bl.solid(c, r));
+    if (!hit) return;
+    hitBlock(w, hit[0], hit[1]);
+    // quebrou embaixo: o chão some e ele cai
+    kick();
+  }, [kick, setLook]);
+
   const jump = useCallback(() => {
     const p = pos.current;
-    if (p.jump > 0.5) return; // só pula do chão
-    p.vy = JUMP_SPEED;
-    p.jump = 0.01;
+    if (!p.air || p.coyote > 0) startJump(p);
+    else p.buffer = BUFFER; // ainda no ar: guarda o pulo para quando tocar o chão
     kick();
   }, [kick]);
 
   // Teclado: só no Santuário, fora de campos de texto, janelas e do lápis
   useEffect(() => {
     const MOVE = ["w", "a", "s", "d"];
-    const refreshPose = () => {
-      const k = keys.current;
-      const dx = (k.has("d") ? 1 : 0) - (k.has("a") ? 1 : 0);
-      if (dx !== 0) setFacing(dx);
-      setWalking(MOVE.some((m) => k.has(m)));
-    };
     const blocked = (e) =>
       get().editing ||
       e.ctrlKey ||
@@ -1151,13 +1722,13 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
       document.querySelector(".modal-backdrop, .ui-dialog-backdrop");
     const onDown = (e) => {
       if (blocked(e)) return;
-      const key = (e.key || "").toLowerCase();
-      if (MOVE.includes(key)) {
+      const raw = (e.key || "").toLowerCase();
+      const key = MOVE.includes(raw) ? raw : null;
+      if (key) {
         e.preventDefault();
         e.stopImmediatePropagation();
         if (!keys.current.has(key)) {
           keys.current.add(key);
-          refreshPose();
           kick();
         }
       } else if (e.key === " " || e.code === "Space") {
@@ -1165,15 +1736,22 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
         e.preventDefault();
         e.stopImmediatePropagation();
         if (!e.repeat) jump();
+      } else if (DIG_KEYS[e.code]) {
+        // teclado numérico: 2 cava embaixo · 4/6 quebra dos lados · 8 em cima
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        digTowards(DIG_KEYS[e.code]);
       }
     };
     const onUp = (e) => {
       const key = (e.key || "").toLowerCase();
-      if (keys.current.delete(key)) refreshPose();
+      if (keys.current.delete(key)) kick();
+      // soltou o Espaço ainda subindo: pulo mais baixo
+      if ((e.key === " " || e.code === "Space") && pos.current.vy < 0) pos.current.vy *= CUT_JUMP;
     };
     const clear = () => {
       keys.current.clear();
-      refreshPose();
+      kick();
     };
     window.addEventListener("keydown", onDown, true);
     window.addEventListener("keyup", onUp, true);
@@ -1185,22 +1763,31 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
       cancelAnimationFrame(raf.current);
       raf.current = 0;
     };
-  }, [kick, jump]);
+  }, [kick, jump, digTowards]);
 
   // virado para o lado em que anda; parado, olha um pouco para a frente
-  const rotation = walking ? facing * 70 : facing * 25 - (facing === 0 ? 22 : 0);
+  const moving = pose === "walk" || pose === "jump";
+  const rotation = moving && facing ? facing * 70 : facing * 25 - (facing === 0 ? 22 : 0);
 
   return (
     <div
       ref={boxRef}
-      className={`sanc-hero ${walking ? "walking" : ""} ${editing ? "is-editing" : ""}`}
+      className={`sanc-hero pose-${pose} ${pose === "walk" ? "walking" : ""} ${editing ? "is-editing" : ""}`}
       title="W A S D para andar · Espaço para pular"
       onPointerDown={(e) => e.stopPropagation()}
       onClick={jump}
     >
-      <HeroModel hero={hero} rotation={rotation} size={1} />
+      <HeroModel hero={hero} rotation={rotation} size={1} limbs pose={pose} />
+      <span className="sanc-ripple" aria-hidden="true" />
     </div>
   );
+}
+
+function startJump(p) {
+  p.vy = -JUMP_SPEED;
+  p.air = true;
+  p.coyote = 0;
+  p.buffer = 0;
 }
 
 
@@ -1354,7 +1941,7 @@ export async function importLayout(index, file) {
     no: "Cancelar",
   });
   if (!ok) return;
-  const layouts = s.layouts.map((l, i) => (i === index ? { ...l, items: cleanItems(data.items) } : l));
+  const layouts = s.layouts.map((l, i) => (i === index ? { ...l, items: cleanItems(data.items), mined: [] } : l));
   setSanctuary({ layouts, viewing: index === s.active ? null : index, selected: null });
 }
 
@@ -1513,130 +2100,154 @@ export function SanctuaryPanel({ prefs }) {
       )}
 
       {view === "decor" && (
-        <div className="sanc-panel-body">
-          <div className="sanc-decor-head">
-            <button type="button" className="sanc-link" onClick={finishEditing}>
-              ← Layouts
+        <div className="sanc-panel-body sanc-decor">
+          <div className="sd-head">
+            <button type="button" className="sd-back" onClick={finishEditing} title="Voltar aos layouts">
+              ←
             </button>
-            <span>
-              Editando: {editingKind.icon} {editingKind.name}
-            </span>
-          </div>
-
-          <div className="sanc-panel-sub">Adicionar</div>
-          <div className="sanc-chips">
-            {ADDABLE.map((t) => (
-              <button key={t} type="button" className="sanc-chip add" onClick={() => addItem(t)} title={t === "land" ? "Levanta o chão e, nas ilhas, cria chão novo" : "Adicionar"}>
-                {ITEM_TYPES[t].icon} {ITEM_TYPES[t].name}
-              </button>
-            ))}
-          </div>
-
-          <div className="sanc-panel-sub">Fundo (em camadas)</div>
-          <div className="sanc-chips">
-            {BG_ADDABLE.map((t) => (
-              <button key={t} type="button" className="sanc-chip add" onClick={() => addItem(t)}>
-                {ITEM_TYPES[t].icon} {ITEM_TYPES[t].name}
-              </button>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            className={`sanc-pencil ${prefs.editing ? "on" : ""}`}
-            onClick={() => setSanctuary({ editing: !prefs.editing, selected: null })}
-            title="Arrastar, mudar o tamanho e remover"
-          >
-            ✏️ {prefs.editing ? "Mover e editar: ligado" : "Mover e editar"}
-          </button>
-
-          {prefs.editing && (
-            <div className="sanc-selected">
-              {selected ? (
-                <>
-                  <div className="sanc-selected-name">
-                    {type.icon} {type.name}
-                  </div>
-                  <label className="sanc-size">
-                    <span>Tamanho</span>
-                    <input
-                      type="range"
-                      min={type.min}
-                      max={type.max}
-                      step="0.05"
-                      value={selected.size || 1}
-                      onChange={(e) => updateItem(selected.id, { size: Number(e.target.value) })}
-                    />
-                    <b>{Math.round((selected.size || 1) * 100)}%</b>
-                  </label>
-                  {ITEM_TYPES[selected.type].bg && (
-                    <div className="sanc-layer-row">
-                      <span>Camada</span>
-                      {[1, 2, 3].map((L) => (
-                        <button key={L} type="button" className={`sanc-chip ${(selected.layer || 2) === L ? "on" : ""}`} onClick={() => updateItem(selected.id, { layer: L })} title={L === 1 ? "Mais perto e mais escura" : L === 3 ? "Mais longe e mais clara" : "No meio"}>
-                          {L === 1 ? "Perto" : L === 2 ? "Meio" : "Longe"}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <div className="sanc-item-actions">
-                    {ITEM_TYPES[selected.type].flip && (
-                      <button type="button" className="sanc-remove" onClick={() => updateItem(selected.id, { flip: !selected.flip })} title="Espelhar para o outro lado">
-                        ↔ Virar
-                      </button>
-                    )}
-                    {ITEM_TYPES[selected.type].random && (
-                      <button type="button" className="sanc-remove" onClick={() => randomizeItem(selected)} title="Sortear outro desenho">
-                        🎲 Aleatorizar
-                      </button>
-                    )}
-                    {selected.type !== "main" && (
-                      <button type="button" className="sanc-remove" onClick={() => removeItem(selected.id)}>
-                        🗑 Remover
-                      </button>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="sanc-panel-hint">Clique em algo para selecionar. Arraste para mover.</div>
-              )}
-              <div className="sanc-panel-hint small">
-                <kbd>Delete</kbd> remove · <kbd>+</kbd> <kbd>−</kbd> tamanho · <kbd>Esc</kbd> solta
-              </div>
+            <div className="sd-title">
+              <small>Decorando</small>
+              <b>
+                {editingKind.icon} {editingKind.name}
+              </b>
             </div>
-          )}
-
-          <div className="sanc-panel-sub">Enfeites</div>
-          <div className="sanc-chips">
-            <button type="button" className={`sanc-chip ${prefs.lanterns ? "on" : ""}`} onClick={() => setSanctuary({ lanterns: !prefs.lanterns })}>
-              🏮 Lanternas nos galhos
+            <button type="button" className="sd-done" onClick={finishEditing}>
+              ✓ Pronto
             </button>
           </div>
 
-          <div className="sanc-panel-sub">Estação</div>
-          <div className="sanc-chips">
-            {SEASONS.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                className={`sanc-chip ${prefs.season === s.id ? "on" : ""}`}
-                onClick={() => setSanctuary({ season: s.id })}
-                title={s.id === "auto" ? `Segue o calendário (agora: ${SEASONS.find((x) => x.id === current)?.label})` : undefined}
-              >
-                {s.icon} {s.label}
-              </button>
-            ))}
-          </div>
+          <label className={`sd-switch ${prefs.editing ? "on" : ""}`} title="Com isto ligado você arrasta, muda o tamanho e remove">
+            <span>✏️ Mover e editar</span>
+            <input type="checkbox" checked={Boolean(prefs.editing)} onChange={() => setSanctuary({ editing: !prefs.editing, selected: null })} />
+            <i aria-hidden="true" />
+          </label>
 
-          <div className="sanc-panel-hint">
-            🎮 <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> anda · <kbd>Espaço</kbd> pula (com o lápis desligado)
+          <div className="sd-scroll">
+            {prefs.editing && (
+              <div className={`sd-card ${selected ? "has" : ""}`}>
+                {selected ? (
+                  <>
+                    <div className="sd-card-head">
+                      <span className="sd-ico big">{type.icon}</span>
+                      <b>{type.name}</b>
+                      <button type="button" className="sd-x" onClick={() => setSanctuary({ selected: null })} title="Soltar (Esc)">
+                        ✕
+                      </button>
+                    </div>
+                    <label className="sd-size">
+                      <span>Tamanho</span>
+                      <input
+                        type="range"
+                        min={type.min}
+                        max={type.max}
+                        step="0.05"
+                        value={selected.size || 1}
+                        onChange={(e) => updateItem(selected.id, { size: Number(e.target.value) })}
+                      />
+                      <b>{Math.round((selected.size || 1) * 100)}%</b>
+                    </label>
+                    {type.bg && (
+                      <div className="sd-seg" role="group" aria-label="Camada">
+                        {[1, 2, 3].map((L) => (
+                          <button
+                            key={L}
+                            type="button"
+                            className={(selected.layer || 2) === L ? "on" : ""}
+                            onClick={() => updateItem(selected.id, { layer: L })}
+                            title={L === 1 ? "Mais perto e mais escura" : L === 3 ? "Mais longe e mais clara" : "No meio"}
+                          >
+                            {L === 1 ? "Perto" : L === 2 ? "Meio" : "Longe"}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div className="sd-actions">
+                      {type.flip && (
+                        <button type="button" onClick={() => updateItem(selected.id, { flip: !selected.flip })} title="Espelhar para o outro lado">
+                          ↔ Virar
+                        </button>
+                      )}
+                      {type.random && (
+                        <button type="button" onClick={() => randomizeItem(selected)} title="Sortear outro desenho">
+                          🎲 Sortear
+                        </button>
+                      )}
+                      {selected.type !== "main" && (
+                        <button type="button" className="danger" onClick={() => removeItem(selected.id)} title="Remover (Delete)">
+                          🗑 Remover
+                        </button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="sd-empty">Clique em algo no mundo para editar. Arraste para mover.</div>
+                )}
+              </div>
+            )}
+
+            <div className="sd-label">No chão</div>
+            <div className="sd-grid">
+              {ADDABLE.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  className="sd-tile"
+                  onClick={() => addItem(t)}
+                  title={t === "land" ? "Levanta o chão e, nas ilhas, cria chão novo" : t === "grass" ? "Tufos que nascem da terra (seguem o relevo)" : `Adicionar ${ITEM_TYPES[t].label}`}
+                >
+                  <span className="sd-ico">{ITEM_TYPES[t].icon}</span>
+                  <span>{ITEM_TYPES[t].name}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="sd-label">Fundo (em camadas)</div>
+            <div className="sd-grid two">
+              {BG_ADDABLE.map((t) => (
+                <button key={t} type="button" className="sd-tile" onClick={() => addItem(t)} title={`Adicionar ${ITEM_TYPES[t].label} — arraste para qualquer lugar`}>
+                  <span className="sd-ico">{ITEM_TYPES[t].icon}</span>
+                  <span>{ITEM_TYPES[t].name}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="sd-label">Ambiente</div>
+            <label className={`sd-switch small ${prefs.lanterns ? "on" : ""}`}>
+              <span>🏮 Lanternas nos galhos</span>
+              <input type="checkbox" checked={Boolean(prefs.lanterns)} onChange={() => setSanctuary({ lanterns: !prefs.lanterns })} />
+              <i aria-hidden="true" />
+            </label>
+            <label className={`sd-switch small ${prefs.grass !== false ? "on" : ""}`} title="Capim, moitas, samambaias, trevos e juncos espalhados pela terra">
+              <span>🌿 Matos espalhados pela terra</span>
+              <input type="checkbox" checked={prefs.grass !== false} onChange={() => setSanctuary({ grass: prefs.grass === false })} />
+              <i aria-hidden="true" />
+            </label>
+            <div className="sd-seasons" role="group" aria-label="Estação">
+              {SEASONS.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={prefs.season === s.id ? "on" : ""}
+                  onClick={() => setSanctuary({ season: s.id })}
+                  title={s.id === "auto" ? `Segue o calendário (agora: ${SEASONS.find((x) => x.id === current)?.label})` : s.label}
+                >
+                  <span>{s.icon}</span>
+                  <small>{s.id === "auto" ? "Auto" : s.label}</small>
+                </button>
+              ))}
+            </div>
+
+            <div className="sd-keys">
+              <span><kbd>Delete</kbd> remove</span>
+              <span><kbd>+</kbd><kbd>−</kbd> tamanho</span>
+              <span><kbd>Esc</kbd> solta</span>
+              <span><kbd>WASD</kbd> anda · <kbd>Espaço</kbd> pula</span>
+              <span><kbd>2</kbd> cava (teclado numérico) · <kbd>4</kbd><kbd>6</kbd> lados · <kbd>8</kbd> em cima</span>
+            </div>
+            <button type="button" className="sd-reset" onClick={() => resetLayout(layout.kind)}>
+              ↺ Voltar este layout ao começo
+            </button>
           </div>
-          <button type="button" className="sanc-back-btn" onClick={() => setItems(defaultsFor(layout.kind))}>
-            ↺ Voltar este layout ao começo
-          </button>
-          <button type="button" className="sanc-action edit wide" onClick={finishEditing}>
-            ✓ Pronto
-          </button>
         </div>
       )}
 

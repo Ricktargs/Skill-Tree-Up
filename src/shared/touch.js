@@ -205,6 +205,6 @@ export function installTouch() {
 }
 
 // ---------- Teclas virtuais (controle do Santuário) ----------
-export const pressKey = (key, down) => {
-  window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { key, code: key === ' ' ? 'Space' : `Key${key.toUpperCase()}`, bubbles: true, cancelable: true }));
+export const pressKey = (key, down, code) => {
+  window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { key, code: code || (key === ' ' ? 'Space' : `Key${key.toUpperCase()}`), bubbles: true, cancelable: true }));
 };

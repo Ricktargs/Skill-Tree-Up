@@ -12,7 +12,10 @@ export const PRESET_DECKS = [
       { name: 'Ciano', hex: '#06b6d4' },
       { name: 'Roxo Neon', hex: '#a855f7' },
       { name: 'Rosa Neon', hex: '#ec4899' },
-      { name: 'Verde Lima', hex: '#10b981' }
+      { name: 'Verde Lima', hex: '#10b981' },
+      { name: 'Amarelo Manteiga', hex: '#fcd775' },
+      { name: 'Coral Suave', hex: '#f8a5a5' },
+      { name: 'Turquesa Clara', hex: '#6ee7d8' }
     ]
   },
   {
@@ -23,7 +26,10 @@ export const PRESET_DECKS = [
       { name: 'Menta', hex: '#34d399' },
       { name: 'Lavanda', hex: '#c084fc' },
       { name: 'Pêssego', hex: '#fb923c' },
-      { name: 'Rosa Suave', hex: '#f472b6' }
+      { name: 'Rosa Suave', hex: '#f472b6' },
+      { name: 'Amarelo Manteiga', hex: '#fcd775' },
+      { name: 'Coral Suave', hex: '#f8a5a5' },
+      { name: 'Turquesa Clara', hex: '#6ee7d8' }
     ]
   },
   {

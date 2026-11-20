@@ -17,6 +17,8 @@ import './shared/nanquim.css'
 import './shared/modeThemes.css'
 // Tema em tudo (janelas soltas, listas suspensas) + nome de emojis/cores
 import './shared/themeFixes.css'
+// Lobby das Habilidades + quadro de nível do editor
+import './shared/lobbyPolish.css'
 // Celular: janelas compactas (retrato e paisagem) — sempre por último
 import './mobile.css'
 import { installNanquimInline } from './shared/nanquimInline.js'
@@ -29,6 +31,9 @@ import { installTouch } from './shared/touch.js'
 installTouch()
 import { installSwatchHints } from './shared/swatchHints.js'
 installSwatchHints()
+import { installGlobalContextMenu } from './shared/globalContextMenu.js'
+installGlobalContextMenu()
+import UpdatePopup from './shared/UpdatePopup.jsx'
 startUpdateWatch()
 
 createRoot(document.getElementById('root')).render(
@@ -37,6 +42,7 @@ createRoot(document.getElementById('root')).render(
       <ModeRoot />
       <Splash />
       <Onboarding />
+      <UpdatePopup />
     </LanguageProvider>
   </StrictMode>,
 )

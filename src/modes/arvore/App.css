@@ -546,8 +546,24 @@ button:disabled {
   cursor: pointer;
 }
 .sanc-hero .vx-rot { transition: transform 0.18s ease-out; }
-.sanc-hero.walking .vx-scene { animation: sanc-walk 0.36s ease-in-out infinite alternate; }
-@keyframes sanc-walk { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+.sanc-hero.walking .vx-scene { animation: sanc-walk calc(var(--walk-dur, 0.42s) / 2) ease-in-out infinite alternate; }
+@keyframes sanc-walk { from { transform: translateY(0); } to { transform: translateY(-4px); } }
+
+/* Braços e pernas: balançam no passo (perna e braço do mesmo lado ao contrário) */
+.vx-limb { position: absolute; left: 0; top: 0; transform-style: preserve-3d; transition: transform 0.16s ease-out; }
+.sanc-hero.pose-walk .vx-legL,
+.sanc-hero.pose-walk .vx-armR { animation: vx-swing var(--walk-dur, 0.42s) ease-in-out infinite alternate; }
+.sanc-hero.pose-walk .vx-legR,
+.sanc-hero.pose-walk .vx-armL { animation: vx-swing var(--walk-dur, 0.42s) ease-in-out infinite alternate-reverse; }
+.sanc-hero.pose-walk .vx-armL,
+.sanc-hero.pose-walk .vx-armR { --swing: 22deg; }
+@keyframes vx-swing { from { transform: rotateX(var(--swing, 30deg)); } to { transform: rotateX(calc(var(--swing, 30deg) * -1)); } }
+/* no ar: pernas dobradas e braços abertos */
+.sanc-hero.pose-jump .vx-legL { transform: rotateX(-26deg); }
+.sanc-hero.pose-jump .vx-legR { transform: rotateX(18deg); }
+.sanc-hero.pose-jump .vx-armL { transform: rotateZ(32deg); }
+.sanc-hero.pose-jump .vx-armR { transform: rotateZ(-32deg); }
+.sanc-hero .vx-rot { transition: transform 0.22s cubic-bezier(0.3, 1.2, 0.5, 1); }
 
 /* Painel Decorar */
 .sanc-panel { position: absolute; right: 18px; bottom: 84px; z-index: 6; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
@@ -589,7 +605,7 @@ button:disabled {
 .sanc-chip.on { border-style: solid; background: var(--wash-strong, rgba(0, 0, 0, 0.06)); opacity: 1; font-weight: 700; }
 .sanc-back-btn { margin-top: 10px; width: 100%; border: 0; background: none; color: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; opacity: 0.75; }
 @media (prefers-reduced-motion: reduce) {
-  .sanc-firefly, .sanc-fall, .sanc-flame-g, .sanc-lantern-sway, .sanc-water-line, .sanc-smoke, .sanc-hero.walking .vx-scene { animation: none; }
+  .sanc-firefly, .sanc-fall, .sanc-flame-g, .sanc-lantern-sway, .sanc-water-line, .sanc-smoke, .sanc-hero.walking .vx-scene, .sanc-hero .vx-limb { animation: none !important; }
 }
 
 /* Lago afundado: terra escavada, barranco e água */
@@ -837,3 +853,308 @@ button:disabled {
 .sanc-transfer-row { display: flex; gap: 8px; margin-top: 8px; }
 .sanc-transfer-row .sanc-action { text-align: center; }
 label.sanc-action { display: inline-flex; align-items: center; justify-content: center; }
+
+/* ---------- Matinho: tufos nascendo da terra ---------- */
+.sanc-blade { stroke: var(--ink); stroke-width: 0.7; stroke-linejoin: round; stroke-opacity: 0.55; }
+.sanc-blade.s0 { fill: var(--foliage, #2c6b8a); }
+.sanc-blade.s1 { fill: var(--foliage-2, #3b7d9c); }
+.sanc-blade.s2 { fill: color-mix(in srgb, var(--foliage, #2c6b8a) 70%, var(--ink, #111)); }
+.sanc-grass.outono .sanc-blade.s1 { fill: color-mix(in srgb, var(--foliage-2, #3b7d9c) 45%, #c8742a); }
+.sanc-grass.outono .sanc-blade.s2 { fill: color-mix(in srgb, var(--foliage, #2c6b8a) 40%, #9a5a1c); }
+.sanc-grass.inverno .sanc-blade { fill: color-mix(in srgb, var(--foliage, #2c6b8a) 45%, #e8eef2); }
+.sanc-flower-stem { stroke: var(--foliage-2, #3b7d9c); stroke-width: 1; }
+.sanc-flower { fill: var(--sanc-lantern, #f4c66b); stroke: var(--ink); stroke-width: 0.6; }
+.sanc-grass.primavera .sanc-flower { fill: #f3a6c0; }
+.sanc-grass-hit { fill: transparent; stroke: none; pointer-events: none; }
+.workspace.is-editing .sanc-grass-hit { pointer-events: all; stroke: var(--sanc-lantern); stroke-width: 1.2; stroke-dasharray: 4 5; opacity: 0.55; }
+
+/* ---------- Painel de decorar (repaginado) ---------- */
+.sanc-panel-body.sanc-decor {
+  width: 304px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* não sobe por cima dos botões do canto de cima (⚙️ / 🎨) */
+  max-height: calc(100vh - 290px);
+  max-height: calc(100dvh - 290px);
+  min-height: 220px;
+}
+.sd-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--line, rgba(0, 0, 0, 0.12));
+}
+.sd-back {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong, rgba(0, 0, 0, 0.2));
+  background: transparent;
+  color: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+.sd-back:hover { background: var(--wash-strong, rgba(0, 0, 0, 0.06)); }
+.sd-title { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.15; }
+.sd-title small { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.6; }
+.sd-title b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sd-done {
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: var(--accent, #2e6f8e);
+  color: var(--surface, #fff);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sd-done:hover { filter: brightness(1.08); }
+
+/* interruptor (Mover e editar, Lanternas) */
+.sd-switch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 8px 12px 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong, rgba(0, 0, 0, 0.2));
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+.sd-switch.on { border-color: var(--sanc-lantern); background: color-mix(in srgb, var(--sanc-lantern) 16%, transparent); }
+.sd-switch.small { margin: 0 0 8px; font-size: 12px; font-weight: 600; }
+.sd-switch input { position: absolute; opacity: 0; pointer-events: none; }
+.sd-switch i {
+  position: relative;
+  flex-shrink: 0;
+  width: 34px;
+  height: 19px;
+  border-radius: 999px;
+  background: var(--line-strong, rgba(0, 0, 0, 0.25));
+  transition: background 0.15s;
+}
+.sd-switch i::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--surface, #fff);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s;
+}
+.sd-switch.on i { background: var(--sanc-lantern); }
+.sd-switch.on i::after { transform: translateX(15px); }
+
+.sd-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 12px 12px; overscroll-behavior: contain; }
+.sd-label { margin: 12px 0 6px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.6; }
+
+.sd-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.sd-grid.two { grid-template-columns: repeat(2, 1fr); }
+.sd-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 56px;
+  padding: 6px 2px;
+  border-radius: 10px;
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.14));
+  background: var(--surface-2, rgba(0, 0, 0, 0.03));
+  color: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.1;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.15s, background 0.15s;
+}
+.sd-grid.two .sd-tile { flex-direction: row; min-height: 40px; gap: 6px; font-size: 11.5px; }
+.sd-tile:hover { border-color: var(--accent, #2e6f8e); background: var(--wash-strong, rgba(0, 0, 0, 0.06)); }
+.sd-tile:active { transform: scale(0.95); }
+.sd-ico { font-size: 19px; line-height: 1; }
+.sd-ico.big { font-size: 22px; }
+
+/* item selecionado */
+.sd-card {
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px dashed var(--line-strong, rgba(0, 0, 0, 0.25));
+}
+.sd-card.has { border-style: solid; border-color: var(--sanc-lantern); background: color-mix(in srgb, var(--sanc-lantern) 8%, transparent); }
+.sd-empty { font-size: 12px; opacity: 0.75; text-align: center; padding: 4px 0; }
+.sd-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.sd-card-head b { flex: 1; font-size: 14px; }
+.sd-x {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+}
+.sd-x:hover { opacity: 1; background: var(--wash-strong, rgba(0, 0, 0, 0.08)); }
+.sd-size { display: grid; grid-template-columns: auto 1fr 40px; align-items: center; gap: 8px; font-size: 12px; }
+.sd-size input { width: 100%; accent-color: var(--sanc-lantern); }
+.sd-size b { text-align: right; font-variant-numeric: tabular-nums; }
+.sd-seg { display: flex; margin-top: 8px; border: 1px solid var(--line-strong, rgba(0, 0, 0, 0.2)); border-radius: 999px; overflow: hidden; }
+.sd-seg button { flex: 1; padding: 5px 0; border: 0; background: transparent; color: inherit; font-size: 12px; cursor: pointer; }
+.sd-seg button + button { border-left: 1px solid var(--line, rgba(0, 0, 0, 0.12)); }
+.sd-seg button.on { background: var(--sanc-lantern); color: #2a1d08; font-weight: 700; }
+.sd-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; margin-top: 10px; }
+.sd-actions button {
+  padding: 6px 4px;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong, rgba(0, 0, 0, 0.2));
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.sd-actions button:hover { background: var(--wash-strong, rgba(0, 0, 0, 0.06)); }
+.sd-actions button.danger:hover { background: rgba(200, 60, 60, 0.18); border-color: rgba(200, 60, 60, 0.5); }
+
+/* estações */
+.sd-seasons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.sd-seasons button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 0;
+  border-radius: 9px;
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.14));
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 16px;
+}
+.sd-seasons small { font-size: 9.5px; opacity: 0.8; }
+.sd-seasons button.on { border-color: var(--sanc-lantern); background: color-mix(in srgb, var(--sanc-lantern) 18%, transparent); font-weight: 700; }
+
+.sd-keys { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 12px; font-size: 11px; opacity: 0.7; }
+.sd-keys span { white-space: nowrap; }
+.sd-keys kbd { font-size: 10px; padding: 0 4px; margin-right: 2px; }
+.sd-reset { margin-top: 10px; width: 100%; border: 0; background: none; color: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; opacity: 0.7; }
+.sd-reset:hover { opacity: 1; }
+
+/* celular/tablet: painel ocupa a largura e respeita a altura */
+html.is-touch .tree-page .sanc-panel-body.sanc-decor { width: min(304px, calc(100vw - 24px)); max-height: calc(100dvh - 200px); overflow: hidden; }
+
+/* ---------- Matos: arbusto, samambaia, trevo e junco ---------- */
+.sanc-bush { stroke: var(--ink); stroke-width: 0.8; stroke-opacity: 0.5; }
+.sanc-bush.s0 { fill: var(--foliage, #2c6b8a); }
+.sanc-bush.s1 { fill: var(--foliage-2, #3b7d9c); }
+.sanc-bush.s2 { fill: color-mix(in srgb, var(--foliage, #2c6b8a) 75%, var(--ink, #111)); }
+.sanc-berry { fill: #d9534f; stroke: var(--ink); stroke-width: 0.4; }
+.sanc-frond { fill: none; stroke: color-mix(in srgb, var(--foliage, #2c6b8a) 70%, var(--ink, #111)); stroke-width: 1.3; stroke-linecap: round; }
+.sanc-leaflets { fill: none; stroke-width: 2.2; stroke-linecap: round; }
+.sanc-leaflets.s0 { stroke: var(--foliage, #2c6b8a); }
+.sanc-leaflets.s1 { stroke: var(--foliage-2, #3b7d9c); }
+.sanc-leaflets.s2 { stroke: color-mix(in srgb, var(--foliage-2, #3b7d9c) 70%, #ffffff); }
+.sanc-clover circle { stroke: var(--ink); stroke-width: 0.4; stroke-opacity: 0.45; }
+.sanc-clover.s0 circle { fill: var(--foliage, #2c6b8a); }
+.sanc-clover.s1 circle { fill: var(--foliage-2, #3b7d9c); }
+.sanc-clover.s2 circle { fill: color-mix(in srgb, var(--foliage-2, #3b7d9c) 75%, #ffffff); }
+.sanc-flower.alt { fill: #f6f1e7; }
+.sanc-reed-stem { fill: none; stroke: color-mix(in srgb, var(--foliage, #2c6b8a) 75%, var(--ink, #111)); stroke-linecap: round; }
+.sanc-cattail { fill: #7a4a26; stroke: var(--ink); stroke-width: 0.5; }
+/* estações */
+.sanc-grass.outono .sanc-bush.s1,
+.sanc-grass.outono .sanc-leaflets.s1,
+.sanc-grass.outono .sanc-clover.s1 circle { fill: color-mix(in srgb, var(--foliage-2, #3b7d9c) 45%, #c8742a); stroke: color-mix(in srgb, var(--foliage-2, #3b7d9c) 45%, #c8742a); }
+.sanc-grass.outono .sanc-leaflets.s1 { fill: none; }
+.sanc-grass.inverno .sanc-bush,
+.sanc-grass.inverno .sanc-clover circle { fill: color-mix(in srgb, var(--foliage, #2c6b8a) 40%, #e8eef2); }
+.sanc-grass.inverno .sanc-leaflets { stroke: color-mix(in srgb, var(--foliage, #2c6b8a) 45%, #e8eef2); }
+/* espalhados: um pouco mais apagados, para não brigar com o que você colocou */
+.sanc-scatter .sanc-grass { opacity: 0.85; pointer-events: none; }
+
+/* ---------- Herói na água: afunda um pouco, com ondinha em volta ---------- */
+.sanc-hero.in-water {
+  /* corta o que está abaixo da superfície (a água fica "na frente") */
+  clip-path: polygon(-2000px -3000px, 2000px -3000px, 2000px calc(var(--wade, 0px) * -1 + 3px), -2000px calc(var(--wade, 0px) * -1 + 3px));
+}
+.sanc-ripple {
+  position: absolute;
+  left: 0;
+  top: calc(var(--wade, 0px) * -1);
+  width: calc(80px * var(--sanc-hero-size, 0.4) * 1.4);
+  height: calc(14px * var(--sanc-hero-size, 0.4) * 1.4);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--ground-line, #9fd3e8) 85%, #ffffff);
+  opacity: 0;
+  pointer-events: none;
+}
+.sanc-hero.in-water .sanc-ripple { opacity: 0.75; animation: sanc-ripple 1.4s ease-out infinite; }
+.sanc-hero.in-water.walking .sanc-ripple { animation-duration: 0.7s; }
+@keyframes sanc-ripple {
+  0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(1.35); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .sanc-hero.in-water .sanc-ripple { animation: none; } }
+
+/* ---------- Blocos do terreno (estilo Terraria, traço de nanquim) ---------- */
+.sanc-blocks .blk { stroke: var(--ink, #1b1712); stroke-width: 1.4; stroke-linejoin: round; stroke-opacity: 0.75; }
+.sanc-blocks .blk-shade { fill: #000; stroke: none; pointer-events: none; }
+.sanc-blocks .blk-hole {
+  fill: color-mix(in srgb, #3a281a 55%, var(--bg, #111));
+  stroke: var(--ink, #1b1712);
+  stroke-width: 0.8;
+  stroke-opacity: 0.35;
+  stroke-dasharray: 3 4;
+}
+/* texturas */
+.bt-dirt { fill: color-mix(in srgb, #8a5a34 82%, var(--bg, #222)); }
+.bt-speck { stroke: var(--ink, #1b1712); stroke-width: 1.6; stroke-linecap: round; opacity: 0.45; }
+.bt-pebble { fill: color-mix(in srgb, #8a5a34 55%, #d8c7a8); stroke: var(--ink, #1b1712); stroke-width: 0.7; opacity: 0.8; }
+.bt-grass { fill: color-mix(in srgb, var(--foliage-2, #3b7d9c) 60%, #4f8a3a); stroke: var(--ink, #1b1712); stroke-width: 0.8; stroke-opacity: 0.6; }
+.bt-blade { stroke: color-mix(in srgb, var(--foliage-2, #3b7d9c) 60%, #4f8a3a); stroke-width: 1.4; stroke-linecap: round; }
+.bt-sand { fill: color-mix(in srgb, #dcc58e 88%, var(--bg, #222)); }
+.bt-sand-dot { stroke: #8a6f3a; stroke-width: 1.4; stroke-linecap: round; opacity: 0.6; }
+.bt-sand-wave { fill: none; stroke: #9c7e44; stroke-width: 0.9; opacity: 0.55; }
+.bt-wood { fill: color-mix(in srgb, #9a6638 85%, var(--bg, #222)); }
+.bt-plank { fill: none; stroke: var(--ink, #1b1712); stroke-width: 1.1; opacity: 0.6; }
+.bt-grain { fill: none; stroke: #5e3a1c; stroke-width: 0.8; stroke-linecap: round; opacity: 0.55; }
+.bt-knot { fill: #5e3a1c; opacity: 0.7; }
+.bt-stone { fill: color-mix(in srgb, #8b9096 85%, var(--bg, #222)); }
+.bt-stone.dark { fill: color-mix(in srgb, #6c7178 85%, var(--bg, #222)); }
+.bt-rock { fill: color-mix(in srgb, #a3a8ad 80%, var(--bg, #222)); stroke: var(--ink, #1b1712); stroke-width: 0.8; stroke-opacity: 0.55; }
+.bt-line { stroke: var(--ink, #1b1712); stroke-width: 1; stroke-linecap: round; opacity: 0.45; }
+.bt-crackline { fill: none; stroke: var(--ink, #1b1712); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; opacity: 0.8; }
+.bt-gem { fill: #a77be0; stroke: #3d1f6b; stroke-width: 0.9; stroke-linejoin: round; }
+.bt-glint { stroke: #f3eaff; stroke-width: 1.2; stroke-linecap: round; }
+/* rachando (batidas com a mão) */
+.blk-crack { fill: none; stroke: #fff8e6; stroke-width: 1.8; stroke-linecap: round; opacity: 0.9; filter: drop-shadow(0 0 1px #000); }
+/* pedacinhos voando ao quebrar */
+.blk-bit { stroke: var(--ink, #1b1712); stroke-width: 0.6; animation: blk-bit 0.65s cubic-bezier(0.2, 0.7, 0.4, 1) forwards; }
+.bt-grass .blk-bit { fill: color-mix(in srgb, var(--foliage-2, #3b7d9c) 60%, #4f8a3a); }
+.bt-dirt .blk-bit { fill: #8a5a34; }
+.bt-sand .blk-bit { fill: #dcc58e; }
+.bt-wood .blk-bit { fill: #9a6638; }
+.bt-stone .blk-bit,
+.bt-cracked .blk-bit { fill: #8b9096; }
+.bt-amethyst .blk-bit { fill: #a77be0; }
+@keyframes blk-bit {
+  0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+  60% { transform: translate(var(--bx), var(--by)) rotate(120deg); opacity: 1; }
+  100% { transform: translate(calc(var(--bx) * 1.3), calc(var(--by) * -0.6)) rotate(200deg); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .blk-bit { animation: none; opacity: 0; } }

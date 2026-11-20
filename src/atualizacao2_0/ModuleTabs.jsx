@@ -101,7 +101,7 @@ function NameInput({ initial, placeholder, onDone, onCancel }) {
   );
 }
 
-export default function ModuleTabs({ skill, setSkill, playSound }) {
+export default function ModuleTabs({ skill, setSkill, playSound, tools = null }) {
   const [renaming, setRenaming] = useState(null); // id do módulo
   const [creating, setCreating] = useState(false);
   const click = (k = 'click') => playSound && playSound(k);
@@ -159,6 +159,7 @@ export default function ModuleTabs({ skill, setSkill, playSound }) {
       <div className="mt-head">
         <h3 className="section-label-large">{tx('Metas e Níveis')}</h3>
         <span className="mt-hint">{tx('Módulos / cursos · duplo clique renomeia')}</span>
+        {tools && <div className="mt-tools">{tools}</div>}
       </div>
       <div className="mt-tabs" role="tablist">
         {tabs.map((t) => {

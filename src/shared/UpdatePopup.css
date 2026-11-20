@@ -1,0 +1,72 @@
+/* Aviso de atualização: cartão discreto no canto de baixo à direita */
+.upd-pop {
+  position: fixed;
+  right: calc(18px + env(safe-area-inset-right, 0px));
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(380px, calc(100vw - 24px));
+  padding: 10px 34px 10px 12px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--theme-accent, #38bdf8) 40%, transparent);
+  background: var(--theme-modal-bg, #0f172a);
+  color: var(--opt-fg, #e2e8f0);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+  font: 13px/1.3 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  animation: upd-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes upd-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+.upd-ico { font-size: 18px; }
+.upd-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.upd-text b { font-size: 13px; }
+.upd-text small { font-size: 11.5px; opacity: 0.65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.upd-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.upd-actions button {
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.upd-later {
+  border: 1px solid color-mix(in srgb, var(--opt-fg, #e2e8f0) 25%, transparent);
+  background: transparent;
+  color: inherit;
+}
+.upd-go {
+  border: 0;
+  background: var(--theme-accent, #38bdf8);
+  color: var(--theme-on-accent, #0b1220);
+}
+.upd-go:disabled { opacity: 0.7; cursor: default; }
+.upd-x {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 11px;
+  opacity: 0.5;
+  cursor: pointer;
+}
+.upd-x:hover { opacity: 1; background: rgba(255, 255, 255, 0.08); }
+/* janela aberta: o aviso não fica por cima */
+body:has(.modal-backdrop) .upd-pop,
+body:has(.ui-dialog-backdrop) .upd-pop { display: none; }
+/* celular: acima da troca de modos */
+@media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
+  .upd-pop { left: 12px; right: 12px; bottom: calc(118px + env(safe-area-inset-bottom, 0px)); max-width: none; flex-wrap: wrap; }
+  .upd-actions { width: 100%; justify-content: flex-end; }
+}
+@media (prefers-reduced-motion: reduce) { .upd-pop { animation: none; } }

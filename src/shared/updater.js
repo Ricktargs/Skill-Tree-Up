@@ -222,7 +222,8 @@ export function startUpdateWatch() {
     desktop.onUpdateState((s) => set(s));
   }
   const every = PLATFORM === 'web' ? 30 * 60 * 1000 : 6 * 60 * 60 * 1000;
-  setTimeout(checkForUpdate, 10000);
+  // logo depois de abrir (o aviso aparece quando a abertura termina)
+  setTimeout(checkForUpdate, 2500);
   setInterval(() => {
     if (!hasUpdate()) checkForUpdate();
   }, every);

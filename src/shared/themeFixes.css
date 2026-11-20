@@ -253,3 +253,79 @@ html .notes-dock .top-icon-button.is-on {
 /* painel de notas aberto: só o ✒️ fica (para fechar), sem cobrir o painel */
 body:has(.np-panel) .notes-dock .dock-tasks,
 body:has(.np-panel) .notes-dock .dock-flash { display: none !important; }
+
+/* ---------- Menu do botão direito (em todo o programa) ---------- */
+.orbe-ctx {
+  position: fixed;
+  z-index: 2147482000;
+  min-width: 210px;
+  max-width: 270px;
+  padding: 5px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--theme-accent, #38bdf8) 35%, transparent);
+  background: var(--theme-modal-bg, #0f172a);
+  color: var(--opt-fg, #e2e8f0);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+  font: 13px/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  animation: orbe-ctx-in 0.12s ease-out;
+  transform-origin: top left;
+}
+@keyframes orbe-ctx-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+.orbe-ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.orbe-ctx-item:hover:not(:disabled),
+.orbe-ctx-item:focus-visible {
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 20%, transparent);
+  outline: none;
+}
+.orbe-ctx-item:disabled { opacity: 0.4; cursor: default; }
+.orbe-ctx-item.on { font-weight: 700; }
+.orbe-ctx-ico { width: 18px; text-align: center; flex-shrink: 0; }
+.orbe-ctx-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.orbe-ctx-item kbd {
+  font: 600 10.5px/1 ui-monospace, Consolas, monospace;
+  padding: 3px 5px;
+  border-radius: 5px;
+  border: 1px solid color-mix(in srgb, var(--opt-fg, #e2e8f0) 18%, transparent);
+  opacity: 0.6;
+}
+.orbe-ctx-item.on kbd { border-color: var(--theme-accent, #38bdf8); color: var(--theme-accent, #38bdf8); opacity: 1; }
+.orbe-ctx-sep { height: 1px; margin: 4px 6px; background: color-mix(in srgb, var(--opt-fg, #e2e8f0) 12%, transparent); }
+
+/* ---------- Ícones próprios: nanquim + aquarela ---------- */
+.app-ic { display: block; flex-shrink: 0; overflow: visible; }
+.app-ic-wash {
+  fill: var(--theme-accent, #38bdf8);
+  opacity: 0.32;
+  stroke: var(--theme-accent, #38bdf8);
+  stroke-width: 0.5;
+  stroke-opacity: 0.55;
+}
+.app-ic-ink { fill: currentColor; }
+.app-ic-back { opacity: 0.55; }
+.app-ic-sand { fill: var(--theme-accent, #38bdf8); }
+.app-ic-ray { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+/* aquarela do Tema: três cores que se misturam */
+.app-ic-wc { mix-blend-mode: normal; opacity: 0.85; stroke-width: 0.5; stroke-opacity: 0.7; }
+.app-ic-wc.wc-a { fill: #e86a6a; stroke: #c0392b; }
+.app-ic-wc.wc-b { fill: #5aa9e6; stroke: #2e6f9e; opacity: 0.78; }
+.app-ic-wc.wc-c { fill: #f4c95d; stroke: #b98a1a; opacity: 0.82; }
+.top-icon-button .app-ic { width: 24px; height: 24px; transition: transform 0.18s ease; }
+.top-icon-button:hover .app-ic { transform: scale(1.08) rotate(-3deg); }
+.top-icon-button:hover .ic-settings { transform: rotate(35deg); }
+.top-icon-button.is-on .app-ic-wash { opacity: 0.55; }
