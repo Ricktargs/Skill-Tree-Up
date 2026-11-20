@@ -77,6 +77,9 @@ export const fullContent = (note) =>
 
 // Mantém as ligações e checklists, remove o perigoso
 export const cleanHtml = (html) => sanitizeHtml(html);
+// Todas as ligações de uma nota: as do texto ([[ ]]) + as do botão Ligações
+// (que ficam guardadas na nota, sem aparecer escritas no texto)
+export const noteLinks = (n) => [...linksIn(fullContent(n)), ...((n && Array.isArray(n.links) && n.links) || [])];
 
 // ---------- Neurônios de exemplo (primeira vez) ----------
 const starter = () => {
@@ -132,7 +135,7 @@ const autoPromote = (data) => {
   const ids = new Set(data.notes.map((n) => n.id));
   const linked = new Set();
   data.notes.forEach((n) => {
-    linksIn(fullContent(n)).forEach((t) => {
+    noteLinks(n).forEach((t) => {
       if (!ids.has(t) || t === n.id) return;
       linked.add(t);
       linked.add(n.id);
@@ -182,6 +185,13 @@ const flushSave = () => {
     emit();
   }
 };
+
+// Ctrl+Z / Ctrl+Y global: grava já o que estava esperando
+if (typeof window !== 'undefined') {
+  window.addEventListener('orbe-flush-saves', () => {
+    if (shared.saveTimer) flushSave();
+  });
+}
 
 // Atualiza os dados (com um pequeno atraso para gravar, como antes)
 // Pasta que virou neurônio: o neurônio dela tem o nome da pasta e uma
@@ -589,7 +599,7 @@ export function useNeuronios() {
     const list = [];
     const back = new Map();
     notes.forEach((n) => {
-      linksIn(fullContent(n)).forEach((target) => {
+      noteLinks(n).forEach((target) => {
         if (!byId.has(target) || target === n.id) return;
         if (!back.has(target)) back.set(target, new Set());
         back.get(target).add(n.id);

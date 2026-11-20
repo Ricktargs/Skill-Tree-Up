@@ -13,7 +13,7 @@ const norm = (s) =>
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase();
 
-export default function LinkPicker({ notes, selfId, linkedIds, folders = [], onToggle, onCreate }) {
+export default function LinkPicker({ notes, pages = [], selfId, linkedIds, folders = [], onToggle, onCreate }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [onlyLinked, setOnlyLinked] = useState(false);
@@ -82,6 +82,12 @@ export default function LinkPicker({ notes, selfId, linkedIds, folders = [], onT
       })
       .slice(0, 80);
   }, [notes, selfId, q, onlyLinked, linkedIds]);
+  // páginas (+Pag) deste texto: ligar transforma a página em neurônio
+  const pageList = useMemo(() => {
+    if (onlyLinked) return [];
+    const nq = norm(q.trim());
+    return pages.filter((p) => !nq || norm(p.title).includes(nq));
+  }, [pages, q, onlyLinked]);
 
   const exact = q.trim() && notes.some((n) => norm(n.title) === norm(q.trim()));
   const create = () => {
@@ -136,7 +142,17 @@ export default function LinkPicker({ notes, selfId, linkedIds, folders = [], onT
           )}
 
           <div className="nr-links-list">
-            {list.length === 0 && <p className="nr-links-empty">{onlyLinked ? 'Nada ligado ainda.' : 'Nada encontrado.'}</p>}
+            {pageList.length > 0 && <div className="nr-links-sub">Páginas deste texto (+Pag)</div>}
+            {pageList.map((pg) => (
+              <button key={pg.id} type="button" className="nr-links-item is-page" onClick={() => onToggle(pg)} title="Ligar transforma esta página num neurônio">
+                <span className="nr-links-check" aria-hidden="true" />
+                <span className="nr-links-emoji">📄</span>
+                <span className="nr-links-title">{pg.title}</span>
+                <span className="nr-links-kind page">página</span>
+              </button>
+            ))}
+            {pageList.length > 0 && list.length > 0 && <div className="nr-links-sub">Notas e neurônios</div>}
+            {list.length === 0 && !pageList.length && <p className="nr-links-empty">{onlyLinked ? 'Nada ligado ainda.' : 'Nada encontrado.'}</p>}
             {list.map((n) => {
               const on = linkedIds.has(n.id);
               const neuron = isNeuron(n);
@@ -155,7 +171,7 @@ export default function LinkPicker({ notes, selfId, linkedIds, folders = [], onT
               );
             })}
           </div>
-          <p className="nr-links-tip">Ligar uma nota a faz virar neurônio no mapa, como o [[ ]].</p>
+          <p className="nr-links-tip">A ligação fica guardada (não aparece escrita no texto) e vira fio no mapa.</p>
         </div>,
           document.body
         )}

@@ -830,9 +830,15 @@ const handleSaveMiniEdit = (idx, oldText) => {
           activeElem.tagName === 'TEXTAREA' ||
           activeElem.isContentEditable);
 
-      // Desfazer/refazer global vale em qualquer modo (Neurônios, Santuário, Habilidades)
-      if (isCtrlOrCmd && !isEditingText && !e.altKey && (keyLower === 'z' || keyLower === 'y')) {
+      // Desfazer/refazer global vale em qualquer modo (Neurônios, Santuário, Habilidades).
+      // No editor de notas/neurônios também: o desfazer do navegador não enxerga
+      // colar, ligações, mover imagem, pastas... o global pega tudo.
+      const inNotesEditor = Boolean(activeElem && activeElem.closest && activeElem.closest('.nr-text'));
+      if (isCtrlOrCmd && (!isEditingText || inNotesEditor) && !e.altKey && (keyLower === 'z' || keyLower === 'y')) {
         e.preventDefault();
+        e.stopPropagation();
+        // grava já o que estava esperando, para o desfazer pegar a última mudança
+        window.dispatchEvent(new Event('orbe-flush-saves'));
         if (keyLower === 'z' && !e.shiftKey) {
           if (globalUndo()) playSound('click');
         } else if (globalRedo()) playSound('click');
