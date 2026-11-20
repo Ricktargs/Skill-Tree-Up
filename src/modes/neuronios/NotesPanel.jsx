@@ -429,15 +429,32 @@ export default function NotesPanel() {
               e.preventDefault();
               setMenu({ kind: 'folder', id: f.id, x: e.clientX, y: e.clientY });
             }}
-            title="Clique abre · duplo clique renomeia · botão direito muda a cor"
+            title="Clique abre · duplo clique renomeia · botão direito: cor e virar neurônio"
             {...dragProps('folder', f.id)}
             {...rowDropProps('folder', f.id)}
           >
             <span className="np-caret">{isOpen ? '▾' : '▸'}</span>
             <FolderIcon color={f.color} open={isOpen} />
             <span className="np-label">{f.name}</span>
+            {f.neuronId && (
+              <span className="np-folder-neuron" title="Esta pasta é um neurônio (aparece no mapa)">
+                🧠
+              </span>
+            )}
             <small className="np-count">{inside.length + subFolders.length || ''}</small>
             <span className="np-folder-actions">
+              <button
+                type="button"
+                title={f.neuronId ? 'Tirar a pasta do mapa' : 'Virar neurônio (a pasta aparece no mapa ligada às notas)'}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (f.neuronId) store.folderUnNeuron(f.id);
+                  else store.folderToNeuron(f.id);
+                  sfx.play(f.neuronId ? 'tick' : 'branch');
+                }}
+              >
+                {f.neuronId ? '⊘' : '🧠'}
+              </button>
               <button
                 type="button"
                 title="Renomear"
@@ -705,6 +722,25 @@ export default function NotesPanel() {
           }}
           resetLabel="Cor padrão"
           onClose={() => setMenu(null)}
+          extra={(() => {
+            const f = folders.find((x) => x.id === menu.id);
+            const on = Boolean(f && f.neuronId);
+            return (
+              <button
+                type="button"
+                className={`np-folder-neuron-btn ${on ? 'on' : ''}`}
+                onClick={() => {
+                  if (on) store.folderUnNeuron(menu.id);
+                  else store.folderToNeuron(menu.id);
+                  sfx.play(on ? 'tick' : 'branch');
+                  setMenu(null);
+                }}
+                title={on ? 'O neurônio da pasta sai do mapa (as notas continuam)' : 'A pasta aparece no mapa, ligada às notas de dentro'}
+              >
+                {on ? 'Tirar a pasta do mapa' : '🧠 Virar neurônio'}
+              </button>
+            );
+          })()}
         />
       )}
       {menu && menu.kind === 'note' && (

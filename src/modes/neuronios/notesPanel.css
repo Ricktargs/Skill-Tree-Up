@@ -459,3 +459,181 @@
   .np-back { display: none !important; }
   .np-row { min-height: 40px; }
 }
+
+/* =========================================================
+   Botão "Ligações" (ao lado do + habilidade) e a lista
+   ========================================================= */
+.nr-links-picker { position: relative; display: inline-flex; }
+.nr-links-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px dashed var(--border, rgba(0, 0, 0, 0.25));
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  opacity: 0.85;
+}
+.nr-links-btn:hover,
+.nr-links-btn.on { opacity: 1; border-style: solid; border-color: var(--accent); background: var(--accent-soft, rgba(0, 0, 0, 0.05)); }
+.nr-links-btn.has { border-style: solid; }
+.nr-links-btn b {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--surface, #fff);
+  font-size: 10.5px;
+  line-height: 16px;
+  text-align: center;
+}
+.nr-links-pop {
+  /* fica no <body>: usa as cores do tema direto */
+  --surface: var(--theme-modal-bg, #fbf8f1);
+  --accent: var(--theme-accent, #2e6f8e);
+  --accent-soft: color-mix(in srgb, var(--theme-accent, #2e6f8e) 16%, transparent);
+  --border: var(--theme-border, rgba(0, 0, 0, 0.2));
+  --text: var(--opt-fg, inherit);
+  --hover: color-mix(in srgb, var(--opt-fg, #000000) 8%, transparent);
+  --input-bg: color-mix(in srgb, var(--opt-fg, #000000) 4%, transparent);
+  --focus: color-mix(in srgb, var(--theme-accent, #2e6f8e) 25%, transparent);
+  position: fixed;
+  z-index: 9500;
+  width: min(330px, 86vw);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.18));
+  background: var(--surface, #fbf8f1);
+  color: var(--text, inherit);
+  box-shadow: var(--shadow-strong, 0 14px 36px rgba(0, 0, 0, 0.3));
+}
+.nr-links-head { display: flex; align-items: center; gap: 8px; }
+.nr-links-search {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.2));
+  background: var(--input-bg, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+.nr-links-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus, rgba(0, 0, 0, 0.08)); }
+.nr-links-only { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; opacity: 0.8; cursor: pointer; white-space: nowrap; }
+.nr-links-only input { accent-color: var(--accent); }
+.nr-links-create {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px dashed var(--accent);
+  background: var(--accent-soft, rgba(0, 0, 0, 0.04));
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.nr-links-create:hover { border-style: solid; }
+.nr-links-create b { font-weight: 800; }
+.nr-links-create kbd { margin-left: auto; font-size: 10px; opacity: 0.6; }
+.nr-links-plus {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--surface, #fff);
+  font-size: 13px;
+  font-weight: 800;
+}
+.nr-links-list { display: flex; flex-direction: column; gap: 2px; max-height: 280px; overflow-y: auto; overscroll-behavior: contain; }
+.nr-links-empty { margin: 10px 0; text-align: center; font-size: 12px; opacity: 0.6; }
+.nr-links-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.nr-links-item:hover { background: var(--hover, rgba(0, 0, 0, 0.05)); }
+.nr-links-item.on { border-color: color-mix(in srgb, var(--accent) 45%, transparent); background: var(--accent-soft, rgba(0, 0, 0, 0.05)); }
+.nr-links-check {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border, rgba(0, 0, 0, 0.3));
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--surface, #fff);
+}
+.nr-links-item.on .nr-links-check { background: var(--accent); border-color: var(--accent); }
+.nr-links-emoji { flex-shrink: 0; width: 18px; text-align: center; }
+.nr-links-title { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; overflow: hidden; }
+.nr-links-title { white-space: nowrap; text-overflow: ellipsis; }
+.nr-links-title small { font-size: 10.5px; opacity: 0.6; }
+.nr-links-kind {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.2));
+}
+.nr-links-kind.neuron { border-color: color-mix(in srgb, var(--accent) 60%, transparent); color: var(--accent); }
+.nr-links-tip { margin: 2px 2px 0; font-size: 11px; opacity: 0.6; }
+
+/* Pasta que virou neurônio */
+.np-folder-neuron { font-size: 11px; margin-left: 2px; }
+.np-folder-neuron-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft, rgba(0, 0, 0, 0.05));
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.np-folder-neuron-btn:hover { background: var(--wash-strong, rgba(0, 0, 0, 0.08)); }
+.np-folder-neuron-btn.on { border-style: dashed; font-weight: 600; }
+/* lista automática do neurônio da pasta */
+.nr-text ul.nr-hub-list { margin: 6px 0; }
+
+@media (max-width: 760px) {
+  .nr-links-pop { left: 12px !important; right: 12px; width: auto !important; }
+  .nr-links-search { height: 40px; font-size: 16px; }
+  .nr-links-item { padding: 9px 8px; }
+}

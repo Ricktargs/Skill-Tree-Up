@@ -184,11 +184,39 @@ const flushSave = () => {
 };
 
 // Atualiza os dados (com um pequeno atraso para gravar, como antes)
+// Pasta que virou neurônio: o neurônio dela tem o nome da pasta e uma
+// lista de ligações com as notas que estão dentro (atualiza sozinha)
+const HUB_LIST_RE = /<ul class="nr-hub-list"[^>]*>[\s\S]*?<\/ul>/;
+const syncFolderHubs = (data) => {
+  const hubs = (data.folders || []).filter((f) => f.neuronId);
+  if (!hubs.length) return data;
+  let notes = data.notes;
+  let folders = data.folders;
+  let changed = false;
+  hubs.forEach((f) => {
+    const hub = notes.find((n) => n.id === f.neuronId);
+    if (!hub) {
+      folders = folders.map((x) => (x.id === f.id ? { ...x, neuronId: null } : x));
+      changed = true;
+      return;
+    }
+    const inside = notes.filter((n) => n.folderId === f.id && n.id !== hub.id);
+    const list = `<ul class="nr-hub-list">${inside.map((n) => `<li>${wikilinkHtml(n)}</li>`).join('') || '<li>(pasta vazia)</li>'}</ul>`;
+    const content = HUB_LIST_RE.test(hub.content || '') ? hub.content.replace(HUB_LIST_RE, list) : `${hub.content || ''}${list}`;
+    const title = f.name || hub.title;
+    if (content !== hub.content || title !== hub.title) {
+      notes = notes.map((n) => (n.id === hub.id ? { ...n, content, title } : n));
+      changed = true;
+    }
+  });
+  return changed ? { ...data, notes, folders } : data;
+};
+
 const setData = (fn) => {
   const cur = getSnapshot();
   const next = typeof fn === 'function' ? fn(cur.data) : fn;
   if (!next || next === cur.data) return;
-  shared.state = { ...cur, data: autoPromote(next) };
+  shared.state = { ...cur, data: autoPromote(syncFolderHubs(next)) };
   emit();
   clearTimeout(shared.saveTimer);
   shared.saveTimer = setTimeout(flushSave, 300);
@@ -422,6 +450,43 @@ const actions = {
     setData((d) => ({ ...d, folders: [...(d.folders || []), folder] }));
     return folder;
   },
+  /** Pasta vira neurônio: aparece no mapa ligada às notas de dentro. */
+  folderToNeuron: (id) => {
+    const folder = (getSnapshot().data.folders || []).find((f) => f.id === id);
+    if (!folder) return null;
+    const existing = folder.neuronId && getSnapshot().data.notes.find((n) => n.id === folder.neuronId);
+    if (existing) return existing;
+    const now = nowIso();
+    const hub = {
+      id: uid(),
+      title: folder.name || 'Pasta',
+      tags: [],
+      content: `<p>Neurônio da pasta <b>${escapeHtml(folder.name || 'Pasta')}</b>. As notas dela:</p><ul class="nr-hub-list"></ul><p><br></p>`,
+      color: randomColor(),
+      emoji: folder.emoji || '📁',
+      folderId: folder.id,
+      hubOf: folder.id,
+      createdAt: now,
+      updatedAt: now
+    };
+    setData((d) => ({
+      ...d,
+      notes: [...d.notes, hub],
+      folders: (d.folders || []).map((f) => (f.id === id ? { ...f, neuronId: hub.id } : f))
+    }));
+    return hub;
+  },
+  /** Desfaz: tira o neurônio da pasta (as notas continuam). */
+  folderUnNeuron: (id) =>
+    setData((d) => {
+      const folder = (d.folders || []).find((f) => f.id === id);
+      if (!folder || !folder.neuronId) return d;
+      return {
+        ...d,
+        notes: d.notes.filter((n) => n.id !== folder.neuronId),
+        folders: d.folders.map((f) => (f.id === id ? { ...f, neuronId: null } : f))
+      };
+    }),
   renameFolder: (id, name) => {
     const clean = String(name || '').trim();
     if (!clean) return;

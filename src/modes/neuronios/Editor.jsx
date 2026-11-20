@@ -3,6 +3,7 @@ import { ask } from '../../shared/Dialog.jsx';
 import SkillLink from '../../shared/SkillLink.jsx';
 import { sfx } from '../arvore/lib/sound.js';
 import { cleanHtml, escapeHtml, linksIn, normalizeTag, pagelinkHtml, pagesIn, plainText, tagColor, wikilinkHtml } from './store.js';
+import LinkPicker from './LinkPicker.jsx';
 import ColorPicker from './ColorPicker.jsx';
 
 // Cores do marca-texto (a escolhida fica lembrada)
@@ -79,6 +80,124 @@ const readImage = (file) =>
 // +Pag cria uma página dentro do neurônio: um texto dentro do texto,
 // que abre numa janela dentro da janela (e pode ter páginas dentro dela)
 // =========================================================
+
+// =========================================================
+// COLAR: mantém quebras de linha, linhas em branco, tabs e recuos
+// (antes os estilos eram tirados junto com o "white-space: pre" dos sites e
+// editores de código, e tudo virava uma linha só, sem os espaços)
+// =========================================================
+const NBSP = '\u00a0';
+const keepSpaces = (t) =>
+  escapeHtml(t)
+    .replace(/\t/g, NBSP.repeat(4))
+    .replace(/ {2,}/g, (m) => `${NBSP.repeat(m.length - 1)} `)
+    .replace(/^ /, NBSP);
+
+/** HTML colado (sites, Word, Google Docs, VS Code) com o espaçamento certo. */
+function normalizePastedHtml(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const body = doc.body;
+  // lixo do Word / comentários
+  const walker = doc.createTreeWalker(body, NodeFilter.SHOW_COMMENT);
+  const comments = [];
+  while (walker.nextNode()) comments.push(walker.currentNode);
+  comments.forEach((c) => c.remove());
+  [...body.getElementsByTagName('*')].forEach((el) => {
+    if (/:/.test(el.tagName)) el.remove(); // <o:p> etc.
+  });
+  // Google Docs embrulha tudo num <b style="font-weight:normal">
+  body.querySelectorAll('b[id^="docs-internal-guid"]').forEach((b) => b.replaceWith(...b.childNodes));
+  // Onde o site usa white-space: pre (código, VS Code, Google Docs):
+  // quebras viram <br> e espaços/tabs viram espaços fixos
+  const preLike = [...body.querySelectorAll('[style]')].filter((el) => /white-space\s*:\s*(pre|break-spaces)/i.test(el.getAttribute('style') || ''));
+  preLike.forEach((el) => {
+    if (el.closest('pre')) return;
+    const tw = doc.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const texts = [];
+    while (tw.nextNode()) texts.push(tw.currentNode);
+    texts.forEach((t) => {
+      if (!t.nodeValue) return;
+      const frag = doc.createDocumentFragment();
+      t.nodeValue.split('\n').forEach((part, i) => {
+        if (i) frag.appendChild(doc.createElement('br'));
+        const fixed = part.replace(/\t/g, NBSP.repeat(4)).replace(/ {2,}/g, (m) => `${NBSP.repeat(m.length - 1)} `).replace(/^ /, NBSP);
+        if (fixed) frag.appendChild(doc.createTextNode(fixed));
+      });
+      t.replaceWith(frag);
+    });
+  });
+  // parágrafos/linhas vazios continuam como linha em branco
+  body.querySelectorAll('p, div, li, h1, h2, h3, h4').forEach((el) => {
+    if (!el.textContent.replace(/\u00a0/g, ' ').trim() && !el.querySelector('img, br, hr')) el.innerHTML = '<br>';
+  });
+  return body.innerHTML;
+}
+
+/** Texto puro → linhas com <br> (exatamente como foi copiado). */
+function plainToLines(text) {
+  const t = String(text || '').replace(/\r\n?/g, '\n');
+  const html = t.split('\n').map(keepSpaces).join('<br>');
+  // <br> no fim de um bloco não aparece: termina com quebra → mais uma
+  return /\n$/.test(t) ? `${html}<br>` : html;
+}
+
+/** Põe o HTML no lugar do cursor sem o navegador mexer na estrutura
+ *  (o insertHTML do Chrome junta/perde linhas e parágrafos). */
+const BLOCK_RE = /^(P|DIV|UL|OL|PRE|H[1-6]|BLOCKQUOTE|FIGURE|TABLE|HR)$/;
+function insertHtmlAt(el, html) {
+  const sel = window.getSelection();
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  const nodes = [...tpl.content.childNodes];
+  if (!nodes.length) return;
+  if (!sel || !sel.rangeCount || !el.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+    nodes.forEach((n) => el.appendChild(n));
+    return;
+  }
+  const range = sel.getRangeAt(0);
+  range.deleteContents();
+  const isBlock = (n) => n.nodeType === 1 && BLOCK_RE.test(n.tagName);
+  const last = nodes[nodes.length - 1];
+  let block = range.startContainer;
+  while (block && block.parentNode !== el) block = block.parentNode;
+  if (nodes.some(isBlock) && block && block !== el) {
+    // divide o parágrafo onde está o cursor e encaixa os blocos no meio
+    const tailRange = document.createRange();
+    tailRange.setStart(range.startContainer, range.startOffset);
+    tailRange.setEnd(block, block.childNodes.length);
+    const tail = tailRange.extractContents();
+    const tailBlock = block.nodeType === 1 ? block.cloneNode(false) : document.createElement('p');
+    tailBlock.appendChild(tail);
+    let i = 0;
+    if (block.nodeType === 1) {
+      while (i < nodes.length && !isBlock(nodes[i])) block.appendChild(nodes[i++]);
+    }
+    let ref = block;
+    for (; i < nodes.length; i++) {
+      ref.after(nodes[i]);
+      ref = nodes[i];
+    }
+    const empty = (b) => b.nodeType === 1 && !b.textContent.replace(/\u00a0/g, ' ').trim() && !b.querySelector('img, a, hr');
+    if (!empty(tailBlock)) ref.after(tailBlock);
+    if (empty(block) && block !== ref) block.remove();
+  } else {
+    const frag = document.createDocumentFragment();
+    nodes.forEach((n) => frag.appendChild(n));
+    range.insertNode(frag);
+  }
+  // cursor no fim do que entrou
+  if (!last.isConnected) return;
+  const r = document.createRange();
+  if (last.nodeType === 1 && !/^(BR|IMG|HR)$/.test(last.tagName)) {
+    r.selectNodeContents(last);
+    r.collapse(false);
+  } else {
+    r.setStartAfter(last);
+    r.collapse(true);
+  }
+  sel.removeAllRanges();
+  sel.addRange(r);
+}
 
 const BLOCKS = [
   ['p', 'Parágrafo'],
@@ -554,6 +673,26 @@ export function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClo
     const el = editorRef.current;
     if (sel && sel.rangeCount && el && el.contains(sel.anchorNode)) savedRangeRef.current = sel.getRangeAt(0).cloneRange();
   };
+  // Move a imagem (com a moldura) para antes/depois do parágrafo onde foi solta
+  const dragImgRef = useRef(null);
+  const moveImage = (node, x, y) => {
+    const el = editorRef.current;
+    if (!el || !node || !el.contains(node)) return;
+    let block = document.elementFromPoint(x, y);
+    while (block && block.parentNode && block.parentNode !== el) block = block.parentNode;
+    if (!block || block === el || block.parentNode !== el || block === node || node.contains(block)) return;
+    const r = block.getBoundingClientRect();
+    const before = y < r.top + r.height / 2;
+    // a moldura deixa um parágrafo vazio para trás: tira junto
+    const after = node.nextSibling;
+    el.insertBefore(node, before ? block : block.nextSibling);
+    if (after && after !== node && after.nodeType === 1 && after.tagName === 'P' && !after.textContent.trim() && !after.querySelector('img, a') && after.parentNode === el && after.previousSibling !== node && after !== el.lastElementChild) {
+      after.remove();
+    }
+    sfx.play('drop');
+    save();
+  };
+
   const insertImages = async (files) => {
     const list = [...(files || [])].filter((f) => /^image\//.test(f.type));
     if (!list.length) return;
@@ -1052,12 +1191,14 @@ export function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClo
     const html = e.clipboardData.getData('text/html');
     const text = e.clipboardData.getData('text/plain');
     e.preventDefault();
-    if (html) {
-      // Tira estilos de sites (fonte, cores, tamanhos) e mantém a estrutura
-      const clean = cleanHtml(html).replace(/\s(style|class|id|width|height)="[^"]*"/gi, '');
-      document.execCommand('insertHTML', false, clean);
-    } else {
-      document.execCommand('insertText', false, text);
+    if (html && html.trim()) {
+      // Tira estilos de sites (fonte, cores, tamanhos) mas mantém a estrutura
+      // e o espaçamento (quebras, linhas em branco, recuos)
+      const clean = cleanHtml(normalizePastedHtml(html)).replace(/\s(style|class|id|width|height|dir|lang)="[^"]*"/gi, '');
+      insertHtmlAt(editorRef.current, clean);
+    } else if (text) {
+      // Texto puro: linhas, linhas em branco, recuos e tabs exatamente como vieram
+      insertHtmlAt(editorRef.current, plainToLines(text));
     }
     save();
   };
@@ -1098,6 +1239,42 @@ export function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClo
     sfx.play('delete');
   };
   const outgoing = linksIn(note.content).filter((id) => store.byId.has(id));
+  // ---------- Ligações (botão) ----------
+  const linkedNow = new Set(linksIn(doc.content || '').filter((id) => store.byId.has(id)));
+  const toggleLink = (t) => {
+    const el = editorRef.current;
+    if (!el || !t) return;
+    const found = el.querySelectorAll(`a.wikilink[data-id="${t.id}"]`);
+    if (found.length) {
+      found.forEach((a) => {
+        const nx = a.nextSibling;
+        if (nx && nx.nodeType === 3 && nx.nodeValue.startsWith(NBSP)) nx.nodeValue = nx.nodeValue.slice(1);
+        const parent = a.parentNode;
+        a.remove();
+        if (parent && parent !== el && parent.tagName === 'P' && !parent.textContent.replace(/\u00a0/g, ' ').trim() && !parent.querySelector('img, a')) parent.remove();
+      });
+      sfx.play('tick');
+    } else {
+      // junta no último parágrafo de ligações (ou cria um no fim)
+      const last = el.lastElementChild;
+      const onlyLinks =
+        last &&
+        last.tagName === 'P' &&
+        last.querySelector('a.wikilink') &&
+        [...last.childNodes].every((c) => (c.nodeType === 1 && c.matches('a.wikilink, br')) || (c.nodeType === 3 && !c.nodeValue.replace(/\u00a0/g, ' ').trim()));
+      if (onlyLinks) {
+        last.querySelectorAll('br').forEach((b) => b.remove());
+        last.insertAdjacentHTML('beforeend', `${wikilinkHtml(t)}&nbsp;`);
+      } else {
+        const p = document.createElement('p');
+        p.innerHTML = `${wikilinkHtml(t)}&nbsp;`;
+        if (last && last.tagName === 'P' && !last.textContent.replace(/\u00a0/g, ' ').trim() && !last.querySelector('img, a')) last.replaceWith(p);
+        else el.appendChild(p);
+      }
+      sfx.play('branch');
+    }
+    save();
+  };
   const incoming = [...(store.backlinks.get(note.id) || [])];
   const tagSuggestions = store.tags.map((t) => t.tag).filter((t) => !(note.tags || []).includes(t));
 
@@ -1220,6 +1397,15 @@ export function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClo
             sfx.play(skillId ? 'branch' : 'tick');
             store.updateNote(note.id, { skillId: skillId || null });
           }}
+        />
+        {/* Ligações com qualquer nota ou neurônio (o mesmo que [[ ]]) */}
+        <LinkPicker
+          notes={store.notes}
+          folders={store.folders || []}
+          selfId={note.id}
+          linkedIds={linkedNow}
+          onToggle={toggleLink}
+          onCreate={(title) => toggleLink(store.addNote({ title, tags: [] }))}
         />
       </div>
       )}
@@ -1513,10 +1699,25 @@ export function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClo
           onMouseUp={refreshState}
           onClick={onEditorClick}
           onPaste={onPaste}
+          onDragStart={(e) => {
+            // arrastar uma imagem que já está no texto: é mover, não copiar
+            const t = e.target;
+            const fig = t && t.closest ? t.closest('figure') : null;
+            dragImgRef.current = fig && editorRef.current.contains(fig) ? fig : t && t.tagName === 'IMG' ? t : null;
+          }}
+          onDragEnd={() => {
+            dragImgRef.current = null;
+          }}
           onDragOver={(e) => {
-            if ([...(e.dataTransfer.items || [])].some((it) => it.kind === 'file')) e.preventDefault();
+            if (dragImgRef.current || [...(e.dataTransfer.items || [])].some((it) => it.kind === 'file')) e.preventDefault();
           }}
           onDrop={(e) => {
+            if (dragImgRef.current) {
+              e.preventDefault();
+              moveImage(dragImgRef.current, e.clientX, e.clientY);
+              dragImgRef.current = null;
+              return;
+            }
             const files = [...(e.dataTransfer.files || [])].filter((f) => /^image\//.test(f.type));
             if (!files.length) return;
             e.preventDefault();
