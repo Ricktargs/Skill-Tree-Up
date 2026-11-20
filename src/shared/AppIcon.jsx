@@ -77,14 +77,19 @@ const ICONS = {
       />
     </>
   ),
-  // Tema: aquarela — três manchas que se misturam e um pincel
+  // Tema: paleta de pintor (furo do polegar) com tintas coloridas
   theme: (
     <>
-      <path className="app-ic-wc wc-a" d="M3.6 9.6c.4-3.2 3.6-5.6 6.8-5 2.8.5 4.4 3.3 3.6 6-.8 2.8-3.8 4.4-6.6 3.8-2.4-.5-4.1-2.5-3.8-4.8z" />
-      <path className="app-ic-wc wc-b" d="M10.6 9.2c2.2-1.7 5.8-1.2 7.4 1.1 1.5 2.1.9 5.2-1.2 6.6-2.2 1.5-5.4 1-6.9-1.2-1.3-1.8-1-4.9.7-6.5z" />
-      <path className="app-ic-wc wc-c" d="M4.8 15.4c.9-2.3 3.8-3.3 6-2.3 2.1.9 2.9 3.6 1.8 5.5-1.1 2-3.9 2.7-5.9 1.6-1.7-.9-2.6-3-1.9-4.8z" />
-      <path className="app-ic-ink" d="M20.6 2.6c.5.5.4 1.2-.1 1.7l-5.8 6.4-1.4-1.4 6.4-5.8c.5-.5 1.2-.5 1.7-.1z" />
-      <path className="app-ic-ink" d="M12.6 10.1l1.4 1.4c-.3 1.6-1.6 2.6-3.3 2.4.4-.6.5-1.1.6-1.7.1-1 .5-1.8 1.3-2.1z" />
+      <Wash n={2} />
+      <path
+        className="app-ic-ink"
+        fillRule="evenodd"
+        d="M12.2 3.2c5 0 9 3.3 9 7.6 0 2.6-1.9 3.9-4 3.9h-1.5c-1 0-1.7.8-1.7 1.7 0 .4.2.8.4 1.1.3.4.5.8.5 1.3 0 1.2-1 2-2.6 2-5.1 0-9.1-3.8-9.1-8.7 0-5 4.1-8.9 9-8.9zM7.6 14.8a1.7 1.7 0 1 0 0 3.4 1.7 1.7 0 0 0 0-3.4z"
+      />
+      <circle className="app-ic-paint p1" cx="7.4" cy="10.2" r="1.55" />
+      <circle className="app-ic-paint p2" cx="10.4" cy="6.9" r="1.55" />
+      <circle className="app-ic-paint p3" cx="14.6" cy="6.7" r="1.55" />
+      <circle className="app-ic-paint p4" cx="17.6" cy="9.8" r="1.55" />
     </>
   ),
   tasks: (

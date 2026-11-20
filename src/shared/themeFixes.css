@@ -320,11 +320,12 @@ body:has(.np-panel) .notes-dock .dock-flash { display: none !important; }
 .app-ic-back { opacity: 0.55; }
 .app-ic-sand { fill: var(--theme-accent, #38bdf8); }
 .app-ic-ray { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
-/* aquarela do Tema: três cores que se misturam */
-.app-ic-wc { mix-blend-mode: normal; opacity: 0.85; stroke-width: 0.5; stroke-opacity: 0.7; }
-.app-ic-wc.wc-a { fill: #e86a6a; stroke: #c0392b; }
-.app-ic-wc.wc-b { fill: #5aa9e6; stroke: #2e6f9e; opacity: 0.78; }
-.app-ic-wc.wc-c { fill: #f4c95d; stroke: #b98a1a; opacity: 0.82; }
+/* paleta do Tema: tintas coloridas sobre a paleta */
+.app-ic-paint { stroke: rgba(0, 0, 0, 0.25); stroke-width: 0.4; }
+.app-ic-paint.p1 { fill: #ef6b6b; }
+.app-ic-paint.p2 { fill: #f4c95d; }
+.app-ic-paint.p3 { fill: #5aa9e6; }
+.app-ic-paint.p4 { fill: #6fcf8e; }
 .top-icon-button .app-ic { width: 24px; height: 24px; transition: transform 0.18s ease; }
 .top-icon-button:hover .app-ic { transform: scale(1.08) rotate(-3deg); }
 .top-icon-button:hover .ic-settings { transform: rotate(35deg); }

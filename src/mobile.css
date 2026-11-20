@@ -449,7 +449,6 @@ html.is-touch .nr-svg [filter] { filter: none !important; }
 .sanc-pad-btn.right { grid-area: right; }
 .sanc-pad-btn.down { grid-area: down; }
 .sanc-pad-btn.jump { width: 64px; height: 64px; border-radius: 50%; font-size: 24px; }
-.sanc-pad-btn.dig { width: 52px; height: 52px; border-radius: 14px; font-size: 22px; margin-right: 10px; }
 @media (max-height: 520px) and (orientation: landscape) {
   .sanc-pad { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
 }

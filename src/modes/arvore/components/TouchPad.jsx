@@ -52,7 +52,6 @@ export default function TouchPad() {
         <PadButton k="d" label="▶" className="right" />
         <PadButton k="s" label="▼" className="down" />
       </div>
-      <PadButton k="2" code="Numpad2" label="⛏" className="dig" repeat />
       <PadButton k=" " label="⤒" className="jump" />
     </div>
   );

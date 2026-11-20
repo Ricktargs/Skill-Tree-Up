@@ -94,7 +94,7 @@ const read = () => {
   const v = { ...DEFAULT, ...(loadJSON(KEY, null) || {}) };
   let layouts;
   if (Array.isArray(v.layouts) && v.layouts.length === 3) {
-    layouts = v.layouts.map((l, i) => ({ kind: Object.keys(LAYOUT_KINDS)[i], items: cleanItems(l.items), mined: Array.isArray(l.mined) ? l.mined : [] }));
+    layouts = v.layouts.map((l, i) => ({ kind: Object.keys(LAYOUT_KINDS)[i], items: cleanItems(l.items) }));
   } else {
     // versões anteriores: o que já estava decorado vai para o layout Terra; perfil novo usa o padrão
     layouts = defaultLayouts(Array.isArray(v.items) ? cleanItems(v.items) : v.pos ? defaultItems(v.pos) : undefined);
@@ -165,53 +165,9 @@ const currentItems = () => shownLayout(get()).items;
 const resetLayout = (kind) => {
   const s = get();
   const idx = shownIndex(s);
-  setSanctuary({ layouts: s.layouts.map((l, i) => (i === idx ? { ...l, items: defaultsFor(kind), mined: [] } : l)) });
+  setSanctuary({ layouts: s.layouts.map((l, i) => (i === idx ? { ...l, items: defaultsFor(kind) } : l)) });
 };
 
-/* ---------------- quebrar blocos (com a mão, por enquanto) ---------------- */
-// batidas em andamento (não salvas) e pedacinhos voando
-const dig = { hits: new Map(), bursts: [], version: 0 };
-const digListeners = new Set();
-const digNotify = () => {
-  dig.version += 1;
-  digListeners.forEach((l) => l());
-};
-const useDig = () =>
-  useSyncExternalStore(
-    (l) => {
-      digListeners.add(l);
-      return () => digListeners.delete(l);
-    },
-    () => dig.version
-  );
-/** Uma batida no bloco (c, r). Devolve true se quebrou. */
-export function hitBlock(world, c, r) {
-  const k = world.blocks.keyOf(c, r);
-  const type = world.blocks.blockType(c, r);
-  if (!type || world.blocks.isMined(c, r)) return false;
-  const need = BLOCK_TYPES[type]?.hits || 2;
-  const n = (dig.hits.get(k) || 0) + 1;
-  if (n < need) {
-    dig.hits.set(k, n);
-    sfx.play("branch");
-    digNotify();
-    return false;
-  }
-  dig.hits.delete(k);
-  const id = Date.now() + Math.random();
-  dig.bursts.push({ id, c, r, type });
-  setTimeout(() => {
-    dig.bursts = dig.bursts.filter((b) => b.id !== id);
-    digNotify();
-  }, 700);
-  const s = get();
-  const idx = shownIndex(s);
-  const layouts = s.layouts.map((l, i) => (i === idx ? { ...l, mined: [...(l.mined || []), k] } : l));
-  setSanctuary({ layouts });
-  sfx.play("rustle");
-  digNotify();
-  return true;
-}
 const updateItem = (id, patch, live = false) => setItems(currentItems().map((i) => (i.id === id ? { ...i, ...patch } : i)), live);
 export const removeItem = (id) => {
   if (!id || id === "main") return;
@@ -267,20 +223,6 @@ const smooth = (t) => t * t * (3 - 2 * t);
 const LEAF_PATH = "M 0,-5 C 3.5,-2 3.5,4 0,6.5 C -3.5,4 -3.5,-2 0,-5 Z";
 export const LAKE_W = 600;
 
-/* ---------------- blocos do terreno (estilo Terraria) ---------------- */
-export const BLOCK = 40; // tamanho de um bloco (unidades do desenho)
-const GRID_X0 = -4000; // a grade começa aqui (colunas alinhadas em qualquer layout)
-const BLOCK_ROWS = { terra: 7, voadora: 4, mar: 5 };
-// quantas batidas com a mão cada bloco aguenta
-export const BLOCK_TYPES = {
-  grass: { name: "Grama", hits: 2 },
-  dirt: { name: "Terra", hits: 2 },
-  sand: { name: "Areia", hits: 1 },
-  wood: { name: "Madeira", hits: 3 },
-  stone: { name: "Pedra", hits: 4 },
-  cracked: { name: "Pedra rachada", hits: 2 },
-  amethyst: { name: "Minério de ametista", hits: 5 },
-};
 const SEA = 676; // nível do mar (Ilha com mar)
 const EDGE = 150; // largura da descida nas pontas das ilhas
 const VOID = 2400; // "chão" fora da ilha voadora (não tem chão)
@@ -329,7 +271,7 @@ export function sanctuaryWorld(layout) {
       return !best || d < best.d ? { s, d } : best;
     }, null)?.s;
 
-  const smoothTop = (x) => {
+  const top = (x) => {
     if (kind === "terra") return base(x);
     const seg = segOf(x);
     if (!seg) return kind === "mar" ? SEA + 30 : VOID;
@@ -355,99 +297,11 @@ export function sanctuaryWorld(layout) {
       const b = l.x + W / 2 - W * 0.16;
       const step = Math.max(8, 12 * size);
       let lowest = -Infinity;
-      for (let px = a; px <= b; px += step) lowest = Math.max(lowest, smoothTop(px));
+      for (let px = a; px <= b; px += step) lowest = Math.max(lowest, top(px));
       return { from: a - W * 0.02, to: b + W * 0.02, x0: l.x - W / 2, x1: l.x + W / 2, level: lowest + 8 * Math.min(1.4, size), size };
     });
   const water = (x) => pools.find((w) => x >= w.from && x <= w.to) || null;
 
-  // ---- blocos: colunas de BLOCK de largura; o chão vira degraus ----
-  const B = BLOCK;
-  const colOf = (x) => Math.floor((x - GRID_X0) / B);
-  const colX0 = (c) => GRID_X0 + c * B;
-  const colMid = (c) => colX0(c) + B / 2;
-  const range = kind === "terra" ? [[TERRA_MIN - 320, TERRA_MAX + 320]] : segments;
-  const inRange = (x) => range.some(([a, b]) => x >= a && x <= b);
-  const landMemo = new Map();
-  const isLand = (c) => {
-    if (landMemo.has(c)) return landMemo.get(c);
-    const xm = colMid(c);
-    const st = smoothTop(xm);
-    const ok =
-      inRange(xm) &&
-      !water(xm) &&
-      // o lago inteiro (com o barranco) fica sem blocos
-      !pools.some((w) => colX0(c) + B > w.x0 && colX0(c) < w.x1) &&
-      (kind === "terra" || (kind === "mar" ? st < SEA - 6 : st < VOID - 200));
-    landMemo.set(c, ok);
-    return ok;
-  };
-  const surf = (c) => Math.round(smoothTop(colMid(c)) / B) * B;
-  const rowsOf = (c) => {
-    const n = BLOCK_ROWS[kind] || 6;
-    if (kind !== "mar") return n;
-    return Math.max(1, Math.min(n, Math.floor((SEA + 30 - surf(c)) / B)));
-  };
-  // topo do chão: em degraus onde há blocos (as decorações apoiam aqui)
-  const top = (x) => {
-    const c = colOf(x);
-    return isLand(c) ? surf(c) : smoothTop(x);
-  };
-  const mined = new Set(Array.isArray(layout?.mined) ? layout.mined : []);
-  const keyOf = (c, r) => `${c},${r}`;
-  // o "fim do terreno": últimas colunas à direita (onde fica a ametista)
-  const lastLand = (() => {
-    const [, b] = range[range.length - 1] || [0, 0];
-    let c = colOf(b);
-    while (c > colOf(b) - 60 && !isLand(c)) c -= 1;
-    return c;
-  })();
-  const trees = items.filter((i) => i.type === "tree");
-  const sandy = (c) => pools.some((w) => colMid(c) > w.x0 - 2.5 * B && colMid(c) < w.x1 + 2.5 * B);
-  const blockType = (c, r) => {
-    if (!isLand(c) || r < 0 || r >= rowsOf(c)) return null;
-    const h = rand(c * 7.13 + r * 3.71 + 0.5);
-    const xm = colMid(c);
-    if (sandy(c) && r <= 1) return "sand";
-    if (sandy(c) && r === 2 && h < 0.5) return "sand";
-    // raízes viram madeira embaixo das árvores
-    if (r >= 1 && r <= 3 && Math.abs(xm - main.x) < 42 * (main.size || 1)) return "wood";
-    if (r >= 1 && r <= 2 && trees.some((t) => Math.abs(xm - t.x) < 24 * (t.size || 1))) return "wood";
-    if (r === 0) return "grass";
-    if (r <= 2) return r === 2 && h < 0.3 ? "stone" : "dirt";
-    if (r >= 3 && c >= lastLand - 7 && h < 0.5) return "amethyst";
-    return h < 0.18 ? "cracked" : "stone";
-  };
-  const isMined = (c, r) => mined.has(keyOf(c, r));
-  const solid = (c, r) => Boolean(blockType(c, r)) && !isMined(c, r);
-  // chão de verdade sob os pés (considera os blocos quebrados)
-  const groundBlock = (x) => {
-    const c = colOf(x);
-    if (!isLand(c)) return null;
-    const n = rowsOf(c);
-    for (let r = 0; r < n; r++) if (solid(c, r)) return surf(c) + r * B;
-    return surf(c) + n * B; // embaixo de tudo: rocha que não quebra
-  };
-  // contorno do chão em degraus (para o desenho da terra por baixo)
-  const outline = (from, to, step = 25) => {
-    const pts = [];
-    let x = from;
-    while (x <= to) {
-      const c = colOf(x);
-      if (isLand(c)) {
-        const x1 = Math.min(colX0(c) + B, to);
-        pts.push([Math.max(colX0(c), from), surf(c)], [x1, surf(c)]);
-        x = colX0(c) + B + 0.001;
-      } else {
-        pts.push([x, smoothTop(x)]);
-        x += step;
-      }
-    }
-    return pts;
-  };
-  const landCols = [];
-  range.forEach(([a, b]) => {
-    for (let c = colOf(a); c <= colOf(b); c++) if (isLand(c)) landCols.push(c);
-  });
   const main = items.find((i) => i.type === "main") || { x: MAIN_X, size: 1 };
   // o pé do tronco entra um pouco na terra: o corte no chão (GroundClip)
   // esconde o que fica enterrado, e o tronco sempre encosta no terreno
@@ -458,13 +312,10 @@ export function sanctuaryWorld(layout) {
     items,
     segments,
     top,
-    smoothTop,
     walk,
     water,
     pools,
     main,
-    blocks: { B, colOf, colX0, surf, rowsOf, blockType, isMined, solid, groundBlock, landCols, keyOf, mined },
-    outline,
     xL: kind === "terra" ? TERRA_MIN : Math.min(...xs),
     xR: kind === "terra" ? TERRA_MAX : Math.max(...xs),
     mainTransform: `translate(${main.x} ${mainBase}) scale(${(main.flip ? -1 : 1) * (main.size || 1)} ${main.size || 1}) translate(${-MAIN_X} ${-BASE_Y})`,
@@ -513,8 +364,9 @@ function Earth({ body, strokes, tufts }) {
 export const WorldGround = memo(function WorldGround({ world }) {
   const { kind, top, segments } = world;
   if (kind === "terra") {
-    const pts = world.outline(TERRA_MIN - 1500, TERRA_MAX + 1500);
-    const body = `M ${pts.map((q) => q.join(" ")).join(" L ")} L ${TERRA_MAX + 1500} 4000 L ${TERRA_MIN - 1500} 4000 Z`;
+    const pts = [];
+    for (let x = TERRA_MIN - 1500; x <= TERRA_MAX + 1500; x += 25) pts.push([x, top(x)]);
+    const body = `${smoothPath(pts)} L ${TERRA_MAX + 1500} 4000 L ${TERRA_MIN - 1500} 4000 Z`;
     return (
       <g className="ground" aria-hidden="true">
         <Earth body={body} strokes={groundStrokes(-1100, 2200, top, 14)} tufts={grassTufts(-700, 1950, top)} />
@@ -525,7 +377,8 @@ export const WorldGround = memo(function WorldGround({ world }) {
     <g className={`sanc-island ${kind}`} aria-hidden="true">
       {kind === "mar" && <rect className="sanc-sea-deep" x={-6000} y={SEA} width={14000} height="3000" />}
       {segments.map(([a, b], si) => {
-        const pts = world.outline(a, b, 20);
+        const pts = [];
+        for (let x = a; x <= b + 0.1; x += 20) pts.push([x, top(x)]);
         const under = [];
         const w = b - a;
         // voadora: a parte de baixo é uma rocha pendurada; com mar: fica sob a água
@@ -537,8 +390,7 @@ export const WorldGround = memo(function WorldGround({ world }) {
           const y0 = kind === "voadora" ? top(x) + 30 : SEA + 40;
           under.push([x, y0 + shape * depth + (rand(i + 3 + si * 7) - 0.5) * (kind === "voadora" ? 34 : 20)]);
         }
-        // topo em degraus (retas) + parte de baixo arredondada
-        const body = `M ${pts.map((q) => q.join(" ")).join(" L ")} ${smoothPath(under).replace(/^M/, "L")} Z`;
+        const body = smoothPath([...pts, ...under], true);
         // raízes e cipós pendurados embaixo da ilha voadora
         const hangs =
           kind === "voadora"
@@ -745,111 +597,6 @@ export function MainTreeRoots({ world, children }) {
     </g>
   );
 }
-
-/* ---------------- blocos (estilo Terraria, traço de nanquim) ---------------- */
-const BLOCK_ORDER = ["grass", "dirt", "sand", "wood", "stone", "cracked", "amethyst"];
-const cell = (x, y, B) => `M ${x} ${y} h ${B} v ${B} h ${-B} Z`;
-export const WorldBlocks = memo(function WorldBlocks({ world }) {
-  useDig();
-  const bl = world.blocks;
-  const B = bl.B;
-  const byType = {};
-  const holes = [];
-  const shade = [];
-  bl.landCols.forEach((c) => {
-    const x = bl.colX0(c);
-    const y0 = bl.surf(c);
-    const n = bl.rowsOf(c);
-    for (let r = 0; r < n; r++) {
-      const t = bl.blockType(c, r);
-      if (!t) continue;
-      const y = y0 + r * B;
-      if (bl.isMined(c, r)) {
-        holes.push(cell(x, y, B));
-        continue;
-      }
-      (byType[t] = byType[t] || []).push(cell(x, y, B));
-      if (r > 0) (shade[r] = shade[r] || []).push(cell(x, y, B));
-    }
-  });
-  // rachaduras das batidas em andamento
-  const cracks = [];
-  dig.hits.forEach((n, k) => {
-    const [c, r] = k.split(",").map(Number);
-    const t = bl.blockType(c, r);
-    if (!t || bl.isMined(c, r)) return;
-    const need = BLOCK_TYPES[t]?.hits || 2;
-    const x = bl.colX0(c);
-    const y = bl.surf(c) + r * B;
-    const lines = [
-      `M ${x + B * 0.5} ${y + B * 0.5} l ${-B * 0.32} ${-B * 0.18} M ${x + B * 0.5} ${y + B * 0.5} l ${B * 0.28} ${-B * 0.3}`,
-      `M ${x + B * 0.5} ${y + B * 0.5} l ${B * 0.3} ${B * 0.2} M ${x + B * 0.5} ${y + B * 0.5} l ${-B * 0.12} ${B * 0.38}`,
-      `M ${x + B * 0.18} ${y + B * 0.32} l ${-B * 0.12} ${-B * 0.2} M ${x + B * 0.78} ${y + B * 0.2} l ${B * 0.14} ${-B * 0.12} M ${x + B * 0.8} ${y + B * 0.7} l ${B * 0.12} ${B * 0.1}`,
-      `M ${x + B * 0.38} ${y + B * 0.88} l ${-B * 0.16} ${B * 0.1} M ${x + B * 0.1} ${y + B * 0.6} l ${-B * 0.08} ${B * 0.04}`,
-    ];
-    const stage = Math.min(lines.length, Math.ceil((n / need) * lines.length));
-    cracks.push(<path key={k} className="blk-crack" d={lines.slice(0, stage).join(" ")} />);
-  });
-  return (
-    <g className="sanc-blocks" aria-hidden="true">
-      <defs>
-        {/* texturas: cada bloco do tamanho de uma célula (alinhadas à grade) */}
-        <pattern id="blk-grass" patternUnits="userSpaceOnUse" x={GRID_X0} y="0" width={B} height={B}>
-          <rect className="bt-dirt" width={B} height={B} />
-          <path className="bt-speck" d={`M ${B * 0.3} ${B * 0.62} h 2 M ${B * 0.7} ${B * 0.78} h 2 M ${B * 0.52} ${B * 0.9} h 1.5`} />
-          <path className="bt-grass" d={`M 0 0 H ${B} V ${B * 0.3} q ${-B * 0.1} ${B * 0.1} ${-B * 0.2} 0 q ${-B * 0.12} ${B * 0.14} ${-B * 0.26} 0 q ${-B * 0.1} ${B * 0.12} ${-B * 0.24} 0 q ${-B * 0.1} ${B * 0.1} ${-B * 0.3} 0 Z`} />
-          <path className="bt-blade" d={`M ${B * 0.15} 0 v ${-B * 0.12} M ${B * 0.45} 0 v ${-B * 0.16} M ${B * 0.78} 0 v ${-B * 0.1}`} />
-        </pattern>
-        <pattern id="blk-dirt" patternUnits="userSpaceOnUse" x={GRID_X0} y="0" width={B} height={B}>
-          <rect className="bt-dirt" width={B} height={B} />
-          <path className="bt-speck" d={`M ${B * 0.2} ${B * 0.25} h 2.5 M ${B * 0.68} ${B * 0.18} h 2 M ${B * 0.42} ${B * 0.55} h 2.5 M ${B * 0.8} ${B * 0.62} h 2 M ${B * 0.18} ${B * 0.82} h 2 M ${B * 0.6} ${B * 0.86} h 1.5`} />
-          <circle className="bt-pebble" cx={B * 0.72} cy={B * 0.38} r={B * 0.06} />
-        </pattern>
-        <pattern id="blk-sand" patternUnits="userSpaceOnUse" x={GRID_X0} y="0" width={B} height={B}>
-          <rect className="bt-sand" width={B} height={B} />
-          <path className="bt-sand-dot" d={`M ${B * 0.15} ${B * 0.2} h .8 M ${B * 0.5} ${B * 0.12} h .8 M ${B * 0.82} ${B * 0.3} h .8 M ${B * 0.3} ${B * 0.5} h .8 M ${B * 0.66} ${B * 0.58} h .8 M ${B * 0.12} ${B * 0.78} h .8 M ${B * 0.48} ${B * 0.86} h .8 M ${B * 0.86} ${B * 0.8} h .8`} />
-          <path className="bt-sand-wave" d={`M ${B * 0.1} ${B * 0.38} q ${B * 0.15} ${-B * 0.06} ${B * 0.3} 0 M ${B * 0.5} ${B * 0.7} q ${B * 0.15} ${-B * 0.06} ${B * 0.3} 0`} />
-        </pattern>
-        <pattern id="blk-wood" patternUnits="userSpaceOnUse" x={GRID_X0} y="0" width={B} height={B}>
-          <rect className="bt-wood" width={B} height={B} />
-          <path className="bt-plank" d={`M 0 ${B / 3} H ${B} M 0 ${(2 * B) / 3} H ${B} M ${B * 0.55} 0 V ${B / 3} M ${B * 0.25} ${B / 3} V ${(2 * B) / 3} M ${B * 0.7} ${(2 * B) / 3} V ${B}`} />
-          <path className="bt-grain" d={`M ${B * 0.06} ${B * 0.16} h ${B * 0.36} M ${B * 0.62} ${B * 0.2} h ${B * 0.3} M ${B * 0.32} ${B * 0.5} h ${B * 0.5} M ${B * 0.08} ${B * 0.84} h ${B * 0.5}`} />
-          <circle className="bt-knot" cx={B * 0.84} cy={B * 0.84} r={B * 0.05} />
-        </pattern>
-        <pattern id="blk-stone" patternUnits="userSpaceOnUse" x={GRID_X0} y="0" width={B} height={B}>
-          <rect className="bt-stone" width={B} height={B} />
-          <path className="bt-rock" d={`M ${B * 0.12} ${B * 0.18} q ${B * 0.16} ${-B * 0.08} ${B * 0.3} ${B * 0.04} q ${B * 0.06} ${B * 0.16} ${-B * 0.12} ${B * 0.2} q ${-B * 0.2} ${-B * 0.02} ${-B * 0.18} ${-B * 0.24} Z M ${B * 0.58} ${B * 0.52} q ${B * 0.2} ${-B * 0.06} ${B * 0.3} ${B * 0.08} q ${B * 0.02} ${B * 0.18} ${-B * 0.16} ${B * 0.2} q ${-B * 0.18} ${-B * 0.04} ${-B * 0.14} ${-B * 0.28} Z`} />
-          <path className="bt-line" d={`M ${B * 0.1} ${B * 0.72} l ${B * 0.18} ${B * 0.06} M ${B * 0.66} ${B * 0.16} l ${B * 0.16} ${-B * 0.04}`} />
-        </pattern>
-        <pattern id="blk-cracked" patternUnits="userSpaceOnUse" x={GRID_X0} y="0" width={B} height={B}>
-          <rect className="bt-stone dark" width={B} height={B} />
-          <path className="bt-crackline" d={`M ${B * 0.08} ${B * 0.2} l ${B * 0.22} ${B * 0.12} l ${B * 0.08} ${B * 0.2} l ${B * 0.26} ${B * 0.06} l ${B * 0.1} ${B * 0.26} M ${B * 0.38} ${B * 0.52} l ${-B * 0.14} ${B * 0.3} M ${B * 0.64} ${B * 0.58} l ${B * 0.26} ${-B * 0.16} M ${B * 0.72} ${B * 0.1} l ${-B * 0.06} ${B * 0.2}`} />
-        </pattern>
-        <pattern id="blk-amethyst" patternUnits="userSpaceOnUse" x={GRID_X0} y="0" width={B} height={B}>
-          <rect className="bt-stone dark" width={B} height={B} />
-          <path className="bt-gem" d={`M ${B * 0.2} ${B * 0.7} l ${B * 0.08} ${-B * 0.3} l ${B * 0.1} ${B * 0.3} Z M ${B * 0.5} ${B * 0.62} l ${B * 0.1} ${-B * 0.42} l ${B * 0.12} ${B * 0.42} Z M ${B * 0.66} ${B * 0.86} l ${B * 0.06} ${-B * 0.2} l ${B * 0.08} ${B * 0.2} Z M ${B * 0.14} ${B * 0.26} l ${B * 0.06} ${-B * 0.14} l ${B * 0.06} ${B * 0.14} Z`} />
-          <path className="bt-glint" d={`M ${B * 0.58} ${B * 0.28} v ${B * 0.1} M ${B * 0.27} ${B * 0.46} v ${B * 0.07}`} />
-        </pattern>
-      </defs>
-      {holes.length > 0 && <path className="blk-hole" d={holes.join(" ")} />}
-      {BLOCK_ORDER.map((t) => (byType[t] ? <path key={t} className={`blk blk-${t}`} d={byType[t].join(" ")} fill={`url(#blk-${t})`} /> : null))}
-      {/* mais fundo = mais escuro (como no Terraria) */}
-      {shade.map((list, r) => (list ? <path key={`s${r}`} className="blk-shade" d={list.join(" ")} style={{ opacity: Math.min(0.5, r * 0.075) }} /> : null))}
-      {cracks}
-      {dig.bursts.map((b) => {
-        const x = bl.colX0(b.c) + B / 2;
-        const y = bl.surf(b.c) + b.r * B + B / 2;
-        return (
-          <g key={b.id} className={`blk-burst bt-${b.type}`} transform={`translate(${x} ${y})`}>
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-              <rect key={i} className="blk-bit" x={-3} y={-3} width={6} height={6} style={{ "--bx": `${Math.cos(i * 1.05) * 26}px`, "--by": `${-14 - Math.abs(Math.sin(i * 1.7)) * 22}px` }} />
-            ))}
-          </g>
-        );
-      })}
-    </g>
-  );
-});
 
 /* ---------------- atrás da árvore principal ---------------- */
 export const SanctuaryBack = memo(function SanctuaryBack({ world, season }) {
@@ -1174,7 +921,6 @@ const ScatterGrass = memo(function ScatterGrass({ world, season }) {
     let n = 0;
     for (let x = a; x < b; x += 60 + rand(x * 0.37 + ri) * 95) {
       if (busy.some(([l, r]) => x > l && x < r)) continue;
-      if (world.blocks && world.blocks.isMined(world.blocks.colOf(x), 0)) continue;
       const seed = Math.floor(x * 13.7) + ri * 97;
       const kinds = ["capim", "capim", "trevo", "arbusto", "samambaia", "junco"];
       out.push({
@@ -1458,7 +1204,7 @@ const ACCEL = 1500; // ganho de velocidade no chão
 const DECEL = 1900; // freio ao soltar
 const AIR_CONTROL = 0.55; // no ar dá para corrigir, mas menos
 const DEPTH_SPEED = 80;
-const JUMP_SPEED = 480; // passa por cima de 2 blocos
+const JUMP_SPEED = 400;
 const GRAVITY = 1250;
 const FALL_MULT = 1.55; // cai mais rápido do que sobe (pulo mais "gostoso")
 const CUT_JUMP = 0.45; // soltou o Espaço subindo: o pulo encurta
@@ -1471,8 +1217,6 @@ const DEPTH_MIN = -16;
 const DEPTH_MAX = 30;
 
 const isTyping = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
-// teclado numérico (e os números de cima, para quem não tem)
-const DIG_KEYS = { Numpad2: "down", Digit2: "down", Numpad4: "left", Numpad6: "right", Numpad8: "up" };
 const approach = (v, target, step) => (v < target ? Math.min(target, v + step) : Math.max(target, v - step));
 
 export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
@@ -1504,9 +1248,7 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
   const groundAt = (x) => {
     const w = worldRef.current;
     const pool = w.water && w.water(x);
-    if (pool) return pool.level + WADE * Math.min(1.3, pool.size);
-    const gb = w.blocks && w.blocks.groundBlock(x);
-    return gb != null ? gb + 2 : w.top(x) + 4;
+    return pool ? pool.level + WADE * Math.min(1.3, pool.size) : w.top(x) + 4;
   };
 
   // Posição na tela a partir da posição no desenho (acompanha zoom e arrasto)
@@ -1606,18 +1348,8 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
 
       const w = worldRef.current;
       const b = w.walk(p.x);
-      let nx = clamp(p.x + p.vx * dt, b.min, b.max);
+      const nx = clamp(p.x + p.vx * dt, b.min, b.max);
       if (nx === b.min || nx === b.max) p.vx = 0; // bateu na ponta
-      // parede de blocos: sobe sozinho 1 bloco; mais alto que isso, só pulando
-      if (p.vx) {
-        const probe = nx + Math.sign(p.vx) * 12;
-        const ahead = groundAt(probe);
-        const limit = p.air ? 3 : BLOCK * 1.05;
-        if (ahead < p.y - limit) {
-          nx = p.x;
-          p.vx = 0;
-        }
-      }
       const before = groundAt(p.x);
       p.x = nx;
       const ground = groundAt(p.x);
@@ -1674,34 +1406,6 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
     }
   }, []);
 
-  // bater no bloco ao lado/embaixo (segurar a tecla continua batendo)
-  const lastDig = useRef(0);
-  const digTowards = useCallback((dir) => {
-    const now = performance.now();
-    if (now - lastDig.current < 170) return;
-    lastDig.current = now;
-    const w = worldRef.current;
-    const bl = w.blocks;
-    if (!bl) return;
-    const p = pos.current;
-    const c0 = bl.colOf(p.x);
-    const rowAt = (c, y) => Math.floor((y - bl.surf(c)) / bl.B);
-    let targets = [];
-    if (dir === "down") targets = [[c0, rowAt(c0, p.y - 2 + 1)]];
-    else if (dir === "up") targets = [[c0, rowAt(c0, p.y - BLOCK * 3.2)]];
-    else {
-      const c = c0 + (dir === "left" ? -1 : 1);
-      // na altura da cintura, depois da cabeça, depois do pé
-      targets = [[c, rowAt(c, p.y - BLOCK * 0.5)], [c, rowAt(c, p.y - BLOCK * 1.5)], [c, rowAt(c, p.y + 2)]];
-      setLook(poseRef.current.pose, dir === "left" ? -1 : 1);
-    }
-    const hit = targets.find(([c, r]) => bl.solid(c, r));
-    if (!hit) return;
-    hitBlock(w, hit[0], hit[1]);
-    // quebrou embaixo: o chão some e ele cai
-    kick();
-  }, [kick, setLook]);
-
   const jump = useCallback(() => {
     const p = pos.current;
     if (!p.air || p.coyote > 0) startJump(p);
@@ -1736,11 +1440,6 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
         e.preventDefault();
         e.stopImmediatePropagation();
         if (!e.repeat) jump();
-      } else if (DIG_KEYS[e.code]) {
-        // teclado numérico: 2 cava embaixo · 4/6 quebra dos lados · 8 em cima
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        digTowards(DIG_KEYS[e.code]);
       }
     };
     const onUp = (e) => {
@@ -1763,7 +1462,7 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
       cancelAnimationFrame(raf.current);
       raf.current = 0;
     };
-  }, [kick, jump, digTowards]);
+  }, [kick, jump]);
 
   // virado para o lado em que anda; parado, olha um pouco para a frente
   const moving = pose === "walk" || pose === "jump";
@@ -1941,7 +1640,7 @@ export async function importLayout(index, file) {
     no: "Cancelar",
   });
   if (!ok) return;
-  const layouts = s.layouts.map((l, i) => (i === index ? { ...l, items: cleanItems(data.items), mined: [] } : l));
+  const layouts = s.layouts.map((l, i) => (i === index ? { ...l, items: cleanItems(data.items) } : l));
   setSanctuary({ layouts, viewing: index === s.active ? null : index, selected: null });
 }
 
@@ -2242,7 +1941,6 @@ export function SanctuaryPanel({ prefs }) {
               <span><kbd>+</kbd><kbd>−</kbd> tamanho</span>
               <span><kbd>Esc</kbd> solta</span>
               <span><kbd>WASD</kbd> anda · <kbd>Espaço</kbd> pula</span>
-              <span><kbd>2</kbd> cava (teclado numérico) · <kbd>4</kbd><kbd>6</kbd> lados · <kbd>8</kbd> em cima</span>
             </div>
             <button type="button" className="sd-reset" onClick={() => resetLayout(layout.kind)}>
               ↺ Voltar este layout ao começo

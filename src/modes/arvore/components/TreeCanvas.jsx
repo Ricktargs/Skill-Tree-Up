@@ -13,7 +13,7 @@ import { refuseExtraTrees, useGrowthPermissions } from "../lib/growthPermissions
 import TouchPad from "./TouchPad.jsx";
 import { IS_TOUCH } from "../../../shared/touch.js";
 import { registerModeActions } from "../../../shared/modeBridge.js";
-import { BranchHandles, BranchLanterns, BranchTools, MainTreeRoots, MainTreeWrap, WorldBlocks, SanctuaryBack, SanctuaryBackdrop, selectBranch, SanctuaryFront, SanctuaryHero, SanctuaryPanel, WorldGround, sanctuaryWorld, seasonOf, shownLayout, useSanctuary } from "./Sanctuary.jsx";
+import { BranchHandles, BranchLanterns, BranchTools, MainTreeRoots, MainTreeWrap, SanctuaryBack, SanctuaryBackdrop, selectBranch, SanctuaryFront, SanctuaryHero, SanctuaryPanel, WorldGround, sanctuaryWorld, seasonOf, shownLayout, useSanctuary } from "./Sanctuary.jsx";
 
 const HOLD_MS = 1500;
 const DRAG_THRESHOLD = 6;
@@ -498,8 +498,6 @@ const TreeScene = memo(function TreeScene({
         </MainTreeRoots>
       )}
       {sanctuary ? <WorldGround world={world} /> : <Ground />}
-      {/* blocos do terreno (quebráveis) */}
-      {sanctuary && <WorldBlocks world={world} />}
       {sanctuary && <SanctuaryBack world={world} season={season} />}
       <MainTreeWrap world={sanctuary ? world : null}>
       {!sanctuary && <ForestRoots trees={trees} />}
