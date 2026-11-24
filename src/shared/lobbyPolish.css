@@ -628,3 +628,59 @@ html #root .lv-card .remove-task-btn:hover { opacity: 1 !important; background: 
   html #root .lv-goal { font-size: 16px !important; }
   html #root .lv-add { height: 30px !important; }
 }
+
+/* ---------- (i) das missões e mini missões (igual ao dos níveis) ---------- */
+html #root .mission-info-btn {
+  margin-left: 0 !important;
+  flex-shrink: 0;
+}
+.mission-head-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.mission-info-title {
+  margin: 0.8rem 0 0.6rem;
+  font-size: 0.85rem;
+  opacity: 0.8;
+  word-break: break-word;
+}
+.mission-info-backdrop .info-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--theme-border, rgba(255, 255, 255, 0.15));
+  border-radius: 8px;
+  padding: 0.75rem;
+  color: inherit;
+  font: inherit;
+  font-size: 0.88rem;
+  resize: vertical;
+  outline: none;
+  margin-bottom: 1rem;
+  min-height: min(45vh, 300px);
+  line-height: 1.5;
+}
+
+/* ---------- Níveis: segurar 1s e arrastar para reordenar ---------- */
+html #root .lv-card {
+  transition: box-shadow 0.15s ease, outline-color 0.15s ease;
+}
+html #root .lv-card.lp-lifted {
+  position: relative;
+  z-index: 50;
+  cursor: grabbing;
+  pointer-events: none;
+  opacity: 0.92;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45), 0 0 0 2px var(--theme-accent, #38bdf8) !important;
+  transition: none;
+}
+html #root .lv-card.lp-drop-target {
+  outline: 2px dashed var(--theme-accent, #38bdf8);
+  outline-offset: 3px;
+}
+body.lp-reordering,
+body.lp-reordering * {
+  user-select: none !important;
+  cursor: grabbing !important;
+}

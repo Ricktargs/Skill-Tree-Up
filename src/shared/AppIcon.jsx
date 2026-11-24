@@ -2,7 +2,6 @@
 // ÍCONES DO ORBE-G (botões principais)
 // Estilo nanquim + aquarela: silhueta cheia de tinta (cor do texto)
 // sobre uma mancha de aquarela na cor do tema, cada uma de um jeito.
-// O de Tema é uma aquarela de verdade: três cores se misturando.
 // =========================================================
 import React from 'react';
 
@@ -77,19 +76,16 @@ const ICONS = {
       />
     </>
   ),
-  // Tema: paleta de pintor (furo do polegar) com tintas coloridas
+  // Tema: godê/paleta de pintor no mesmo estilo dos outros (nanquim sobre
+  // aquarela): os potinhos de tinta são furos na paleta
   theme: (
     <>
       <Wash n={2} />
       <path
         className="app-ic-ink"
         fillRule="evenodd"
-        d="M12.2 3.2c5 0 9 3.3 9 7.6 0 2.6-1.9 3.9-4 3.9h-1.5c-1 0-1.7.8-1.7 1.7 0 .4.2.8.4 1.1.3.4.5.8.5 1.3 0 1.2-1 2-2.6 2-5.1 0-9.1-3.8-9.1-8.7 0-5 4.1-8.9 9-8.9zM7.6 14.8a1.7 1.7 0 1 0 0 3.4 1.7 1.7 0 0 0 0-3.4z"
+        d="M12.2 3.2c5 0 9 3.3 9 7.6 0 2.6-1.9 3.9-4 3.9h-1.5c-1 0-1.7.8-1.7 1.7 0 .4.2.8.4 1.1.3.4.5.8.5 1.3 0 1.2-1 2-2.6 2-5.1 0-9.1-3.8-9.1-8.7 0-5 4.1-8.9 9-8.9zM7.6 14.8a1.7 1.7 0 1 0 0 3.4 1.7 1.7 0 0 0 0-3.4zM7.4 8.65a1.55 1.55 0 1 0 0 3.1 1.55 1.55 0 0 0 0-3.1zM10.4 5.35a1.55 1.55 0 1 0 0 3.1 1.55 1.55 0 0 0 0-3.1zM14.6 5.15a1.55 1.55 0 1 0 0 3.1 1.55 1.55 0 0 0 0-3.1zM17.6 8.25a1.55 1.55 0 1 0 0 3.1 1.55 1.55 0 0 0 0-3.1z"
       />
-      <circle className="app-ic-paint p1" cx="7.4" cy="10.2" r="1.55" />
-      <circle className="app-ic-paint p2" cx="10.4" cy="6.9" r="1.55" />
-      <circle className="app-ic-paint p3" cx="14.6" cy="6.7" r="1.55" />
-      <circle className="app-ic-paint p4" cx="17.6" cy="9.8" r="1.55" />
     </>
   ),
   tasks: (

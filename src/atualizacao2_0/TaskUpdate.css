@@ -997,3 +997,12 @@ textarea.ck-input { resize: vertical; min-height: 60px; }
 
 /* Caixa de descrição do editor: 3x mais alta */
 .ck-editor-body textarea.ck-input { min-height: 180px; }
+
+/* Veio do aviso: destaca a tarefa por um instante */
+.ck-task.ck-focus {
+  animation: ck-focus-pulse 2.4s ease;
+}
+@keyframes ck-focus-pulse {
+  0%, 40% { box-shadow: 0 0 0 2px var(--theme-accent, #38bdf8), 0 0 18px color-mix(in srgb, var(--theme-accent, #38bdf8) 55%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}

@@ -4,7 +4,7 @@ import { isSkillsMode, useMode } from './modes/modeState.js';
 import { useUiTheme, toggleDark } from './shared/uiTheme.js';
 import { tx } from './i18n/index.jsx';
 import { useGameData, PRESET_DECKS, getXpNeededForLevel, getGameDayKey } from './hooks/useGameData';
-import EmojiPicker from 'emoji-picker-react';
+import EmojiPicker from './shared/EmojiPickerPT.jsx';
 import confetti from 'canvas-confetti';
 import './App.css';
 import './SetMobileGrande.css';
@@ -35,6 +35,8 @@ import { useFlashcards } from './atualizacao2_0/Flashcards.js';
 import { FlashcardsModal } from './atualizacao2_0/Flashcards.jsx';
 import { TaskModal, TaskAlert, TaskBadge } from './atualizacao2_0/TaskUpdate.jsx';
 import { DiamondHistoryModal, MissionHistoryModal } from './atualizacao2_0/DiamondHistory.jsx';
+import MissionInfo from './shared/MissionInfo.jsx';
+import { startLongPressReorder } from './shared/longPressReorder.js';
 
 
 // Fecha apenas a janela que está por cima de todas, apertando o ✕ dela
@@ -230,7 +232,8 @@ export default function App() {
     setDailyMissionsQuota,
     prioritizedMissions,
     togglePrioritizeMission,
-    updateMiniMissionText
+    updateMiniMissionText,
+    setMiniMissionInfo
   } = useGameData();
 
   // Checklists de cada perfil (antes eram os mesmos para todos)
@@ -837,6 +840,11 @@ const handleSaveMiniEdit = (idx, oldText) => {
       if (isCtrlOrCmd && (!isEditingText || inNotesEditor) && !e.altKey && (keyLower === 'z' || keyLower === 'y')) {
         e.preventDefault();
         e.stopPropagation();
+        // Editar habilidade aberto: primeiro desfaz/refaz a ordem dos níveis
+        if (levelUndoRedo(!(keyLower === 'z' && !e.shiftKey))) {
+          playSound('click');
+          return;
+        }
         // grava já o que estava esperando, para o desfazer pegar a última mudança
         window.dispatchEvent(new Event('orbe-flush-saves'));
         if (keyLower === 'z' && !e.shiftKey) {
@@ -1161,6 +1169,71 @@ const handleSaveEdit = (e) => {
     setNewMaxLevel(10);
 
     setIsAddModalOpen(true);
+  };
+
+  // Ctrl+Z / Ctrl+Y da reordenação: a janela só grava ao Salvar, então o
+  // desfazer global não enxerga; guardamos aqui o "antes" de cada troca
+  const LEVEL_FIELDS = ['levelDescriptions', 'levelTasks', 'levelInfos'];
+  const editingSkillRef = useRef(null);
+  editingSkillRef.current = editingSkill;
+  const levelHistoryRef = useRef({ id: null, past: [], future: [] });
+  const levelSnap = (sk) => Object.fromEntries(LEVEL_FIELDS.map((f) => [f, sk ? sk[f] : undefined]));
+  const levelHistory = () => {
+    const h = levelHistoryRef.current;
+    const id = editingSkillRef.current ? editingSkillRef.current.id : null;
+    if (h.id !== id) levelHistoryRef.current = { id, past: [], future: [] };
+    return levelHistoryRef.current;
+  };
+  // devolve true se desfez/refez algo da reordenação
+  const levelUndoRedo = (redo) => {
+    const cur = editingSkillRef.current;
+    if (!cur) return false;
+    const h = levelHistory();
+    const from = redo ? h.future : h.past;
+    const to = redo ? h.past : h.future;
+    if (!from.length) return false;
+    const snap = from.pop();
+    to.push(levelSnap(cur));
+    setEditingSkill((prev) => (prev ? { ...prev, ...snap } : prev));
+    return true;
+  };
+
+  // Segurar meio segundo e arrastar um nível: ele vai para a posição do outro e
+  // meta, sub-tarefas e descritivo andam juntos (os números se ajustam)
+  const moveLevel = (from, to) => {
+    const a = Number(from);
+    const b = Number(to);
+    if (!a || !b || a === b) return;
+    playSound('click');
+    const h = levelHistory();
+    h.past.push(levelSnap(editingSkillRef.current));
+    if (h.past.length > 50) h.past.shift();
+    h.future = [];
+    setEditingSkill((prev) => {
+      if (!prev) return prev;
+      const max = prev.maxLevel || 10;
+      const order = Array.from({ length: max }, (_, i) => i + 1);
+      const [moved] = order.splice(a - 1, 1);
+      order.splice(b - 1, 0, moved);
+      const remap = (obj) => {
+        const src = obj || {};
+        const out = {};
+        Object.keys(src).forEach((k) => {
+          const n = Number(k);
+          if (!(n >= 1 && n <= max)) out[k] = src[k];
+        });
+        order.forEach((oldLvl, i) => {
+          if (src[oldLvl] !== undefined) out[i + 1] = src[oldLvl];
+        });
+        return out;
+      };
+      return {
+        ...prev,
+        levelDescriptions: remap(prev.levelDescriptions),
+        levelTasks: remap(prev.levelTasks),
+        levelInfos: remap(prev.levelInfos)
+      };
+    });
   };
 
   const handleLevelDescChange = (lvl, text) => {
@@ -1892,7 +1965,6 @@ if (folderSortOrder === 'a-z') {
                       if (e.target.closest('button') || e.target.closest('input')) return;
                       playSound('click');
                       setEditingSkill({ ...skill });
-                      setIsCustomMaxLevelInput(false);
                     }}
                     className={`skill-card ${isMax ? 'gold-maxed' : ''} ${isShaking ? 'shake-warning' : ''}`}
                     style={getCardStyle(isMax, skillColor)}
@@ -1902,7 +1974,6 @@ if (folderSortOrder === 'a-z') {
                       onClick={() => {
                         playSound('click');
                         setEditingSkill({ ...skill });
-                        setIsCustomMaxLevelInput(false);
                       }}
                       title={tx("Configurar Habilidade")}
                     >
@@ -2512,10 +2583,18 @@ if (folderSortOrder === 'a-z') {
                           >
                             {mission.skillName}
                           </span>
-                          <span
-                            className="mission-reward-badge"
-                          >
-                            +{mission.rewardDiamonds || 1} 💎
+                          <span className="mission-head-right">
+                            <MissionInfo
+                              skill={skills.find((sk) => sk.id === mission.skillId)}
+                              text={mission.text}
+                              onSave={(info) => setMiniMissionInfo(mission.skillId, mission.text, info)}
+                              playSound={playSound}
+                            />
+                            <span
+                              className="mission-reward-badge"
+                            >
+                              +{mission.rewardDiamonds || 1} 💎
+                            </span>
                           </span>
                         </div>
                         <div
@@ -2663,6 +2742,22 @@ editingSkill.miniMissions.map((mm, idx) => {
         </span>
       )}
 
+      <MissionInfo
+        skill={editingSkill}
+        text={mm}
+        onSave={(info) => {
+          setMiniMissionInfo(editingSkill.id, mm, info);
+          // a janela de edição da habilidade guarda uma cópia: atualiza também
+          setEditingSkill((prev) => {
+            if (!prev) return prev;
+            const infos = { ...(prev.miniMissionInfos || {}) };
+            if (String(info || '').trim()) infos[mm.trim()] = info;
+            else delete infos[mm.trim()];
+            return { ...prev, miniMissionInfos: infos };
+          });
+        }}
+        playSound={playSound}
+      />
       <button
         type="button"
         className="editor-remove-btn"
@@ -3063,7 +3158,6 @@ editingSkill.miniMissions.map((mm, idx) => {
           playSound('click');
           // O Gerenciador de Pastas continua aberto por trás da edição
           setEditingSkill({ ...sk });
-          setIsCustomMaxLevelInput(false);
         }}
         className="skill-card"
         style={{
@@ -4593,7 +4687,18 @@ editingSkill.miniMissions.map((mm, idx) => {
   </div>
   )}
 />
-              <div className="horizontal-levels-grid">
+              <div
+                className="horizontal-levels-grid"
+                onPointerDown={(e) =>
+                  startLongPressReorder(e, {
+                    itemSelector: '.lv-card[data-lv]',
+                    getKey: (el) => Number(el.getAttribute('data-lv')),
+                    delay: 500,
+                    onLift: () => playSound('click'),
+                    onMove: moveLevel
+                  })
+                }
+              >
                 {Array.from({ length: editingSkill.maxLevel }).map((_, idx) => {
                   const lvlNum = idx + 1;
                   const targetActiveLevel = editingSkill.level + 1;
@@ -4618,7 +4723,7 @@ editingSkill.miniMissions.map((mm, idx) => {
                       className={`level-card-item lv-card ${isCurrentActive ? 'active-level' : ''} ${isPassed ? 'passed-level' : ''}`}
                       style={{ '--lv-color': editingSkill.color || '#3b82f6' }}
                     >
-<div className="level-card-header lv-head">
+<div className="level-card-header lv-head" title={tx('Segure meio segundo e arraste para mudar a ordem do nível')}>
   <span className="lv-num" aria-hidden="true">{isPassed ? '✓' : lvlNum}</span>
   <span className="lv-title">{tx("Nível")}{' '}{lvlNum}</span>
   {isCurrentActive && <span className="lv-status now">{tx("Em progresso")}</span>}
@@ -4738,6 +4843,7 @@ editingSkill.miniMissions.map((mm, idx) => {
         prioritizedMissions={prioritizedMissions}
         togglePrioritizeMission={togglePrioritizeMission}
         updateMiniMissionText={updateMiniMissionText}
+        setMiniMissionInfo={setMiniMissionInfo}
         playSound={playSound}
       />
 
@@ -4766,7 +4872,7 @@ editingSkill.miniMissions.map((mm, idx) => {
     <div
       className="modal-window high-z-window"
       onClick={(e) => e.stopPropagation()}
-      style={{ maxWidth: '480px', width: '92vw' }}
+      style={{ maxWidth: '680px', width: '94vw', maxHeight: '92vh' }}
     >
       <div className="modal-header-row">
         <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--theme-accent, #38bdf8)' }}>
@@ -4785,7 +4891,7 @@ editingSkill.miniMissions.map((mm, idx) => {
         <textarea
           className="info-textarea"
           placeholder={tx("Escreva aqui anotações, descrições ou observações para este nível...")}
-          rows={6}
+          rows={12}
           value={editingSkill?.levelInfos?.[levelInfoModal.levelNumber] || ''}
           onChange={(e) => {
             const val = e.target.value;
@@ -4806,6 +4912,8 @@ editingSkill.miniMissions.map((mm, idx) => {
             color: '#f8fafc',
             fontSize: '0.88rem',
             resize: 'vertical',
+            minHeight: 'min(45vh, 300px)',
+            lineHeight: 1.5,
             outline: 'none',
             boxSizing: 'border-box'
           }}

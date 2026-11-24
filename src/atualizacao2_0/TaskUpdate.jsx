@@ -151,6 +151,7 @@ function TaskRow({ task, todayKey, draggable, dragState, onToggle, onEdit, onDel
 
   return (
     <div
+      data-task-id={task.id}
       className={`ck-task ${done ? 'done' : ''} ${info?.status === 'overdue' && !done ? 'overdue' : ''} ${notToday ? 'dim' : ''} ${isDragOver ? 'drag-over' : ''}`}
       draggable
       onDragStart={(e) => {
@@ -584,6 +585,24 @@ export function TaskModal({ taskState, playSound }) {
   const [draggingListId, setDraggingListId] = useState(null);
   const [taskDropListId, setTaskDropListId] = useState(null);
 
+  // Veio do aviso de tarefas: rola até a tarefa e pisca nela
+  const { focusTaskId, setFocusTaskId } = taskState;
+  useEffect(() => {
+    if (!isOpen || !focusTaskId) return undefined;
+    const t = setTimeout(() => {
+      const el = document.querySelector(`.ck-task[data-task-id="${focusTaskId}"]`);
+      if (el) {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        el.classList.remove('ck-focus');
+        void el.offsetWidth;
+        el.classList.add('ck-focus');
+        setTimeout(() => el.classList.remove('ck-focus'), 2600);
+      }
+      setFocusTaskId(null);
+    }, 120);
+    return () => clearTimeout(t);
+  }, [isOpen, focusTaskId, setFocusTaskId]);
+
   // Esc fecha primeiro o editor (se aberto) e só depois o modal
   const { escapeRef } = taskState;
   useEffect(() => {
@@ -988,8 +1007,8 @@ export function TaskModal({ taskState, playSound }) {
 // ALERTA E BADGE
 // =========================================================
 export function TaskAlert({ taskState }) {
-  const { tasksDue, isAlertDismissed, setIsAlertDismissed, toggleModal, isOpen } = taskState;
-  const { overdueCount, todayCount, tomorrowCount } = tasksDue;
+  const { tasksDue, isAlertDismissed, setIsAlertDismissed, goToTask, isOpen } = taskState;
+  const { overdueCount, todayCount, tomorrowCount, target } = tasksDue;
 
   if (isOpen || isAlertDismissed || overdueCount + todayCount + tomorrowCount === 0) return null;
 
@@ -999,7 +1018,7 @@ export function TaskAlert({ taskState }) {
   if (tomorrowCount > 0) parts.push(`${tomorrowCount} para amanhã`);
 
   return (
-    <div className={`ck-alert ${overdueCount > 0 ? 'overdue' : todayCount > 0 ? 'today' : ''}`} onClick={toggleModal} title={tx("Abrir checklists")}>
+    <div className={`ck-alert ${overdueCount > 0 ? 'overdue' : todayCount > 0 ? 'today' : ''}`} onClick={() => goToTask(target)} title={target ? `${tx('Ir para a tarefa')}: ${target.title}` : tx('Abrir checklists')}>
       <span>{tx("📋 Tarefas:")}{' '}{parts.join(' · ')}</span>
       <button
         type="button"

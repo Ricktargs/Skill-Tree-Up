@@ -456,28 +456,58 @@ export function useTaskUpdate(profileId, { onTaskXp, onListComplete } = {}) {
     let overdueCount = 0;
     let todayCount = 0;
     let tomorrowCount = 0;
+    // a tarefa que o aviso mostra primeiro (atrasada > hoje > amanhã)
+    const first = { overdue: null, today: null, tomorrow: null };
     const now = new Date();
     taskLists.forEach((list) =>
       list.tasks.forEach((task) => {
+        const ref = { listId: list.id, taskId: task.id, title: task.title };
         if (task.isRecurring) {
-          if (isRecurringDueOn(task, todayKey) && !isTaskDone(task, todayKey)) todayCount++;
+          if (isRecurringDueOn(task, todayKey) && !isTaskDone(task, todayKey)) {
+            todayCount++;
+            first.today = first.today || ref;
+          }
           return;
         }
         if (task.completed) return;
         const info = getDueInfo(task, todayKey, now);
         if (!info) return;
-        if (info.status === 'overdue') overdueCount++;
-        else if (info.status === 'today') todayCount++;
-        else if (info.status === 'tomorrow') tomorrowCount++;
+        if (info.status === 'overdue') {
+          overdueCount++;
+          first.overdue = first.overdue || ref;
+        } else if (info.status === 'today') {
+          todayCount++;
+          first.today = first.today || ref;
+        } else if (info.status === 'tomorrow') {
+          tomorrowCount++;
+          first.tomorrow = first.tomorrow || ref;
+        }
       })
     );
-    return { overdueCount, todayCount, tomorrowCount };
+    const target = first.overdue || first.today || first.tomorrow;
+    return { overdueCount, todayCount, tomorrowCount, target };
   }, [taskLists, todayKey]);
+
+  // Clique no aviso: abre a lista certa já na tarefa (rola até ela e destaca)
+  const [focusTaskId, setFocusTaskId] = useState(null);
+  const goToTask = (ref) => {
+    if (!ref) {
+      setIsOpen(true);
+      return;
+    }
+    setActiveListId(ref.listId);
+    setView((v) => ({ ...sanitizeView(v), filter: 'pending' }));
+    setFocusTaskId(ref.taskId);
+    setIsOpen(true);
+  };
 
   return {
     isOpen,
     setIsOpen,
     toggleModal,
+    goToTask,
+    focusTaskId,
+    setFocusTaskId,
     taskLists,
     activeListId: resolvedActiveId,
     setActiveListId,

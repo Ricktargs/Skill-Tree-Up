@@ -4,6 +4,9 @@ import { installGlobalUndo } from './atualizacao2_0/GlobalUndo.js'
 installGlobalUndo()
 import { installDialogKeys } from './shared/Dialog.jsx'
 installDialogKeys()
+// 📑 copiar bloco de código / citação nos editores
+import { installBlockCopy } from './shared/blockCopy.js'
+installBlockCopy()
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'

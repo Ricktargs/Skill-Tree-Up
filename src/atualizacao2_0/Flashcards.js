@@ -479,6 +479,16 @@ export function useFlashcards(profileId, { onReward } = {}) {
       return { ...d, cards: d.cards.filter((c) => c.id !== cardId) };
     });
 
+  // várias de uma vez (Selecionar etapas → Remover)
+  const deleteCards = (ids) => {
+    const set = new Set(ids || []);
+    if (!set.size) return;
+    update((d) => {
+      d.cards.filter((c) => set.has(c.id)).forEach((c) => deleteMedia(cardMediaIds(c)));
+      return { ...d, cards: d.cards.filter((c) => !set.has(c.id)) };
+    });
+  };
+
   const resetDeckProgress = (deckId) =>
     update((d) => ({
       ...d,
@@ -627,6 +637,7 @@ export function useFlashcards(profileId, { onReward } = {}) {
     addCards,
     updateCard,
     deleteCard,
+    deleteCards,
     resetDeckProgress,
     reviewCard,
     finishSession,

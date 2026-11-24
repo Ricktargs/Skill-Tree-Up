@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { tx } from '../i18n/index.jsx';
-import EmojiPicker from 'emoji-picker-react';
+import EmojiPicker from '../shared/EmojiPickerPT.jsx';
 import './Update_2.css';
 import { usePomodoro, useDraggable, ALARM_SOUNDS, DEFAULT_TIMER_EMOJI } from './Update_2.js';
 

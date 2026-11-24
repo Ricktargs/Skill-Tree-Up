@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { tx } from './i18n/index.jsx';
+import MissionInfo from './shared/MissionInfo.jsx';
 
 export function EditMissionsModal({
   isOpen,
@@ -10,6 +11,7 @@ export function EditMissionsModal({
   prioritizedMissions,
   togglePrioritizeMission,
   updateMiniMissionText,
+  setMiniMissionInfo,
   playSound
 }) {
   const [editingKey, setEditingKey] = useState(null);
@@ -167,6 +169,15 @@ const [levelDescriptions, setLevelDescriptions] = useState({}); // Guarda o text
                       </span>
                     )}
                   </div>
+
+                  {setMiniMissionInfo && (
+                    <MissionInfo
+                      skill={skill}
+                      text={text}
+                      onSave={(info) => setMiniMissionInfo(skill.id, text, info)}
+                      playSound={playSound}
+                    />
+                  )}
 
                   <button
                     type="button"

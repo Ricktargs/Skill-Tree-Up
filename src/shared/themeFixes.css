@@ -320,13 +320,58 @@ body:has(.np-panel) .notes-dock .dock-flash { display: none !important; }
 .app-ic-back { opacity: 0.55; }
 .app-ic-sand { fill: var(--theme-accent, #38bdf8); }
 .app-ic-ray { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
-/* paleta do Tema: tintas coloridas sobre a paleta */
-.app-ic-paint { stroke: rgba(0, 0, 0, 0.25); stroke-width: 0.4; }
-.app-ic-paint.p1 { fill: #ef6b6b; }
-.app-ic-paint.p2 { fill: #f4c95d; }
-.app-ic-paint.p3 { fill: #5aa9e6; }
-.app-ic-paint.p4 { fill: #6fcf8e; }
 .top-icon-button .app-ic { width: 24px; height: 24px; transition: transform 0.18s ease; }
 .top-icon-button:hover .app-ic { transform: scale(1.08) rotate(-3deg); }
 .top-icon-button:hover .ic-settings { transform: rotate(35deg); }
 .top-icon-button.is-on .app-ic-wash { opacity: 0.55; }
+
+/* Seletor de emojis em português: sem "Cada Palavra Com Maiúscula" */
+.EmojiPickerReact * {
+  text-transform: none !important;
+}
+.EmojiPickerReact div:not(:has(*))::first-letter {
+  text-transform: uppercase;
+}
+
+/* 📑 copiar bloco de código / citação (o clique é tratado no blockCopy.js) */
+.editor pre,
+.editor blockquote {
+  position: relative;
+  padding-right: 1.9em !important;
+}
+.editor pre::after,
+.editor blockquote::after {
+  content: '📑';
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1;
+  opacity: 0.45;
+  cursor: pointer;
+  user-select: none;
+  pointer-events: auto;
+}
+.editor pre:hover::after,
+.editor blockquote:hover::after {
+  opacity: 0.9;
+}
+.block-copy-tip {
+  position: fixed;
+  z-index: 100000;
+  transform: translate(-50%, -140%);
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--theme-modal-bg, #1e2433);
+  color: var(--opt-fg, #e2e8f0);
+  border: 1px solid var(--theme-accent, #38bdf8);
+  font: 600 11px/1.2 system-ui, sans-serif;
+  pointer-events: none;
+  animation: block-copy-tip 1.1s ease forwards;
+}
+@keyframes block-copy-tip {
+  0% { opacity: 0; }
+  15%, 70% { opacity: 1; }
+  100% { opacity: 0; }
+}

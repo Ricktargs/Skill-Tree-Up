@@ -606,7 +606,12 @@ export default function NotesPanel() {
               </>
             )}
           </div>
-          <small className="np-tip">Arraste para mover e mudar a ordem (segure em cima da pasta para abrir) · duplo clique renomeia · botão direito: cor da pasta / emoji da nota</small>
+          {/* + Nota também embaixo, à mão quando a lista é comprida */}
+          <div className="np-foot">
+            <button type="button" className="btn small btn-primary" onClick={newNote} title="Nova nota (não aparece no mapa)">
+              ＋ Nota
+            </button>
+          </div>
         </nav>
 
         {/* Editor (o mesmo dos Neurônios) */}

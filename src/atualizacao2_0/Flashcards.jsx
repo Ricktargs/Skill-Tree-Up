@@ -609,7 +609,9 @@ function SkillPicker({ fc, skills, click, onBack, onCreated }) {
   const [chosen, setChosen] = useState(null); // habilidade com mais de um módulo
   const list = skills.filter((s) => (s.title || '').toLowerCase().includes(query.trim().toLowerCase()));
 
-  const createFrom = (skill, moduleId, cards) => {
+  // O deck nasce vazio, só ligado à habilidade: as cartas vêm quando a
+  // pessoa clicar em "⚡ Gerar cartas da habilidade" dentro do deck.
+  const createFrom = (skill, moduleId) => {
     const existing = fc.decks.find((d) => d.skillId === skill.id && (d.moduleId || 'default') === moduleId);
     if (existing) {
       click();
@@ -622,8 +624,7 @@ function SkillPicker({ fc, skills, click, onBack, onCreated }) {
       name: mod && mod.name ? `${skill.title} · ${mod.name}` : skill.title,
       emoji: '📘',
       skillId: skill.id,
-      moduleId,
-      cards
+      moduleId
     });
     onCreated(id);
   };
@@ -638,7 +639,7 @@ function SkillPicker({ fc, skills, click, onBack, onCreated }) {
           <strong>{tx('De qual módulo/curso de “{s}”?', { s: chosen.title })}</strong>
         </div>
         <p className="fc-help">{tx('Cada módulo tem as próprias metas e tarefas, então as cartas mudam de um para outro.')}</p>
-        <ModuleChooser skill={chosen} onPick={(moduleId, cards) => createFrom(chosen, moduleId, cards)} />
+        <ModuleChooser skill={chosen} onPick={(moduleId) => createFrom(chosen, moduleId)} />
       </div>
     );
   }
@@ -652,11 +653,10 @@ function SkillPicker({ fc, skills, click, onBack, onCreated }) {
         <strong>{tx('Escolha a habilidade')}</strong>
         <input className="fc-input fc-search" placeholder={tx('Buscar...')} value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
-      <p className="fc-help">{tx('As metas, detalhes e tarefas de cada nível viram cartas. Você pode editar ou adicionar mais depois.')}</p>
+      <p className="fc-help">{tx('O deck começa vazio e ligado à habilidade. Dentro dele, use “⚡ Gerar cartas da habilidade” se quiser transformar metas, detalhes e tarefas em cartas.')}</p>
       <div className="fc-skill-list">
         {list.map((skill) => {
           const mods = skillModules(skill);
-          const generated = cardsFromSkill(skill, tx, 'default');
           const existing = mods.length === 1 ? fc.decks.find((d) => d.skillId === skill.id) : null;
           return (
             <button
@@ -670,7 +670,7 @@ function SkillPicker({ fc, skills, click, onBack, onCreated }) {
                   setChosen(skill);
                   return;
                 }
-                createFrom(skill, 'default', generated);
+                createFrom(skill, 'default');
               }}
             >
               <i />
@@ -685,7 +685,7 @@ function SkillPicker({ fc, skills, click, onBack, onCreated }) {
                   ? tx('{n} módulos', { n: mods.length })
                   : existing
                   ? tx('Abrir deck')
-                  : tx('{n} carta(s)', { n: generated.length })}
+                  : tx('Criar deck')}
               </span>
             </button>
           );
@@ -824,6 +824,21 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
   const stopSelecting = () => {
     setSelecting(false);
     setSelected(new Set());
+  };
+  const removeSelected = async () => {
+    const n = selected.size;
+    if (!n) return;
+    const ok = await ask({
+      title: tx('Remover {n} carta(s)?', { n }),
+      message: tx('As cartas selecionadas e o progresso delas serão excluídos.'),
+      yes: tx('Remover'),
+      danger: true
+    });
+    if (!ok) return;
+    click('delete');
+    fc.deleteCards([...selected]);
+    setSelected(new Set());
+    flash(tx('{n} carta(s) removida(s)', { n }));
   };
   const createGroup = () => {
     if (selected.size === 0) return;
@@ -1177,7 +1192,7 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
                   if (selecting) stopSelecting();
                   else setSelecting(true);
                 }}
-                title={tx('Selecionar cartas para montar grupos (etapas) de estudo')}
+                title={tx('Selecionar cartas para montar grupos (etapas) de estudo ou remover várias de uma vez')}
               >
                 ☑ {selecting ? tx('Cancelar seleção') : tx('Selecionar etapas')}
               </button>
@@ -1243,6 +1258,15 @@ function DeckEditor({ fc, deck, skills, click, deckColor, skillOf, onBack, onStu
                     <option value={NO_GROUP}>{tx('Sem grupo')}</option>
                   </select>
                 )}
+                <button
+                  type="button"
+                  className="fc-btn small danger-ghost fc-remove-sel"
+                  disabled={selected.size === 0}
+                  onClick={removeSelected}
+                  title={tx('Excluir as cartas selecionadas')}
+                >
+                  🗑 {tx('Remover')}
+                </button>
                 <button type="button" className="fc-btn primary small" disabled={selected.size === 0} onClick={createGroup}>
                   ＋ {tx('Criar grupo')}
                 </button>

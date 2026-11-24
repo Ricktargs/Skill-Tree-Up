@@ -116,6 +116,7 @@
 .np-rename { width: calc(100% - var(--depth, 0) * 14px); margin-left: calc(var(--depth, 0) * 14px); box-sizing: border-box; font-size: 13px; }
 .np-empty-folder { font-size: 11px; color: var(--muted); font-style: italic; padding: 4px 6px 4px calc(22px + var(--depth, 0) * 14px); }
 .np-tip { font-size: 10.5px; color: var(--muted); line-height: 1.35; }
+.np-foot { display: flex; justify-content: flex-start; padding-top: 6px; flex-shrink: 0; }
 
 /* ---------- Editor ---------- */
 .np-editor {

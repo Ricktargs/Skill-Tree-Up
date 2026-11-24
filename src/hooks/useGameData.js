@@ -323,7 +323,13 @@ export function useGameData() {
           const updated = skill.miniMissions.map((t) =>
             t.trim() === oldTrimmed ? newTrimmed : t
           );
-          return { ...skill, miniMissions: updated };
+          // o descritivo (i) acompanha o novo nome
+          const infos = { ...(skill.miniMissionInfos || {}) };
+          if (infos[oldTrimmed] !== undefined) {
+            infos[newTrimmed] = infos[oldTrimmed];
+            delete infos[oldTrimmed];
+          }
+          return { ...skill, miniMissions: updated, miniMissionInfos: infos };
         }
         return skill;
       })
@@ -818,6 +824,21 @@ export function useGameData() {
     recordState(updatedSkills);
   };
 
+  // Descritivo (i) de uma mini missão, guardado na habilidade pelo texto dela
+  const setMiniMissionInfo = (skillId, missionText, info) => {
+    const key = String(missionText || '').trim();
+    if (!key) return;
+    setSkills((prev) =>
+      prev.map((s) => {
+        if (s.id !== skillId) return s;
+        const infos = { ...(s.miniMissionInfos || {}) };
+        if (String(info || '').trim()) infos[key] = info;
+        else delete infos[key];
+        return { ...s, miniMissionInfos: infos };
+      })
+    );
+  };
+
   const deleteMiniMissionFromSkill = (skillId, index) => {
     let missionTextToRemove = '';
 
@@ -826,7 +847,9 @@ export function useGameData() {
         const miniArr = s.miniMissions || [];
         missionTextToRemove = miniArr[index];
         const filtered = miniArr.filter((_, idx) => idx !== index);
-        return { ...s, miniMissions: filtered };
+        const infos = { ...(s.miniMissionInfos || {}) };
+        if (missionTextToRemove) delete infos[String(missionTextToRemove).trim()];
+        return { ...s, miniMissions: filtered, miniMissionInfos: infos };
       }
       return s;
     });
@@ -1268,6 +1291,7 @@ const trainSkill = (skillId) => {
     completeMission,
     addMiniMissionToSkill,
     deleteMiniMissionFromSkill,
+    setMiniMissionInfo,
     updateMiniMissionText,
     dailyMissionsQuota,
     setDailyMissionsQuota,
