@@ -96,8 +96,35 @@ async function latestRelease() {
 }
 const hasAsset = (rel, file) => Array.isArray(rel && rel.assets) && rel.assets.some((a) => a.name === file);
 
+// fetch que desiste depois de alguns segundos (não fica "procurando" para sempre)
+const fetchWithTimeout = (url, opts = {}, ms = 10000) => {
+  const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const t = ctrl ? setTimeout(() => ctrl.abort(), ms) : null;
+  return fetch(url, { ...opts, ...(ctrl ? { signal: ctrl.signal } : {}) }).finally(() => t && clearTimeout(t));
+};
+
+// Reserva: o GitHub limita as consultas por internet (60 por hora). Se ele
+// recusar, a versão mais nova vem da lista de versões do jsDelivr.
+async function latestFromJsdelivr() {
+  const r = await fetchWithTimeout(`https://data.jsdelivr.com/v1/packages/gh/${REPO}`, { cache: 'no-store' });
+  if (!r.ok) throw new Error(`jsDelivr ${r.status}`);
+  const j = await r.json();
+  const list = (j.versions || []).map((v) => String(v.version || v).replace(/^v/i, '')).filter((v) => /^\d+(\.\d+)*$/.test(v));
+  return list.reduce((best, v) => (!best || newer(v, best) ? v : best), null);
+}
+
 async function checkGithub() {
-  const rel = await latestRelease();
+  let rel = null;
+  try {
+    const r = await fetchWithTimeout(RELEASE_API, { cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } });
+    if (r.ok) rel = await r.json();
+  } catch {
+    rel = null;
+  }
+  if (!rel) {
+    const latest = await latestFromJsdelivr();
+    return latest && newer(latest, APP_VERSION) ? latest : null;
+  }
   const latest = String(rel.tag_name || '').replace(/^v/i, '');
   if (!newer(latest, APP_VERSION)) return null;
   // versão nova sem o arquivo deste sistema (ex.: o GitHub ficou sem Mac): ainda não avisa
