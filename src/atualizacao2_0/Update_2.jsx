@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { tx } from '../i18n/index.jsx';
 import EmojiPicker from '../shared/EmojiPickerPT.jsx';
 import './Update_2.css';
+import { ClockTab, useAlarmCount, useAlarmRinging } from './AlarmClock.jsx';
 import { usePomodoro, useDraggable, ALARM_SOUNDS, DEFAULT_TIMER_EMOJI } from './Update_2.js';
 
 export { usePomodoro };
@@ -410,6 +411,36 @@ function TimerCard({ timer, pomodoro, click }) {
   );
 }
 
+// Janela flutuante TOCANDO: mesmo visual do alarme do Relógio, no lugar
+// onde a janela estava (dá para arrastar)
+function RingFloat({ elRef, position, zIndex, onPointerDown, title, onSnooze, onStop }) {
+  const stop = (e) => e.stopPropagation();
+  return (
+    <div
+      ref={elRef}
+      className="pomo-ring-float alc-ring-card"
+      style={{ left: `${position.x}px`, top: `${position.y}px`, zIndex }}
+      onPointerDown={onPointerDown}
+      role="alertdialog"
+      aria-label={tx('Alarme tocando')}
+    >
+      <span className="alc-ring-bell" aria-hidden="true">
+        ⏰
+      </span>
+      <div className="alc-ring-text">
+        <b>{tx('Acabou!')}</b>
+        <span>{title}</span>
+      </div>
+      <button type="button" className="alc-btn ghost" onPointerDown={stop} onClick={onSnooze}>
+        +5 min
+      </button>
+      <button type="button" className="alc-btn primary" onPointerDown={stop} onClick={onStop}>
+        {tx('Parar')}
+      </button>
+    </div>
+  );
+}
+
 // 4b. JANELA FLUTUANTE DE UM TIMER EXTRA (só aparece se você ativar o 📌,
 //     ou enquanto o alarme dele estiver tocando)
 function ExtraFloat({ timer, pomodoro, click }) {
@@ -422,6 +453,26 @@ function ExtraFloat({ timer, pomodoro, click }) {
   const total = timer.initialTotalSeconds || 1500;
   const remaining = extraRemaining(timer);
   const state = ringing ? 'ringing' : isActive ? 'running' : 'paused';
+
+  if (ringing) {
+    return (
+      <RingFloat
+        elRef={elRef}
+        position={position}
+        zIndex={101}
+        onPointerDown={onPointerDown}
+        title={`${timer.emoji || DEFAULT_TIMER_EMOJI} ${timer.title}`}
+        onSnooze={() => {
+          click();
+          pomodoro.snoozeExtra(timer.id, 5);
+        }}
+        onStop={() => {
+          click();
+          resetExtra(timer.id);
+        }}
+      />
+    );
+  }
 
   return (
     <div
@@ -573,6 +624,8 @@ export function PomodoroModal({ pomodoro, playSound }) {
     setModalTab
   } = pomodoro;
 
+  const alarmCount = useAlarmCount();
+  const alarmRinging = useAlarmRinging();
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [inputMin, setInputMin] = useState('45');
   const [inputSec, setInputSec] = useState('0');
@@ -695,7 +748,7 @@ export function PomodoroModal({ pomodoro, playSound }) {
             className={`pomo-tab ${modalTab === 'main' ? 'active' : ''}`}
             onClick={() => switchTab('main')}
           >
-            {tx("Principal")}
+            {tx("Pomodoros")}
             {isActive && <span className="pomo-tab-dot" />}
           </button>
           <button
@@ -712,10 +765,22 @@ export function PomodoroModal({ pomodoro, playSound }) {
               </span>
             )}
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={modalTab === 'clock'}
+            className={`pomo-tab ${modalTab === 'clock' ? 'active' : ''}`}
+            onClick={() => switchTab('clock')}
+          >
+            {tx("Relógio")}
+            {alarmCount > 0 && <span className={`pomo-tab-badge ${alarmRinging ? 'ringing' : ''}`}>{alarmCount}</span>}
+          </button>
         </div>
 
         {modalTab === 'timers' ? (
           <TimersTab pomodoro={pomodoro} click={click} />
+        ) : modalTab === 'clock' ? (
+          <ClockTab click={click} />
         ) : (
           <>
             {/* Criar novo botão de tempo */}
@@ -995,7 +1060,24 @@ export function PomodoroWidget({ pomodoro, playSound }) {
 
   return (
     <>
-      {showMain && (
+      {showMain && isAlarmRinging && (
+        <RingFloat
+          elRef={elRef}
+          position={position}
+          zIndex={100}
+          onPointerDown={onPointerDown}
+          title={`⏱️ ${modeName}`}
+          onSnooze={() => {
+            click();
+            pomodoro.snoozeMain(5);
+          }}
+          onStop={() => {
+            click();
+            stopAlarm();
+          }}
+        />
+      )}
+      {showMain && !isAlarmRinging && (
         <div
           ref={elRef}
           className={`pomo-float ${stateClass}`}

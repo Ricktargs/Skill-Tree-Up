@@ -6,9 +6,11 @@ import { cleanHtml, escapeHtml, linksIn, noteLinks, normalizeTag, pagelinkHtml, 
 import LinkPicker from './LinkPicker.jsx';
 import { NBSP, insertHtmlAt, pasteHtmlFrom } from '../../shared/pasteText.js';
 import ColorPicker from './ColorPicker.jsx';
+import BalloonLayer from './BalloonLayer.jsx';
 
 // Cores do marca-texto (a escolhida fica lembrada)
-const HIGHLIGHT_COLORS = ['#f6e7a1', '#fde68a', '#bbf7d0', '#a7f3d0', '#bae6fd', '#c7d2fe', '#fbcfe8', '#fecaca', '#fed7aa', '#e9d5ff'];
+// uma de cada: amarelo, laranja, vermelho, rosa, lilás, azul, ciano, verde, lima, cinza
+const HIGHLIGHT_COLORS = ['#fde68a', '#fed7aa', '#fecaca', '#fbcfe8', '#e9d5ff', '#bfdbfe', '#a5f3fc', '#bbf7d0', '#d9f99d', '#e5e7eb'];
 const HL_KEY = 'nr-highlight-color';
 const HL_ALPHA_KEY = 'nr-highlight-alpha';
 const loadHlAlpha = () => {
@@ -184,12 +186,25 @@ const textAround = (container) => {
   return { before: flat(before), after: flat(after) };
 };
 
-export default function EditorPane({ store, openIds, activeId, onActivate, onCloseTab, onCloseAll, onOpen, onBackToMap, onDelete }) {
+export default function EditorPane({ store, openIds, activeId, onActivate, onCloseTab, onCloseAll, onOpen, onBackToMap, onDelete, fw }) {
   const note = activeId ? store.byId.get(activeId) : null;
+  const paneRef = useRef(null);
 
   return (
-    <section className="nr-editor-pane">
-      <div className="nr-tabs" role="tablist">
+    <section ref={paneRef} className={`nr-editor-pane ${fw && fw.floating ? 'fw-floating' : ''}`} style={fw ? fw.style : undefined}>
+      {fw && fw.enabled && (
+        <>
+          <span className="fw-resize br" onPointerDown={(e) => fw.start(e, 'br', paneRef.current)} title="Arraste para mudar o tamanho" aria-hidden="true" />
+          <span className="fw-resize tr" onPointerDown={(e) => fw.start(e, 'tr', paneRef.current)} title="Arraste para mudar o tamanho" aria-hidden="true" />
+        </>
+      )}
+      <div
+        className="nr-tabs"
+        role="tablist"
+        onPointerDown={fw && fw.enabled ? (e) => fw.start(e, 'move', paneRef.current) : undefined}
+        onDoubleClick={fw && fw.enabled ? (e) => !e.target.closest('[role="tab"], button') && fw.reset() : undefined}
+        title={fw && fw.enabled ? 'Arraste aqui para mover a janela · duplo clique volta ao lugar' : undefined}
+      >
         {onBackToMap && (
           <button type="button" className="nr-back" onClick={onBackToMap} title="Voltar ao mapa">
             ← Mapa
@@ -1651,6 +1666,7 @@ export function NeuronEditor({ note, store, onOpen, onDelete, page = null, onClo
           }}
           onBlur={() => setTimeout(() => setSuggest(null), 150)}
         />
+        <BalloonLayer editorRef={editorRef} onChange={save} />
 
       </div>
 

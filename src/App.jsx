@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { registerModeActions } from './shared/modeBridge.js';
-import { isSkillsMode, useMode } from './modes/modeState.js';
+import { getMode, isSkillsMode, useMode } from './modes/modeState.js';
 import { useUiTheme, toggleDark } from './shared/uiTheme.js';
 import { tx } from './i18n/index.jsx';
 import { useGameData, PRESET_DECKS, getXpNeededForLevel, getGameDayKey } from './hooks/useGameData';
@@ -36,6 +36,9 @@ import { FlashcardsModal } from './atualizacao2_0/Flashcards.jsx';
 import { TaskModal, TaskAlert, TaskBadge } from './atualizacao2_0/TaskUpdate.jsx';
 import { DiamondHistoryModal, MissionHistoryModal } from './atualizacao2_0/DiamondHistory.jsx';
 import MissionInfo from './shared/MissionInfo.jsx';
+import { saveTextFile } from './shared/saveFile.js';
+import { AlarmClockHost } from './atualizacao2_0/AlarmClock.jsx';
+import { DictionaryHost } from './shared/spell/DictionaryWindow.jsx';
 import { startLongPressReorder } from './shared/longPressReorder.js';
 
 
@@ -65,6 +68,15 @@ function closeTopmostWindow() {
 const LEVEL_PRESETS = [5, 10, 15, 20, 25, 30, 40, 50, 80, 100];
 
 const playSound = (type) => {
+  // mesmo som duas vezes quase juntas (ex.: Esc + o ✕ que o Esc aperta): toca uma só
+  try {
+    const now = Date.now();
+    const last = window.__orbeLastSound || {};
+    if (last.type === type && now - last.at < 120) return;
+    window.__orbeLastSound = { type, at: now };
+  } catch {
+    /* sem window */
+  }
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
@@ -633,15 +645,7 @@ const handleExportSkillData = () => {
   if (!editingSkill) return;
   const textContent = generateTextFromSkill(editingSkill);
   const fileName = `${(editingSkill.title || editingSkill.name || 'habilidade').replace(/\s+/g, '_')}_dados.txt`;
-  const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  saveTextFile(fileName, textContent, { mime: 'text/plain;charset=utf-8', question: tx('Onde salvar os dados da habilidade?') });
   if (playSound) playSound('click');
 };
 const handleSaveMiniEdit = (idx, oldText) => {
@@ -854,10 +858,19 @@ const handleSaveMiniEdit = (idx, oldText) => {
       }
 
       // E: editor de notas (✒️), em qualquer modo
-      if (keyLower === 'e' && !isCtrlOrCmd && !e.altKey && !isEditingText) {
+      // N (ou E): editor de notas em qualquer modo · Shift+N cria neurônio (nos Neurônios)
+      if ((keyLower === 'e' || (keyLower === 'n' && !e.shiftKey)) && !isCtrlOrCmd && !e.altKey && !isEditingText) {
         e.preventDefault();
         playSound('click');
         toggleNotesPanel();
+        return;
+      }
+
+      // L no Santuário: janela de Layout (nas Habilidades é o Organizar)
+      if (keyLower === 'l' && !inSkills && !isCtrlOrCmd && !e.altKey && !isEditingText && (getMode() === 'arvore' || getMode() === 'neuronios')) {
+        e.preventDefault();
+        if (getMode() === 'arvore') playSound('click');
+        window.dispatchEvent(new Event(getMode() === 'arvore' ? 'orbe-sanctuary-layout' : 'orbe-neuron-map'));
         return;
       }
 
@@ -1343,13 +1356,8 @@ const handleSaveEdit = (e) => {
     const now = new Date();
     const fileName = `orbe-g-backup-${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}.json`;
 
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportObject, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', fileName);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+    // PC/site: baixa; celular: pergunta se vai para os arquivos ou para o Drive
+    saveTextFile(fileName, JSON.stringify(exportObject, null, 2));
   };
 
   const handleFileChange = (e) => {
@@ -1750,11 +1758,16 @@ if (folderSortOrder === 'a-z') {
       </div>
 
       <div className="top-nav-buttons">
-        {inSkills && (
+        {(inSkills || mode === 'arvore' || mode === 'neuronios') && (
           <button
             className="top-icon-button"
-            title={tx("Organizar habilidades (L)")}
-            onClick={() => { playSound('click'); setIsLayoutEditorOpen(true); }}
+            title={inSkills ? tx("Organizar habilidades (L)") : mode === 'arvore' ? tx("Layout do Santuário (L)") : tx("Mapa dos neurônios (L)")}
+            onClick={() => {
+              playSound('click');
+              // Santuário: janela de Layout · Neurônios: forças do mapa
+              if (inSkills) setIsLayoutEditorOpen(true);
+              else window.dispatchEvent(new Event(mode === 'arvore' ? 'orbe-sanctuary-layout' : 'orbe-neuron-map'));
+            }}
           >
             <AppIcon name="organize" />
           </button>
@@ -4830,6 +4843,8 @@ editingSkill.miniMissions.map((mm, idx) => {
       {/* COMPONENTES DO POMODORO E TAREFAS */}
       <PomodoroModal pomodoro={pomodoro} playSound={playSound} />
       <PomodoroWidget pomodoro={pomodoro} playSound={playSound} />
+      <AlarmClockHost />
+      <DictionaryHost />
       <TaskModal taskState={taskState} playSound={playSound} />
       <FlashcardsModal fc={flashcards} skills={skills} playSound={playSound} />
 {/* ... outros modais do final do App.jsx ... */}

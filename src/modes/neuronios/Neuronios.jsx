@@ -1,3 +1,4 @@
+import { useFloatingWindow, useIsMobile } from '../../shared/useFloatingWindow.js';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 // Mesmo sistema de design da Árvore (papel, nanquim e aquarela)
 import '../arvore/App.css';
@@ -38,12 +39,37 @@ export default function Neuronios() {
   const [query, setQuery] = useState('');
   const [toast, setToast] = useState(null);
   const [tagPick, setTagPick] = useState(null); // { tag, x, y } — cor de uma tag
-  // Painel "Mapa/Neuro": forças do mapa (embaixo do + Neurônio)
+  // Janela "Mapa dos neurônios": forças do mapa (botão de cima ou L)
   const [forces, setForces] = useState(loadForces);
   const [mapOpen, setMapOpen] = useState(false);
+  // aberto pelo botão de cima (ícone de lista) ou pela tecla L
+  useEffect(() => {
+    const toggle = () => {
+      sfx.play('tick');
+      setMapOpen((v) => !v);
+    };
+    window.addEventListener('orbe-neuron-map', toggle);
+    return () => window.removeEventListener('orbe-neuron-map', toggle);
+  }, []);
+  const mapRef = useRef(null);
+  const mapWin = useFloatingWindow('nr-map-window', { disabled: false, minW: 240, minH: 120 });
+  useEffect(() => {
+    if (!mapOpen) return undefined;
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || isTyping(document.activeElement)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      setMapOpen(false);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [mapOpen]);
   useEffect(() => saveForces(forces), [forces]);
   const [split, setSplit] = useState(() => (typeof view.split === 'number' ? view.split : 0.5));
   const narrow = useNarrow();
+  // janela do neurônio solta no PC (mover pela barra das abas, tamanho pelos cantos)
+  const phoneLike = useIsMobile();
+  const editorWin = useFloatingWindow('nr-neuron-window', { disabled: narrow || phoneLike });
   const splitRef = useRef(null);
   const searchRef = useRef(null);
 
@@ -246,7 +272,8 @@ export default function Neuronios() {
         return undefined;
       }
       if (isTyping(document.activeElement) || e.ctrlKey || e.metaKey || e.altKey) return undefined;
-      if (e.key.toLowerCase() === 'n') {
+      // Shift+N: novo neurônio (só N abre as notas, em qualquer modo)
+      if (e.key.toLowerCase() === 'n' && e.shiftKey) {
         e.preventDefault();
         createNeuron();
       } else if (e.key === '/' || e.key === ' ') {
@@ -293,27 +320,26 @@ export default function Neuronios() {
           <div className="top-right" />
         </header>
 
-        {store.saveError && <div className="storage-warning">⚠️ O navegador recusou salvar (espaço cheio). Exporte um backup no ⚙️.</div>}
-
-        {/* Busca + filtro de tags */}
-        <div className="nr-filters">
-          <div className="nr-new-col">
-            <button type="button" className="btn small btn-primary nr-new" onClick={() => createNeuron()} title="Novo neurônio (N)">
-              ＋ Neurônio
-            </button>
-            <button
-              type="button"
-              className={`btn small nr-mapneuro ${mapOpen ? 'on' : ''}`}
-              onClick={() => {
-                sfx.play('tick');
-                setMapOpen((v) => !v);
-              }}
-              title="Forças do mapa"
+        {mapOpen && (
+          <div
+            ref={mapRef}
+            className="nr-map-float"
+            style={mapWin.style ? { ...mapWin.style, height: 'auto' } : undefined}
+            role="dialog"
+            aria-label="Mapa dos neurônios"
+          >
+            <div
+              className="nr-map-float-bar"
+              onPointerDown={(e) => mapWin.start(e, 'move', mapRef.current)}
+              onDoubleClick={() => mapWin.reset()}
+              title="Arraste para mover · duplo clique volta ao lugar"
             >
-              ⚙ Mapa/Neuro
-            </button>
-            {mapOpen && (
-              <div className="nr-forces-panel">
+              <span>🧠 Mapa dos neurônios</span>
+              <button type="button" className="nr-map-float-x" onClick={() => setMapOpen(false)} title="Fechar (Esc)" aria-label="Fechar">
+                ✕
+              </button>
+            </div>
+              <div className="nr-forces-panel nr-forces-body">
                 {[
                   ['center', 'Força central', 'Puxa os neurônios soltos para o meio'],
                   ['repel', 'Força de repulsão', 'Quanto os neurônios se empurram'],
@@ -349,8 +375,16 @@ export default function Neuronios() {
                   ↺ Restaurar padrão
                 </button>
               </div>
-            )}
+            <p className="nr-map-float-tip">
+              <kbd>Shift</kbd>+<kbd>N</kbd> novo neurônio · dois cliques no mapa também criam
+            </p>
           </div>
+        )}
+
+        {store.saveError && <div className="storage-warning">⚠️ O navegador recusou salvar (espaço cheio). Exporte um backup no ⚙️.</div>}
+
+        {/* Busca + filtro de tags */}
+        <div className="nr-filters">
           <SearchBox
             inputRef={searchRef}
             query={query}
@@ -395,7 +429,7 @@ export default function Neuronios() {
 
         <div
           ref={splitRef}
-          className={`nr-split ${showEditor ? 'with-editor' : ''} ${narrow ? 'narrow' : ''}`}
+          className={`nr-split ${showEditor ? 'with-editor' : ''} ${narrow ? 'narrow' : ''} ${editorWin.floating ? 'editor-floating' : ''}`}
           style={showEditor && !narrow ? { '--nr-editor': `${Math.round(split * 100)}%` } : undefined}
         >
           {!(narrow && showEditor) && (
@@ -405,7 +439,7 @@ export default function Neuronios() {
               activeId={activeId}
               openIds={openIds}
               highlightIds={highlightIds}
-              resizeKey={`${showEditor}-${split}`}
+              resizeKey={`${showEditor}-${split}-${editorWin.floating}`}
               onOpen={(id, newTab) => {
                 if (id.startsWith('tag:')) return toggleTag(id.slice(4));
                 return open(id, newTab || !activeId);
@@ -417,7 +451,7 @@ export default function Neuronios() {
             />
           )}
 
-          {showEditor && !narrow && <div className="nr-resizer" onPointerDown={startResize} title="Arraste para redimensionar" />}
+          {showEditor && !narrow && !editorWin.floating && <div className="nr-resizer" onPointerDown={startResize} title="Arraste para redimensionar" />}
 
           {showEditor && (
             <EditorPane
@@ -430,13 +464,14 @@ export default function Neuronios() {
               onOpen={(id, newTab) => open(id, newTab)}
               onDelete={deleteNeuron}
               onBackToMap={narrow ? () => setActiveId(null) : null}
+              fw={{ ...editorWin, enabled: !narrow && !phoneLike }}
             />
           )}
         </div>
 
         {graph.nodes.length === 0 && !showEditor && (
           <div className="nr-empty-map">
-            {notes.length === 0 ? 'Nenhum neurônio ainda. Clique em ＋ ou dê dois cliques no mapa.' : 'Nenhum neurônio com esse filtro.'}
+            {notes.length === 0 ? 'Nenhum neurônio ainda. Aperte Shift+N ou dê dois cliques no mapa.' : 'Nenhum neurônio com esse filtro.'}
           </div>
         )}
 

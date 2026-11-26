@@ -88,6 +88,10 @@ function createWindow(show = true) {
     win.show();
   });
 
+  // A página fica sabendo quando a janela vai para a bandeja (para o som de fundo)
+  win.on('hide', () => win.webContents.send('orbe:window-visibility', false));
+  win.on('show', () => win.webContents.send('orbe:window-visibility', true));
+
   // Fechar = ficar na bandeja (se a opção estiver ligada)
   win.on('close', (e) => {
     if (quitting || !settings.closeToTray) return;

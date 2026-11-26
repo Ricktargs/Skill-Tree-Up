@@ -1,0 +1,77 @@
+/* =========================================================
+   🎈 BALÃO NAS NOTAS (BalloonLayer.jsx)
+   ========================================================= */
+.nr-balloon { --bc: #ef4444; --bh: 0deg; border-bottom: 1.5px dotted var(--bc); cursor: help; border-radius: 2px; }
+.nr-balloon:hover { background: color-mix(in srgb, var(--bc) 14%, transparent); }
+.nr-balloon::after {
+  content: '🎈';
+  display: inline-block;
+  font-size: 0.72em;
+  margin-left: 1px;
+  vertical-align: super;
+  line-height: 0;
+  font-style: normal;
+  filter: hue-rotate(var(--bh)) saturate(1.1);
+  animation: nr-balloon-float 3.2s ease-in-out infinite;
+  user-select: none;
+  pointer-events: none;
+}
+@keyframes nr-balloon-float {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50% { transform: translateY(-3px) rotate(6deg); }
+}
+.nr-balloon[data-bc='orange'], .nr-balloon-pop.c-orange, .nr-balloon-dot.c-orange { --bc: #f97316; --bh: 25deg; }
+.nr-balloon[data-bc='yellow'], .nr-balloon-pop.c-yellow, .nr-balloon-dot.c-yellow { --bc: #eab308; --bh: 50deg; }
+.nr-balloon[data-bc='green'], .nr-balloon-pop.c-green, .nr-balloon-dot.c-green { --bc: #22c55e; --bh: 110deg; }
+.nr-balloon[data-bc='blue'], .nr-balloon-pop.c-blue, .nr-balloon-dot.c-blue { --bc: #3b82f6; --bh: 210deg; }
+.nr-balloon[data-bc='purple'], .nr-balloon-pop.c-purple, .nr-balloon-dot.c-purple { --bc: #a855f7; --bh: 265deg; }
+.nr-balloon[data-bc='pink'], .nr-balloon-pop.c-pink, .nr-balloon-dot.c-pink { --bc: #ec4899; --bh: 310deg; }
+.nr-balloon-pop, .nr-balloon-dot { --bc: #ef4444; }
+
+.nr-balloon-offer {
+  position: fixed;
+  z-index: 100000;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--theme-accent, #38bdf8);
+  background: var(--theme-modal-bg, #1e2433);
+  color: var(--opt-fg, #e2e8f0);
+  font: 600 12px/1.2 system-ui, sans-serif;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.nr-balloon-offer:hover { background: color-mix(in srgb, var(--theme-accent, #38bdf8) 22%, var(--theme-modal-bg, #1e2433)); }
+
+.nr-balloon-pop {
+  position: fixed;
+  z-index: 100000;
+  width: min(330px, calc(100vw - 16px));
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--theme-modal-bg, #1e2433);
+  color: var(--opt-fg, #e2e8f0);
+  border: 1px solid color-mix(in srgb, var(--bc) 60%, transparent);
+  border-top: 3px solid var(--bc);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+  font: 13px/1.45 system-ui, sans-serif;
+}
+.nr-balloon-head { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
+.nr-balloon-dots { display: flex; gap: 4px; flex: 1; }
+.nr-balloon-dot {
+  width: 13px; height: 13px; padding: 0; border-radius: 50%;
+  border: 2px solid transparent; background: var(--bc); cursor: pointer; opacity: 0.75;
+}
+.nr-balloon-dot.on { border-color: var(--opt-fg, #e2e8f0); opacity: 1; }
+.nr-balloon-icon {
+  width: 24px; height: 24px; padding: 0; border-radius: 6px; border: none;
+  background: transparent; color: inherit; cursor: pointer; font-size: 13px; opacity: 0.7;
+}
+.nr-balloon-icon:hover { opacity: 1; background: color-mix(in srgb, var(--opt-fg, #e2e8f0) 12%, transparent); }
+.nr-balloon-text {
+  width: 100%; box-sizing: border-box; min-height: 110px; max-height: 50vh; resize: vertical;
+  padding: 7px 8px; border-radius: 7px; outline: none;
+  border: 1px solid color-mix(in srgb, var(--opt-fg, #e2e8f0) 14%, transparent);
+  background: rgba(0, 0, 0, 0.22); color: inherit; font: inherit;
+}
+.nr-balloon-text:focus { border-color: var(--bc); }
+.nr-balloon-count { text-align: right; font-size: 10px; opacity: 0.5; margin-top: 2px; }

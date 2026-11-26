@@ -92,7 +92,7 @@ const starter = () => {
       ids.boas,
       'Bem-vindo aos Neurônios',
       ['inicio'],
-      `<h2>Seu mapa de ideias</h2><p>Cada bolinha do mapa é um <b>neurônio</b>: uma nota que pode se ligar a outras.</p><ul><li>Clique em <b>+ Neurônio</b> para criar um novo.</li><li>Digite <code>[[</code> no texto para ligar um neurônio a outro. As ligações viram fios no mapa.</li><li>Adicione tags embaixo do título e use os filtros no topo do mapa.</li></ul><p>Comece por aqui: ${link(ids.calma, 'Acalmar a mente')}</p>`,
+      `<h2>Seu mapa de ideias</h2><p>Cada bolinha do mapa é um <b>neurônio</b>: uma nota que pode se ligar a outras.</p><ul><li>Aperte <b>Shift+N</b> (ou dê dois cliques no mapa) para criar um novo.</li><li>Digite <code>[[</code> no texto para ligar um neurônio a outro. As ligações viram fios no mapa.</li><li>Adicione tags embaixo do título e use os filtros no topo do mapa.</li></ul><p>Comece por aqui: ${link(ids.calma, 'Acalmar a mente')}</p>`,
       0,
       0
     ),
@@ -533,6 +533,34 @@ const actions = {
 
   // Arrastar: coloca a nota/pasta "id" dentro de "parentId" e grava a ordem
   // de todos os irmãos (orderedIds já vem na ordem final, com o próprio id).
+  // Pastas e notas misturadas numa ordem só ("pos"), dentro da mesma pasta.
+  // items = [{ kind, id }] já na ordem nova; o movido vai para parentId
+  arrangeMixed: (kind, id, parentId, items) =>
+    setData((d) => {
+      const folders = d.folders || [];
+      if (kind === 'folder') {
+        let p = parentId;
+        while (p) {
+          if (p === id) return d; // não entra nela mesma
+          p = (folders.find((f) => f.id === p) || {}).parentId;
+        }
+      }
+      const pos = new Map(items.map((x, i) => [`${x.kind}:${x.id}`, i * 10]));
+      return {
+        ...d,
+        folders: folders.map((f) => {
+          const k = `folder:${f.id}`;
+          if (kind === 'folder' && f.id === id) return { ...f, parentId: parentId || null, pos: pos.get(k) };
+          return pos.has(k) ? { ...f, pos: pos.get(k) } : f;
+        }),
+        notes: d.notes.map((n) => {
+          const k = `note:${n.id}`;
+          if (kind === 'note' && n.id === id) return { ...n, folderId: parentId || null, pos: pos.get(k) };
+          return pos.has(k) ? { ...n, pos: pos.get(k) } : n;
+        })
+      };
+    }),
+
   arrange: (kind, id, parentId, orderedIds) =>
     setData((d) => {
       const pos = new Map(orderedIds.map((x, i) => [x, i * 10]));

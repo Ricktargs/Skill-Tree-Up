@@ -7,6 +7,8 @@
 //  · no resto: as opções do modo aberto (Neurônios, Santuário ou Habilidades)
 // O App registra as ações em registerAppActions (abrir janelas etc.).
 // =========================================================
+import { addToDictionary, checkWord, warmUpSpell, wordAtPoint } from './spell/spell.js';
+import { openDictionary } from './spell/DictionaryWindow.jsx';
 import { tx } from '../i18n/index.jsx';
 import { getMode } from '../modes/modeState.js';
 import { getModeActions } from './modeBridge.js';
@@ -37,7 +39,7 @@ function modeItems(mode) {
     const nr = getModeActions('neuronios');
     const tags = nr && nr.setView ? document.querySelectorAll('.nr-filter-chip.on').length : 0;
     return [
-      { label: tx('Novo neurônio'), keys: 'N', run: () => nr && nr.createNeuron && nr.createNeuron() },
+      { label: tx('Novo neurônio'), keys: 'Shift+N', run: () => nr && nr.createNeuron && nr.createNeuron() },
       {
         label: tx('Buscar neurônio'),
         keys: '/',
@@ -58,7 +60,7 @@ function modeItems(mode) {
     const panelOpen = Boolean(document.querySelector('.sanc-panel.open'));
     return [
       { label: tx('Centralizar a câmera'), keys: 'Espaço 2×', run: () => view && view.resetView && view.resetView() },
-      { label: panelOpen ? tx('Fechar layouts') : tx('Layouts e decoração'), run: () => click('.sanc-panel > .sanc-toggle-btn') },
+      { label: panelOpen ? tx('Fechar layouts') : tx('Layouts e decoração'), keys: 'L', run: () => window.dispatchEvent(new Event('orbe-sanctuary-layout')) },
       { label: p.editing ? tx('Parar de mover decorações') : tx('Mover e editar decorações'), on: Boolean(p.editing), run: () => setSanctuary({ editing: !p.editing, selected: null }) },
       { label: tx('Lanternas nos galhos'), on: Boolean(p.lanterns), run: () => setSanctuary({ lanterns: !p.lanterns }) },
       { label: `${tx('Próxima estação')}: ${tx(nextSeason.label)}`, run: () => setSanctuary({ season: nextSeason.id }) },
@@ -75,10 +77,25 @@ function modeItems(mode) {
   ];
 }
 
-function itemsFor(target) {
+// ---------- Corretor ortográfico (dicionário de verdade, em todo lugar) ----------
+// Mostra no topo a correção e até mais 4 sugestões da palavra clicada.
+function spellItems(hit, result) {
+  if (!hit) return [];
+  if (result === 'loading') return [{ label: tx('Verificando a palavra…'), disabled: true }, { sep: true }];
+  if (result === 'error') return [{ label: tx('Corretor indisponível (sem internet na 1ª vez?)'), disabled: true }, { sep: true }];
+  // palavra certa: abre o Dicionário ORBE (significado, sinônimos, verbos, adjetivos)
+  if (!result || result.ok) return [{ label: tx('📖 +Dicionário ORBE'), run: () => openDictionary(hit.word) }, { sep: true }];
+  const list = result.suggestions || [];
+  const add = { label: tx('Adicionar “{w}” ao dicionário', { w: hit.word }), run: () => addToDictionary(hit.word) };
+  if (!list.length) return [{ label: tx('Sem sugestões para “{w}”', { w: hit.word }), disabled: true }, add, { sep: true }];
+  return [...list.map((w, i) => ({ label: w, strong: i === 0, run: () => hit.apply(w) })), add, { sep: true }];
+}
+
+function itemsFor(target, spell) {
   const field = target.closest && target.closest(EDITABLE);
   if (field && !field.disabled) {
     lastField = field;
+    const fixes = spell ? spellItems(spell.hit, spell.result) : [];
     const ro = field.readOnly;
     const hasSel = (() => {
       try {
@@ -89,6 +106,7 @@ function itemsFor(target) {
       }
     })();
     return [
+      ...fixes,
       { label: tx('Recortar'), keys: 'Ctrl+X', disabled: ro || !hasSel, run: () => document.execCommand('cut') },
       { label: tx('Copiar'), keys: 'Ctrl+C', disabled: !hasSel, run: () => document.execCommand('copy') },
       {
@@ -139,7 +157,7 @@ function open(x, y, items) {
     }
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = `orbe-ctx-item${it.on ? ' on' : ''}`;
+    b.className = `orbe-ctx-item${it.on ? ' on' : ''}${it.strong ? ' strong' : ''}`;
     b.setAttribute('role', 'menuitem');
     b.disabled = Boolean(it.disabled);
     const lb = document.createElement('span');
@@ -169,6 +187,7 @@ function open(x, y, items) {
 }
 
 let installed = false;
+let spellToken = null;
 export function installGlobalContextMenu() {
   if (installed || typeof document === 'undefined') return;
   installed = true;
@@ -182,8 +201,36 @@ export function installGlobalContextMenu() {
     // Shift + botão direito: menu do navegador (para quem precisar)
     if (e.shiftKey) return;
     e.preventDefault();
-    open(e.clientX, e.clientY, itemsFor(e.target));
+    const field = e.target.closest && e.target.closest(EDITABLE);
+    const hit = field && !field.disabled && field.spellcheck !== false && field.type !== 'password' ? wordAtPoint(field, e.clientX, e.clientY) : null;
+    if (!hit) {
+      open(e.clientX, e.clientY, itemsFor(e.target, null));
+      return;
+    }
+    // abre já (com "verificando…") e completa quando o corretor responder
+    const x = e.clientX;
+    const y = e.clientY;
+    const target = e.target;
+    const token = {};
+    spellToken = token;
+    open(x, y, itemsFor(target, { hit, result: 'loading' }));
+    checkWord(hit.word, hit.context).then(
+      (result) => {
+        if (spellToken === token && menu) open(x, y, itemsFor(target, { hit, result }));
+      },
+      () => {
+        if (spellToken === token && menu) open(x, y, itemsFor(target, { hit, result: 'error' }));
+      }
+    );
   });
+  // prepara o corretor (baixa os dicionários na 1ª vez) assim que alguém for escrever
+  const warm = (ev) => {
+    if (ev.target && ev.target.closest && ev.target.closest(EDITABLE)) {
+      document.removeEventListener('focusin', warm, true);
+      setTimeout(warmUpSpell, 800);
+    }
+  };
+  document.addEventListener('focusin', warm, true);
   document.addEventListener(
     'pointerdown',
     (e) => {

@@ -705,6 +705,18 @@ export function usePomodoro() {
     setTotalSeconds(targetSeconds(targetTimeRef.current));
   };
 
+  // Soneca: para o alarme e toca de novo daqui a alguns minutos
+  const snoozeMain = (min = 5) => {
+    silenceAlarm();
+    setTotalSeconds(min * 60);
+    setEndAt(Date.now() + min * 60000);
+  };
+  const snoozeExtra = (id, min = 5) => {
+    setExtraTimers((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, isAlarmRinging: false, totalSeconds: min * 60, endAt: Date.now() + min * 60000 } : t))
+    );
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Ferramenta compartilhada: vale nos três modos
@@ -899,6 +911,8 @@ export function usePomodoro() {
     testSound,
     isAlarmRinging,
     stopAlarm,
+    snoozeMain,
+    snoozeExtra,
     startTimer,
     pauseTimer,
     resetTimer,

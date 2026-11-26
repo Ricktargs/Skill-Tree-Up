@@ -7,7 +7,7 @@ import { useSyncExternalStore } from "react";
 
 const KEY = "eu-sou-arvore-sound";
 // Todos os sons (efeitos e ambiente) vêm ligados de padrão
-const DEFAULTS = { enabled: true, ambient: true, volume: 1 };
+const DEFAULTS = { enabled: true, ambient: true, volume: 0.45 };
 
 function loadSettings() {
   try {
@@ -20,6 +20,16 @@ function loadSettings() {
       saved.volume = 1;
       saved.ambientDefaultV2 = true;
       saved.soundDefaultV3 = true;
+      try {
+        localStorage.setItem(KEY, JSON.stringify({ ...DEFAULTS, ...saved }));
+      } catch {
+        /* sem armazenamento */
+      }
+    }
+    // v2.0.15: o volume no máximo era alto demais — desce uma vez para 45%
+    if (!saved.volumeDownV4) {
+      if (typeof saved.volume !== 'number' || saved.volume > 0.45) saved.volume = 0.45;
+      saved.volumeDownV4 = true;
       try {
         localStorage.setItem(KEY, JSON.stringify({ ...DEFAULTS, ...saved }));
       } catch {
@@ -186,6 +196,7 @@ function chirp(c) {
 }
 
 function startAmbient() {
+  if (away) return;
   const c = ready();
   if (!c || ambient) return;
   const src = c.createBufferSource();
@@ -257,10 +268,33 @@ function bindFirstGesture() {
 }
 bindFirstGesture();
 
+/* Fechou o programa (PC: foi para a bandeja · celular: saiu do app):
+   o som de fundo para. O alarme do Pomodoro é outro som e continua. */
+let away = false;
+function setAway(v) {
+  away = v;
+  if (away) stopAmbient();
+  else if (settings.enabled && settings.ambient && ctx) startAmbient();
+}
+if (typeof window !== "undefined") {
+  const desk = window.orbeDesktop;
+  if (desk && desk.onWindowVisibility) {
+    desk.onWindowVisibility((visible) => setAway(!visible));
+  } else if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+    document.addEventListener("visibilitychange", () => setAway(document.hidden));
+  }
+}
+
 /* ---------------- API pública ---------------- */
 export const sfx = {
   play(name) {
     if (!settings.enabled) return;
+    // o mesmo som duas vezes quase juntas (Esc + ✕): toca uma só
+    const now = Date.now();
+    const last = window.__orbeLastSound || {};
+    const key = name === "tick" ? "click" : name;
+    if (last.type === key && now - last.at < 120) return;
+    window.__orbeLastSound = { type: key, at: now };
     const fn = SOUNDS[name];
     if (!fn) return;
     try {

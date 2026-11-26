@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { saveTextFile } from "../../../shared/saveFile.js";
 import { ask, inform } from "../../../shared/Dialog.jsx";
 import Modal from "./Modal";
 import NoteForm from "./NoteForm";
@@ -44,15 +45,7 @@ export function SettingsModal({ onClose, onShuffle, onOpenRevisions, onOpenInfo 
       settings: { darkMode },
       ...data,
     };
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `eu-sou-arvore-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    saveTextFile(`eu-sou-arvore-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(backup, null, 2));
   };
 
   const handleImport = (e) => {

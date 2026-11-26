@@ -1,0 +1,148 @@
+/* =========================================================
+   ⏰ RELÓGIO / ALARMES (aba do Pomodoro + aviso flutuante)
+   ========================================================= */
+.alc-tab { display: flex; flex-direction: column; gap: 12px; padding: 4px 2px 6px; }
+.alc-now { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0 2px; }
+.alc-now-time { font: 700 2.6rem/1 ui-monospace, Consolas, monospace; letter-spacing: 0.02em; }
+.alc-now-time small { font-size: 0.45em; opacity: 0.55; margin-left: 2px; }
+.alc-now-date { display: block; font-size: 0.82rem; opacity: 0.65; }
+.alc-now-date::first-letter { text-transform: uppercase; }
+
+.alc-add {
+  align-self: center;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px dashed var(--theme-accent, #38bdf8);
+  background: color-mix(in srgb, var(--theme-accent, #38bdf8) 10%, transparent);
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.alc-add:hover { background: color-mix(in srgb, var(--theme-accent, #38bdf8) 20%, transparent); }
+.alc-empty { text-align: center; font-size: 0.82rem; opacity: 0.6; margin: 0; }
+
+.alc-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--theme-border, rgba(255, 255, 255, 0.12));
+  background: rgba(0, 0, 0, 0.22);
+}
+.alc-editor-row { display: flex; gap: 8px; align-items: center; }
+.alc-editor-row.end { justify-content: flex-end; }
+.alc-time-input,
+.alc-label-input,
+.alc-sound {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--theme-border, rgba(255, 255, 255, 0.15));
+  background: rgba(0, 0, 0, 0.3);
+  color: inherit;
+  font: inherit;
+  outline: none;
+  color-scheme: dark;
+}
+.alc-time-input { font: 700 1.2rem ui-monospace, Consolas, monospace; width: 7.5em; }
+.alc-label-input { flex: 1; min-width: 0; }
+.alc-sound { flex: 1; min-width: 0; }
+.alc-time-input:focus,
+.alc-label-input:focus,
+.alc-sound:focus { border-color: var(--theme-accent, #38bdf8); }
+
+.alc-days { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.alc-day {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--theme-border, rgba(255, 255, 255, 0.15));
+  background: transparent;
+  color: inherit;
+  font: 700 0.8rem system-ui, sans-serif;
+  cursor: pointer;
+}
+.alc-day.on { background: var(--theme-accent, #38bdf8); border-color: var(--theme-accent, #38bdf8); color: #0b1220; }
+.alc-days small { margin-left: 6px; opacity: 0.65; font-size: 0.78rem; }
+
+.alc-btn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--theme-border, rgba(255, 255, 255, 0.15));
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.alc-btn.primary { background: var(--theme-accent, #38bdf8); border-color: transparent; color: #0b1220; }
+.alc-btn:hover { filter: brightness(1.1); }
+
+.alc-list { display: flex; flex-direction: column; gap: 8px; }
+.alc-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--theme-border, rgba(255, 255, 255, 0.1));
+  background: rgba(0, 0, 0, 0.2);
+}
+.alc-item.off { opacity: 0.5; }
+.alc-item-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.alc-item-time { font: 700 1.5rem/1 ui-monospace, Consolas, monospace; }
+.alc-item-info { display: flex; flex-direction: column; min-width: 0; }
+.alc-item-info b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alc-item-info small { opacity: 0.6; font-size: 0.75rem; }
+.alc-del { border: 0; background: none; cursor: pointer; opacity: 0.55; font-size: 0.95rem; color: inherit; }
+.alc-del:hover { opacity: 1; }
+
+.alc-switch { position: relative; width: 38px; height: 22px; flex-shrink: 0; cursor: pointer; }
+.alc-switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.alc-switch span { position: absolute; inset: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.18); transition: background 0.15s; }
+.alc-switch span::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 0.15s; }
+.alc-switch input:checked + span { background: var(--theme-accent, #38bdf8); }
+.alc-switch input:checked + span::after { transform: translateX(16px); }
+
+/* ---------- aviso flutuante quando o alarme toca ---------- */
+.alc-ringing {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100002;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(420px, calc(100vw - 24px));
+}
+.alc-ring-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--theme-modal-bg, #1e2433);
+  color: var(--opt-fg, #e2e8f0);
+  border: 1px solid var(--theme-accent, #38bdf8);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45), 0 0 0 4px color-mix(in srgb, var(--theme-accent, #38bdf8) 18%, transparent);
+  animation: alc-pop 0.25s ease-out;
+}
+@keyframes alc-pop { from { transform: translateY(-10px); opacity: 0; } }
+.alc-ring-bell { font-size: 1.6rem; animation: alc-shake 0.5s ease-in-out infinite; }
+@keyframes alc-shake { 0%, 100% { transform: rotate(-12deg); } 50% { transform: rotate(12deg); } }
+.alc-ring-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.alc-ring-text b { font: 700 1.2rem/1.1 ui-monospace, Consolas, monospace; }
+.alc-ring-text span { opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Janela flutuante do Pomodoro tocando: o mesmo cartão, no lugar dela */
+.pomo-ring-float {
+  position: fixed;
+  width: min(390px, calc(100vw - 24px));
+  box-sizing: border-box;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.pomo-ring-float:active { cursor: grabbing; }

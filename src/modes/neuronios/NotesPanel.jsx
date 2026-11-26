@@ -1,3 +1,4 @@
+import { useFloatingWindow, useIsMobile } from '../../shared/useFloatingWindow.js';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import '../arvore/App.css';
 import '../arvore/ui.css';
@@ -57,6 +58,10 @@ const byTitle = (a, b) => (a.title || a.name || '').localeCompare(b.title || b.n
 const NO_ORDER = 1e12;
 const sortItems = (a, b) =>
   (typeof a.order === 'number' ? a.order : NO_ORDER) - (typeof b.order === 'number' ? b.order : NO_ORDER) || byTitle(a, b);
+// Pastas e notas numa lista só, na ordem que a pessoa arrumou ("pos").
+// O que nunca foi arrumado: pastas primeiro e depois notas (como antes).
+const mixKey = (it) => (typeof it.item.pos === 'number' ? it.item.pos : (it.kind === 'folder' ? 0 : NO_ORDER) + (typeof it.item.order === 'number' ? it.item.order : NO_ORDER / 2));
+const sortMixed = (a, b) => mixKey(a) - mixKey(b) || byTitle(a.item, b.item);
 
 export default function NotesPanel() {
   const store = useNeuronios();
@@ -81,6 +86,13 @@ export default function NotesPanel() {
 
   // Celular: tela cheia; no retrato mostra a lista OU a nota (com "‹ Notas" para voltar)
   const [phoneView, setPhoneView] = useState(() => (readJSON(ACTIVE_KEY, null) ? 'note' : 'list'));
+
+  // ---------- Janela solta no PC (posição e tamanho que a pessoa quiser) ----------
+  const isMobile = useIsMobile();
+  const panelRef = useRef(null);
+  const fw = useFloatingWindow('nr-notes-window', { disabled: isMobile });
+  const winStyle = fw.style;
+  const startWinDrag = (e, mode) => fw.start(e, mode === 'size' ? 'br' : mode, panelRef.current);
   const openNote = (id) => {
     setActiveId(id);
     setPhoneView('note');
@@ -210,6 +222,10 @@ export default function NotesPanel() {
     kind === 'folder'
       ? folders.filter((f) => parentOfFolder(f) === (parentId || null)).sort(sortItems)
       : notes.filter((n) => folderOf(n) === (parentId || null)).sort(sortItems);
+  // pastas e notas juntas, na ordem arrumada
+  const mixedChildren = (parentId) =>
+    [...childrenOf('folder', parentId).map((item) => ({ kind: 'folder', item })), ...childrenOf('note', parentId).map((item) => ({ kind: 'note', item }))].sort(sortMixed);
+  const renderMixed = (parentId, depth) => mixedChildren(parentId).map((x) => (x.kind === 'folder' ? renderFolder(x.item, depth) : renderNote(x.item, depth)));
   // "folderId" está dentro de "ancestorId" (ou é ela)?
   const isWithin = (folderId, ancestorId) => {
     let cur = folderId;
@@ -241,20 +257,17 @@ export default function NotesPanel() {
     const r = (e.clientY - box.top) / Math.max(1, box.height);
     let t;
     if (kind === 'folder') {
-      if (d.kind === 'note') t = { kind, id, where: 'inside' };
-      else t = { kind, id, where: r < 0.28 ? 'before' : r > 0.72 ? 'after' : 'inside' };
-    } else if (d.kind === 'note') {
-      if (d.id === id) return null;
-      t = { kind, id, where: r < 0.5 ? 'before' : 'after' };
+      // pasta: borda de cima/baixo = antes/depois, meio = dentro (vale para notas também)
+      t = { kind, id, where: r < 0.28 ? 'before' : r > 0.72 ? 'after' : 'inside' };
     } else {
-      // pasta solta em cima de uma nota: vai para a pasta dessa nota
-      const fid = folderOf(store.byId.get(id) || {});
-      t = fid ? { kind: 'folder', id: fid, where: 'inside' } : { kind: 'root', id: null, where: 'root' };
+      // em cima de uma nota (nota ou pasta arrastada): antes ou depois dela
+      if (d.kind === 'note' && d.id === id) return null;
+      t = { kind, id, where: r < 0.5 ? 'before' : 'after' };
     }
     // pasta não entra nela mesma nem nas de dentro dela
     if (d.kind === 'folder') {
-      const parent = t.where === 'inside' ? t.id : t.where === 'root' ? null : parentOfFolder(folders.find((f) => f.id === t.id));
-      if (t.id === d.id || (parent && isWithin(parent, d.id))) return null;
+      const parent = t.where === 'inside' ? t.id : t.where === 'root' ? null : t.kind === 'note' ? folderOf(store.byId.get(t.id) || {}) : parentOfFolder(folders.find((f) => f.id === t.id));
+      if ((t.kind === 'folder' && t.id === d.id) || (parent && isWithin(parent, d.id))) return null;
     }
     return t;
   };
@@ -263,16 +276,16 @@ export default function NotesPanel() {
     let parent = null;
     if (t.where === 'inside') parent = t.id;
     else if (t.where !== 'root') parent = t.kind === 'folder' ? parentOfFolder(folders.find((f) => f.id === t.id)) : folderOf(store.byId.get(t.id) || {});
-    const ids = childrenOf(d.kind, parent)
-      .map((x) => x.id)
-      .filter((x) => x !== d.id);
-    let idx = ids.length;
-    if ((t.where === 'before' || t.where === 'after') && t.kind === d.kind) {
-      const i = ids.indexOf(t.id);
+    const list = mixedChildren(parent)
+      .map((x) => ({ kind: x.kind, id: x.item.id }))
+      .filter((x) => !(x.kind === d.kind && x.id === d.id));
+    let idx = list.length;
+    if (t.where === 'before' || t.where === 'after') {
+      const i = list.findIndex((x) => x.kind === t.kind && x.id === t.id);
       if (i >= 0) idx = t.where === 'before' ? i : i + 1;
     }
-    ids.splice(idx, 0, d.id);
-    store.arrange(d.kind, d.id, parent, ids);
+    list.splice(idx, 0, { kind: d.kind, id: d.id });
+    store.arrangeMixed(d.kind, d.id, parent, list);
     if (parent) openPath(parent);
     sfx.play('drop');
   };
@@ -480,12 +493,7 @@ export default function NotesPanel() {
         )}
         {isOpen && (
           <div className="np-children">
-            {subFolders.map((sf) => (
-              renderFolder(sf, depth + 1)
-            ))}
-            {inside.map((n) => (
-              renderNote(n, depth + 1)
-            ))}
+            {renderMixed(f.id, depth + 1)}
             {!subFolders.length && !inside.length && (
               <div className="np-empty-folder" style={{ '--depth': depth + 1 }} {...insideDropProps(f.id)}>
                 Pasta vazia — arraste notas para cá
@@ -507,13 +515,31 @@ export default function NotesPanel() {
   const neuronCount = notes.filter(isNeuron).length;
 
   return (
-    <aside className={`arvore-root nr-root np-panel np-view-${note ? phoneView : 'list'} ${dark ? 'dark-mode' : ''}`} aria-label="Editor de notas">
-      <div className="np-head">
-        {note && phoneView === 'note' && (
-          <button type="button" className="np-back" onClick={() => setPhoneView('list')} aria-label="Voltar para a lista de notas">
-            ‹ Notas
-          </button>
-        )}
+    <aside
+      ref={panelRef}
+      className={`arvore-root nr-root np-panel np-view-${note ? phoneView : 'list'} ${winStyle ? 'np-floating' : ''} ${dark ? 'dark-mode' : ''}`}
+      style={winStyle}
+      aria-label="Editor de notas"
+    >
+      <div
+        className="np-head"
+        onPointerDown={(e) => startWinDrag(e, 'move')}
+        onDoubleClick={(e) => {
+          if (isMobile || e.target.closest('button, input, select, textarea')) return;
+          fw.reset(); // volta para o lugar de sempre
+        }}
+        title={isMobile ? undefined : 'Arraste para mover · duplo clique volta ao lugar'}
+      >
+        {/* celular/tablet: uma parte por vez, este botão alterna */}
+        <button
+          type="button"
+          className="np-switch"
+          disabled={!note && phoneView !== 'note'}
+          onClick={() => setPhoneView((v) => (v === 'note' ? 'list' : 'note'))}
+          aria-label={phoneView === 'note' && note ? 'Mostrar a lista de notas' : 'Mostrar a nota aberta'}
+        >
+          {phoneView === 'note' && note ? '☰ Lista' : '✎ Nota'}
+        </button>
         <h2>✏️ Notas</h2>
         <small>
           {notes.length - neuronCount} nota(s) · {neuronCount} neurônio(s)
@@ -596,12 +622,7 @@ export default function NotesPanel() {
               )
             ) : (
               <>
-                {rootFolders.map((f) => (
-                  renderFolder(f, 0)
-                ))}
-                {rootNotes.map((n) => (
-                  renderNote(n, 0)
-                ))}
+                {renderMixed(null, 0)}
                 {!rootFolders.length && !rootNotes.length && <div className="np-empty-folder">Nenhuma nota ainda.</div>}
               </>
             )}
@@ -615,6 +636,12 @@ export default function NotesPanel() {
         </nav>
 
         {/* Editor (o mesmo dos Neurônios) */}
+        {!isMobile && (
+          <>
+            <span className="fw-resize br" onPointerDown={(e) => startWinDrag(e, 'br')} title="Arraste para mudar o tamanho" aria-hidden="true" />
+            <span className="fw-resize tr" onPointerDown={(e) => startWinDrag(e, 'tr')} title="Arraste para mudar o tamanho" aria-hidden="true" />
+          </>
+        )}
         <section className="np-editor">
           {note ? (
             <>
@@ -625,10 +652,10 @@ export default function NotesPanel() {
                   value={folderOf(note) || ''}
                   onChange={(e) => {
                     const target = e.target.value || null;
-                    const ids = childrenOf('note', target)
-                      .map((x) => x.id)
-                      .filter((x) => x !== note.id);
-                    store.arrange('note', note.id, target, [note.id, ...ids]);
+                    const list = mixedChildren(target)
+                      .map((x) => ({ kind: x.kind, id: x.item.id }))
+                      .filter((x) => !(x.kind === 'note' && x.id === note.id));
+                    store.arrangeMixed('note', note.id, target, [{ kind: 'note', id: note.id }, ...list]);
                     if (target) openPath(target);
                     sfx.play('drop');
                   }}

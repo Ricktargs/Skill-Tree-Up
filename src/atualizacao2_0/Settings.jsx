@@ -358,36 +358,6 @@ export function SettingsModal({
               ) : (
                 <p className="st-note">{tx('Carregando…')}</p>
               )}
-              <Toggle
-                title={tx('Efeitos sonoros')}
-                desc={tx('Sons ao criar galhos, notas e pastas')}
-                checked={sound.enabled}
-                onChange={(v) => {
-                  setSoundSettings({ enabled: v });
-                  if (v) sfx.play('grow');
-                }}
-              />
-              <Toggle
-                title={tx('Som ambiente')}
-                desc={tx('Vento e pássaros')}
-                checked={sound.ambient}
-                onChange={(v) => setSoundSettings({ ambient: v })}
-              />
-              <div className="st-row">
-                <div className="st-row-text">
-                  <strong>{tx('Volume')}</strong>
-                </div>
-                <input
-                  className="st-range"
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={sound.volume}
-                  disabled={!sound.enabled}
-                  onChange={(e) => setSoundSettings({ volume: Number(e.target.value) })}
-                />
-              </div>
             </section>
           )}
 
@@ -455,6 +425,41 @@ export function SettingsModal({
           )}
 
           {/* Dados */}
+          {/* Som: vale nos 3 modos (Neurônios, Santuário e Habilidades) */}
+          <section className="st-section">
+            <h4>🔊 {tx('Som')}</h4>
+            <Toggle
+              title={tx('Efeitos sonoros')}
+              desc={tx('Sons ao criar galhos, notas e pastas')}
+              checked={sound.enabled}
+              onChange={(v) => {
+                setSoundSettings({ enabled: v });
+                if (v) sfx.play('grow');
+              }}
+            />
+            <Toggle
+              title={tx('Som ambiente')}
+              desc={tx('Vento e pássaros')}
+              checked={sound.ambient}
+              onChange={(v) => setSoundSettings({ ambient: v })}
+            />
+            <div className="st-row">
+              <div className="st-row-text">
+                <strong>{tx('Volume')}</strong>
+              </div>
+              <input
+                className="st-range"
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={sound.volume}
+                disabled={!sound.enabled}
+                onChange={(e) => setSoundSettings({ volume: Number(e.target.value) })}
+              />
+            </div>
+          </section>
+
           <section className="st-section">
             <h4>💾 {tx('Dados e backup')}</h4>
             <p className="st-note">
@@ -544,7 +549,7 @@ const NEURONIOS_GROUPS = [
   {
     title: 'Mapa',
     items: [
-      { keys: ['N'], text: 'Novo neurônio.' },
+      { keys: ['Shift', 'N'], text: 'Novo neurônio.' },
       { keys: ['/'], text: 'Buscar neurônios.' },
       { keys: ['Clique duplo'], text: 'No vazio do mapa: cria um neurônio ali.' },
       { keys: ['Clique'], text: 'Num neurônio: abre no editor.' },
@@ -587,7 +592,7 @@ const COMMAND_GROUPS = [
       { keys: ['A'], text: 'Emoji do avatar.' },
       { keys: ['G'], text: 'Pastas e filtros.' },
       { keys: ['O'], text: 'Organizar habilidades (mesma janela do L).' },
-      { keys: ['E'], text: 'Editor de notas (em qualquer modo).' },
+      { keys: ['N'], alt: ['E'], text: 'Editor de notas (em qualquer modo).' },
       { keys: ['L'], text: 'Organizar habilidades: ordem, ocultas, pastas e edição.' }
     ]
   },

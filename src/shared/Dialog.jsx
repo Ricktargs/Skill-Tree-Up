@@ -41,6 +41,10 @@ export const inform = (opts = {}) =>
 
 export const askText = (opts = {}) => push({ kind: 'text', yes: tx('Ok'), no: tx('Cancelar'), value: '', ...opts });
 
+// Várias opções: await choose({ title, message, options: [{ value, label, hint }] })
+// -> value da opção escolhida, ou null se cancelar
+export const choose = (opts = {}) => push({ kind: 'choose', no: tx('Cancelar'), options: [], ...opts });
+
 export const isDialogOpen = () => queue.length > 0;
 
 // Teclado: registrado antes de qualquer atalho do programa, para a janela
@@ -99,7 +103,7 @@ export function DialogHost() {
 
   if (!current) return null;
 
-  const cancel = () => settle(current.kind === 'text' ? null : current.kind === 'inform' ? undefined : false);
+  const cancel = () => settle(current.kind === 'text' || current.kind === 'choose' ? null : current.kind === 'inform' ? undefined : false);
   const confirm = () => settle(current.kind === 'text' ? inputRef.current?.value ?? '' : current.kind === 'inform' ? undefined : true);
 
   return createPortal(
@@ -130,15 +134,33 @@ export function DialogHost() {
             placeholder={current.placeholder || ''}
           />
         )}
+        {current.kind === 'choose' && (
+          <div className="ui-dialog-choices">
+            {current.options.map((o, i) => (
+              <button
+                key={o.value}
+                ref={i === 0 ? yesRef : undefined}
+                type="button"
+                className="ui-dialog-choice"
+                onClick={() => settle(o.value)}
+              >
+                <b>{o.label}</b>
+                {o.hint && <small>{o.hint}</small>}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="ui-dialog-actions">
           {current.kind !== 'inform' && (
             <button type="button" className="ui-dialog-btn" onClick={cancel}>
               {current.no}
             </button>
           )}
-          <button ref={yesRef} type="button" className={`ui-dialog-btn primary ${current.danger ? 'danger' : ''}`} onClick={confirm}>
-            {current.kind === 'inform' ? current.ok : current.yes}
-          </button>
+          {current.kind !== 'choose' && (
+            <button ref={yesRef} type="button" className={`ui-dialog-btn primary ${current.danger ? 'danger' : ''}`} onClick={confirm}>
+              {current.kind === 'inform' ? current.ok : current.yes}
+            </button>
+          )}
         </div>
       </div>
     </div>,

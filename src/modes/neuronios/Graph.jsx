@@ -42,7 +42,7 @@ export default function Graph({ nodes, links, activeId, openIds, onOpen, onCreat
   const raf = useRef(0);
   const [, setFrame] = useState(0);
   const [view, setView] = useState(() => lastView || { x: 0, y: 0, k: 1 });
-  // As forças vêm do painel "Mapa/Neuro" (fica embaixo do + Neurônio)
+  // As forças vêm da janela "Mapa dos neurônios" (botão de cima ou L)
   const forcesRef = useRef(forces);
   const forcesKey = `${forces.center}|${forces.repel}|${forces.link}|${forces.distance}`;
   const firstForces = useRef(true);

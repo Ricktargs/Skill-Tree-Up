@@ -16,6 +16,7 @@
    guardados e voltam em "Ver como Árvore".
 ========================================================= */
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { saveTextFile } from "../../../shared/saveFile.js";
 import { BASE_Y, groundY, smoothPath, treeGeometry } from "../lib/growth";
 import { canopyCircles } from "../lib/canopy";
 import { hashString } from "../lib/ids";
@@ -35,6 +36,7 @@ import { ROOT_ID } from "../lib/constants";
 import { findBranch } from "../lib/tree";
 import { TEXT_FEATURES } from "../lib/standby";
 import { DEFAULT_LAYOUT_ITEMS } from "../lib/sanctuaryDefaults";
+import { useFloatingWindow, useIsMobile } from "../../../shared/useFloatingWindow.js";
 
 /* ---------------- objetos do mundo ---------------- */
 export const ITEM_TYPES = {
@@ -1608,15 +1610,7 @@ export function exportLayout(index) {
   const s = get();
   const layout = s.layouts[index];
   const payload = { app: LAYOUT_FILE, version: 1, kind: layout.kind, exportedAt: new Date().toISOString(), items: layout.items };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${LAYOUT_FILE}-${layout.kind}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  saveTextFile(`${LAYOUT_FILE}-${layout.kind}.json`, JSON.stringify(payload, null, 2), { question: "Onde salvar o layout?" });
 }
 export async function importLayout(index, file) {
   let data = null;
@@ -1650,6 +1644,39 @@ export function SanctuaryPanel({ prefs }) {
   const [slot, setSlot] = useState(prefs.active);
   const layout = shownLayout(prefs);
   const selected = prefs.selected ? layout.items.find((i) => i.id === prefs.selected) : null;
+
+  // Janela de Layout: aberta pelo botão Organizar (ícone de lista) ou pela tecla L
+  const panelRef = useRef(null);
+  const isMobile = useIsMobile();
+  const fw = useFloatingWindow("sanc-layout-window", { disabled: isMobile, minW: 260, minH: 120 });
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  useEffect(() => {
+    const toggle = () => {
+      if (viewRef.current !== "closed") {
+        setSanctuary({ editing: false, selected: null, viewing: null });
+        setView("closed");
+      } else {
+        setSlot(get().viewing ?? get().active);
+        setView("layouts");
+      }
+    };
+    window.addEventListener("orbe-sanctuary-layout", toggle);
+    return () => window.removeEventListener("orbe-sanctuary-layout", toggle);
+  }, []);
+  // Esc fecha a janela (quando não está editando/selecionando nada)
+  useEffect(() => {
+    if (view === "closed") return undefined;
+    const onKey = (e) => {
+      if (e.key !== "Escape" || isTyping(e.target) || get().editing || document.querySelector(".modal-backdrop, .ui-dialog-backdrop")) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      setSanctuary({ editing: false, selected: null, viewing: null });
+      setView("closed");
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [view]);
 
   // Clicar fora de uma árvore esconde a bolinha de aleatorizar
   useEffect(() => {
@@ -1715,9 +1742,29 @@ export function SanctuaryPanel({ prefs }) {
   const current = seasonOf(prefs.season);
   const type = selected ? ITEM_TYPES[selected.type] : null;
   const editingKind = LAYOUT_KINDS[layout.kind];
+  if (view === "closed") return null;
 
   return (
-    <div className={`sanc-panel ${view !== "closed" ? "open" : ""}`} onPointerDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
+    <div
+      ref={panelRef}
+      className={`sanc-panel open sanc-float ${fw.floating ? "moved" : ""}`}
+      style={fw.style ? { ...fw.style, height: "auto" } : undefined}
+      onPointerDown={(e) => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}
+      role="dialog"
+      aria-label="Layout do Santuário"
+    >
+      <div
+        className="sanc-float-bar"
+        onPointerDown={(e) => fw.start(e, "move", panelRef.current)}
+        onDoubleClick={() => fw.reset()}
+        title={isMobile ? undefined : "Arraste para mover · duplo clique volta ao lugar"}
+      >
+        <span>🗺️ Layout do Santuário</span>
+        <button type="button" className="sanc-float-x" onClick={close} title="Fechar (Esc)" aria-label="Fechar">
+          ✕
+        </button>
+      </div>
       {view === "layouts" && (
         <div className="sanc-panel-body sanc-layouts">
           <div className="sanc-panel-title">Editor de layout</div>
@@ -1950,9 +1997,6 @@ export function SanctuaryPanel({ prefs }) {
       )}
 
       {prefs.editing && view !== "decor" && <div className="sanc-edit-hint">✏️ Arraste o que quiser · Delete remove · + − tamanho</div>}
-      <button type="button" className="sanc-toggle-btn" onClick={() => (view === "closed" ? openLayouts() : close())} aria-expanded={view !== "closed"}>
-        {view === "closed" ? "🗺️ Layout" : "✕ Fechar"}
-      </button>
     </div>
   );
 }

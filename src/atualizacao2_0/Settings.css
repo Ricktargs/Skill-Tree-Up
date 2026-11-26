@@ -229,10 +229,16 @@
 }
 
 /* Interruptor */
-.st-toggle-row { cursor: pointer; }
+.st-toggle-row { cursor: pointer; position: relative; }
 
+/* o checkbox escondido fica em cima da própria linha: ao clicar, o navegador
+   não rola a janela inteira para "mostrar" ele (era o que bagunçava tudo) */
 .st-toggle-row input {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   opacity: 0;
   pointer-events: none;
 }

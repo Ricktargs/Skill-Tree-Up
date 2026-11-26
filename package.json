@@ -1,7 +1,7 @@
 {
   "name": "skill-tree-rpg",
   "private": true,
-  "version": "2.0.14",
+  "version": "2.0.15",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -23,6 +23,8 @@
     "@capacitor/assets": "^4.0.0",
     "@capacitor/cli": "^8.6.2",
     "@capacitor/core": "^8.6.2",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/share": "^8.0.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
@@ -31,6 +33,7 @@
     "electron": "^45.4.1",
     "electron-builder": "^26.18.0",
     "emoji-picker-react": "^4.22.3",
+    "hunspell-asm": "^4.0.2",
     "oxlint": "^1.81.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
