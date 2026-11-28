@@ -33,10 +33,16 @@ export const IN_BOUNDS = [34, 404];
 export const DECK_Y = 104; // varanda da árvore
 export const DECK = [TX + 60, TX + 160];
 export const BALCONY_DOOR = TX + 76;
+// canteiro (mini horta) à esquerda da casa
+export const GARDEN_X = TX - 330;
+export const GARDEN_BED_W = 14;
+export const GARDEN_GAP = 3;
+export const GARDEN_X0 = GARDEN_X - Math.round((4 * GARDEN_BED_W + 3 * GARDEN_GAP) / 2);
 
 // coisas para interagir (E). y = altura do chão onde ficam
 export const SPOTS = [
   { id: 'door', where: 'out', x: TX, y: GROUND, w: 40, label: 'Entrar em casa', act: 'enter' },
+  { id: 'garden', where: 'out', x: GARDEN_X, y: GROUND, w: 70, label: 'Canteiro', act: 'garden' },
   { id: 'deckdoor', where: 'out', x: BALCONY_DOOR, y: DECK_Y, w: 24, label: 'Entrar pela varanda', act: 'deckIn' },
   { id: 'exit', where: 'in', x: 50, y: FLOOR1, w: 32, label: 'Sair de casa', act: 'exit' },
   { id: 'up', where: 'in', x: LADDER_X, y: FLOOR1, w: 26, label: 'Subir a escada', act: 'up' },
@@ -360,7 +366,7 @@ function flowers(g, x0, x1, P, r, n) {
   if (!P.flower.length) return;
   for (let i = 0; i < n; i++) {
     const x = Math.round(x0 + r() * (x1 - x0));
-    if (Math.abs(x - TX) < 70) continue;
+    if (Math.abs(x - TX) < 70 || Math.abs(x - GARDEN_X) < 58) continue;
     const col = P.flower[Math.floor(r() * P.flower.length)];
     px(g, x, GROUND - 1, P.grass[1]);
     px(g, x, GROUND - 2, P.grass[1]);
@@ -426,6 +432,90 @@ function lampPost(g, x, lights) {
   rect(g, x - 2, GROUND - 47, 6, 6, '#fde68a');
   rect(g, x - 4, GROUND - 49, 10, 2, '#111827');
   lights.push({ x: x + 1, y: GROUND - 44, r: 3, glow: 26 });
+}
+
+/* ---------------- canteiro (mini horta) ---------------- */
+function drawGardenBeds(g, P) {
+  const x0 = GARDEN_X0;
+  const total = 4 * GARDEN_BED_W + 3 * GARDEN_GAP;
+  // cerquinha baixa atrás
+  for (let x = x0 - 8; x <= x0 + total + 8; x += 7) {
+    rect(g, x, GROUND - 14, 2, 14, WOOD[1]);
+    px(g, x, GROUND - 15, WOOD[2]);
+  }
+  rect(g, x0 - 8, GROUND - 11, total + 18, 1, WOOD[2]);
+  // canteiros de madeira com terra
+  for (let i = 0; i < 4; i++) {
+    const x = x0 + i * (GARDEN_BED_W + GARDEN_GAP);
+    rect(g, x, GROUND - 6, GARDEN_BED_W, 6, WOOD[1]);
+    rect(g, x, GROUND - 6, GARDEN_BED_W, 1, WOOD[3]);
+    rect(g, x + 1, GROUND - 5, GARDEN_BED_W - 2, 2, '#5b3a1e');
+    px(g, x + 3, GROUND - 5, '#7a4f2a');
+    px(g, x + 9, GROUND - 4, '#7a4f2a');
+    rect(g, x, GROUND - 1, GARDEN_BED_W, 1, WOOD[0]);
+  }
+  // plaquinha com uma cenoura
+  const sx = x0 + total + 12;
+  rect(g, sx, GROUND - 16, 2, 16, WOOD[0]);
+  rect(g, sx - 6, GROUND - 24, 14, 10, WOOD[2]);
+  rect(g, sx - 5, GROUND - 23, 12, 8, WOOD[3]);
+  [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [1, 2]].forEach(([dx, dy]) => px(g, sx - 1 + dx, GROUND - 20 + dy, '#f97316'));
+  px(g, sx, GROUND - 21, '#22c55e');
+  px(g, sx + 1, GROUND - 22, '#22c55e');
+  px(g, sx - 1, GROUND - 22, '#22c55e');
+  // regador
+  const wx = x0 - 18;
+  rect(g, wx, GROUND - 7, 8, 7, '#7c8b99');
+  rect(g, wx, GROUND - 7, 8, 1, '#a9b6c2');
+  rect(g, wx + 8, GROUND - 6, 3, 1, '#7c8b99');
+  rect(g, wx + 10, GROUND - 8, 2, 2, '#7c8b99');
+  rect(g, wx - 2, GROUND - 6, 2, 4, '#5d6b78');
+  rect(g, wx + 1, GROUND - 10, 6, 1, '#5d6b78');
+  if (P.snow) rect(g, x0 - 8, GROUND - 16, total + 18, 1, '#ffffff');
+}
+
+// plantas do canteiro (mudam com o tempo: desenhadas a cada quadro)
+// beds[i] = { crop, stage 0..3, wet }
+export function drawGardenPlants(g, ox, beds, t) {
+  beds.forEach((b, i) => {
+    const x = GARDEN_X0 + i * (GARDEN_BED_W + GARDEN_GAP) + ox;
+    if (!b) return;
+    if (b.wet) {
+      rect(g, x + 1, GROUND - 5, GARDEN_BED_W - 2, 2, '#3a2412');
+      if (Math.sin(t * 3 + i) > 0.7) px(g, x + 4 + i, GROUND - 5, '#93c5fd');
+    }
+    const carrot = b.crop === 'cenoura';
+    const leaf = carrot ? '#4ade80' : '#15803d';
+    const leafD = carrot ? '#16a34a' : '#14532d';
+    const cols = [x + 3, x + 7, x + 11];
+    cols.forEach((c, k) => {
+      if (b.stage === 0) {
+        px(g, c, GROUND - 5, '#3b2412');
+        px(g, c - 1, GROUND - 4, '#c4a072');
+        return;
+      }
+      const h = b.stage === 1 ? 2 : b.stage === 2 ? 5 : 7;
+      const sway = Math.sin(t * 2 + i + k) > 0.6 ? 1 : 0;
+      for (let y = 0; y < h; y++) px(g, c + (y > h / 2 ? sway : 0), GROUND - 6 - y, y % 2 ? leaf : leafD);
+      if (b.stage >= 2) {
+        if (carrot) {
+          px(g, c - 1, GROUND - 6 - h + 1, leaf);
+          px(g, c + 1, GROUND - 6 - h + 2, leaf);
+          px(g, c - 1 + sway, GROUND - 6 - h + 3, leafD);
+        } else {
+          rect(g, c - 2, GROUND - 6 - h + 1, 2, 2, leaf);
+          rect(g, c + 1, GROUND - 6 - h + 2, 2, 2, leaf);
+          px(g, c, GROUND - 6 - h + 3, '#9d174d');
+        }
+      }
+      if (b.stage === 3) {
+        // a raiz aparecendo na terra
+        rect(g, c - 1, GROUND - 6, 3, 2, carrot ? '#f97316' : '#be185d');
+        px(g, c, GROUND - 4, carrot ? '#ea580c' : '#9d174d');
+        if (Math.sin(t * 4 + i * 2 + k) > 0.85) px(g, c + 2, GROUND - 10 - h, '#fef08a');
+      }
+    });
+  });
 }
 
 /* ---------------- a Árvore-casa gigante ---------------- */
@@ -700,6 +790,7 @@ export function buildWorld(kind, season) {
     fence(g, b - 34, 3);
     fence(g, a + 4, 3);
     lampPost(g, TX + 180, lights);
+    drawGardenBeds(g, P);
   } else {
     const end = kind === 'praia' ? sc.sand : OUT_W;
     groundStrip(g, 0, end, P, r);
@@ -735,19 +826,19 @@ export function buildWorld(kind, season) {
     flowers(g, 40, rightEnd, P, r, 150);
     for (let i = 0; i < 12; i++) {
       const x = 60 + r() * (rightEnd - 120);
-      if (Math.abs(x - TX) < 260) continue;
+      if (Math.abs(x - TX) < 260 || Math.abs(x - GARDEN_X) < 80) continue;
       bush(g, x, P, 0.8 + r() * 0.5);
     }
     for (let i = 0; i < 7; i++) {
       const x = 80 + r() * (rightEnd - 160);
-      if (Math.abs(x - TX) < 240) continue;
+      if (Math.abs(x - TX) < 240 || Math.abs(x - GARDEN_X) < 70) continue;
       rock(g, x, 0.7 + r() * 0.6);
     }
     mushroom(g, TX - 240);
     mushroom(g, TX - 232);
     mushroom(g, TX + 262);
     fence(g, TX - 420, 6);
-    lampPost(g, TX - 330, lights);
+    drawGardenBeds(g, P);
     lampPost(g, TX + 330, lights);
     // árvores menores nas pontas (o mundo "acaba" nelas)
     [60, ...(kind === 'praia' ? [] : [OUT_W - 60])].forEach((x) => {

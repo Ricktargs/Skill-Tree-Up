@@ -26,6 +26,7 @@ export const PER_PROFILE_KEYS = [
   'eu-sou-arvore-historico-pontos',
   'eu-sou-arvore-xp-sync', // pontos antigos da Árvore já viraram XP
   'eu-sou-arvore-santuario', // Santuário: decoração e estação
+  'eu-sou-arvore-canteiro', // Santuário: canteiro (plantas e colheita)
   'eu-sou-arvore-growth', // permissões de crescimento (dividir tronco, árvores novas)
   // Neurônios
   'neuronios-v1'

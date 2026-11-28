@@ -19,10 +19,12 @@ import { getActiveProfileId } from "../../../shared/activeProfile.js";
 import { IS_TOUCH } from "../../../shared/touch.js";
 import { tx, useLanguage } from "../../../i18n/index.jsx";
 import { sfx } from "../lib/sound";
+import { ask } from "../../../shared/Dialog.jsx";
 import { SEASONS, seasonOf, setSanctuary } from "./Sanctuary.jsx";
 import TouchPad from "./TouchPad.jsx";
 import PixelSceneEditor from "./PixelSceneEditor.jsx";
 import { artKey, blobToCanvas, loadDevData, solidKey, spotsKey } from "./sanctuaryDevStore.js";
+import { CROPS, STAGES, harvest, loadGarden, plant, progressOf, saveGarden, stageOf, tickGarden, uproot, water, waterAll, waterOf } from "../lib/garden.js";
 import {
   BOT,
   FAR,
@@ -48,6 +50,7 @@ import {
   composeLayer,
   defaultSolid,
   drawClouds,
+  drawGardenPlants,
   drawNight,
   drawPendulum,
   drawRoomWindow,
@@ -83,7 +86,7 @@ const JOY_KEY = "pw-joystick";
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const approach = (v, target, step) => (v < target ? Math.min(target, v + step) : Math.max(target, v - step));
 const isTyping = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
-const modalOpen = () => document.querySelector(".modal-backdrop, .ui-dialog-backdrop, .pwd-editor");
+const modalOpen = () => document.querySelector(".modal-backdrop, .ui-dialog-backdrop, .pwd-editor, .pw-garden");
 const readLS = (k, fb) => {
   try {
     const v = localStorage.getItem(k);
@@ -160,6 +163,29 @@ export default function PixelSanctuary({ prefs }) {
   const [joy, setJoy] = useState(() => IS_TOUCH && readLS(JOY_KEY, "0") === "1");
   const [devData, setDevData] = useState({});
   const [layers, setLayers] = useState(null);
+  // canteiro
+  const [garden, setGardenState] = useState(() => tickGarden(loadGarden()));
+  const [gardenOpen, setGardenOpen] = useState(false);
+  const gardenRef = useRef(garden);
+  gardenRef.current = garden;
+  const updateGarden = useCallback((fn) => {
+    setGardenState((g) => {
+      const next = fn(tickGarden(g));
+      saveGarden(next);
+      return next;
+    });
+  }, []);
+  // o tempo passa: atualiza o crescimento a cada segundo
+  useEffect(() => {
+    const id = setInterval(() => setGardenState((g) => tickGarden(g)), 1000);
+    const save = () => saveGarden(tickGarden(gardenRef.current));
+    window.addEventListener("beforeunload", save);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("beforeunload", save);
+      save();
+    };
+  }, []);
 
   const st = useRef(null);
   if (!st.current) {
@@ -402,6 +428,12 @@ export default function PixelSanctuary({ prefs }) {
           p.climb = { y0: p.y, y1: other.y, t: 0 };
           break;
         }
+        case "garden":
+          sfx.play("rustle");
+          keys.current.clear();
+          p.analog = 0;
+          setGardenOpen(true);
+          break;
         case "hero":
           sfx.play("open");
           window.dispatchEvent(new Event("orbe-open-hero-menu"));
@@ -434,7 +466,7 @@ export default function PixelSanctuary({ prefs }) {
   );
   const actRef = useRef(act);
   actRef.current = act;
-  const UPISH = ["up", "enter", "exit", "deckIn", "deckOut"];
+  const UPISH = ["up", "enter", "exit", "deckIn", "deckOut", "garden"];
   const jump = () => {
     st.current.buffer = BUFFER;
   };
@@ -748,6 +780,13 @@ export default function PixelSanctuary({ prefs }) {
         if (L.mid) g.drawImage(L.mid, Math.round(-900 - cam * MID), -PAD);
         g.drawImage(L.world, ox, -PAD);
         if (artRef.current.kind === "praia") drawWaves(g, ox, t);
+        const now = Date.now();
+        drawGardenPlants(
+          g,
+          ox,
+          gardenRef.current.beds.map((b) => (b ? { crop: b.crop, stage: stageOf(b), wet: waterOf(b, now) > 0 } : null)),
+          t
+        );
         drawParts(g, list, ox, t, false);
         if (isNight) drawNight(g, cw, L.worldLights, ox, false, top);
       } else if (L) {
@@ -909,6 +948,8 @@ export default function PixelSanctuary({ prefs }) {
         </div>
       )}
 
+      {gardenOpen && <GardenPanel garden={garden} update={updateGarden} onClose={() => setGardenOpen(false)} />}
+
       {IS_TOUCH && (
         <button
           type="button"
@@ -950,6 +991,170 @@ export default function PixelSanctuary({ prefs }) {
           />,
           document.body
         )}
+    </div>
+  );
+}
+
+/* ---------- janela do canteiro ---------- */
+const fmtTime = (ms) => {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(s / 60);
+  return m ? `${m}min ${String(s % 60).padStart(2, "0")}s` : `${s}s`;
+};
+function GardenPanel({ garden, update, onClose }) {
+  const [picking, setPicking] = useState(null); // canteiro escolhendo o que plantar
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    const onKey = (e) => {
+      const k = (e.key || "").toLowerCase();
+      if (k !== "escape" && k !== "e") return;
+      if (document.querySelector(".ui-dialog-backdrop")) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      sfx.play("close");
+      closeRef.current();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
+  const now = Date.now();
+  const thirsty = garden.beds.some((b) => b && stageOf(b) < 3 && waterOf(b, now) < 0.35);
+
+  return (
+    <div className="pw-garden" onPointerDown={(e) => e.stopPropagation()}>
+      <div className="pw-garden-box">
+        <div className="pw-panel-head">
+          <strong>🌱 {tx("Canteiro")}</strong>
+          <button type="button" onClick={onClose} title={tx("Fechar (Esc)")}>
+            ✕
+          </button>
+        </div>
+        <div className="pw-bag">
+          <span>{tx("Colhido")}:</span>
+          {Object.values(CROPS).map((c) => (
+            <b key={c.id}>
+              {c.icon} {garden.bag[c.id] || 0}
+            </b>
+          ))}
+          {thirsty && (
+            <button
+              type="button"
+              className="pw-water-all"
+              onClick={() => {
+                sfx.play("drop");
+                update((g) => waterAll(g));
+              }}
+            >
+              💧 {tx("Aguar tudo")}
+            </button>
+          )}
+        </div>
+        <div className="pw-beds">
+          {garden.beds.map((b, i) => {
+            if (!b) {
+              return (
+                <div key={i} className="pw-bed empty">
+                  <div className="pw-bed-soil">{picking === i ? "" : "·  ·  ·"}</div>
+                  {picking === i ? (
+                    <div className="pw-bed-pick">
+                      {Object.values(CROPS).map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            sfx.play("grow");
+                            update((g) => plant(g, i, c.id));
+                            setPicking(null);
+                          }}
+                        >
+                          {c.icon} {tx(c.name)}
+                          <small>{Math.round(c.grow / 60000)} min</small>
+                        </button>
+                      ))}
+                      <button type="button" className="ghost" onClick={() => setPicking(null)}>
+                        {tx("Cancelar")}
+                      </button>
+                    </div>
+                  ) : (
+                    <button type="button" className="pw-bed-main" onClick={() => setPicking(i)}>
+                      🌱 {tx("Plantar")}
+                    </button>
+                  )}
+                </div>
+              );
+            }
+            const crop = CROPS[b.crop];
+            const stage = stageOf(b);
+            const prog = progressOf(b);
+            const wet = waterOf(b, now);
+            const left = crop.grow - b.grown;
+            const ready = stage === 3;
+            return (
+              <div key={i} className={`pw-bed stage-${stage} ${ready ? "ready" : ""}`}>
+                <div className="pw-bed-top">
+                  <span className="pw-bed-icon">{ready ? crop.icon : ["🫘", "🌱", "🌿"][stage]}</span>
+                  <span>
+                    <b>{tx(crop.name)}</b>
+                    <small>{tx(STAGES[stage])}</small>
+                  </span>
+                </div>
+                <div className="pw-meter grow" title={tx("Crescimento")}>
+                  <span style={{ width: `${prog * 100}%` }} />
+                </div>
+                {!ready && (
+                  <>
+                    <div className="pw-meter water" title={tx("Água")}>
+                      <span style={{ width: `${wet * 100}%` }} />
+                    </div>
+                    <small className="pw-bed-note">
+                      {wet > 0 ? `${tx("Cresce mais")} ${fmtTime(Math.min(left, b.wetUntil - now))} · ${tx("falta")} ${fmtTime(left)}` : tx("Terra seca: regue para crescer")}
+                    </small>
+                  </>
+                )}
+                {ready ? (
+                  <button
+                    type="button"
+                    className="pw-bed-main harvest"
+                    onClick={() => {
+                      sfx.play("save");
+                      update((g) => harvest(g, i));
+                    }}
+                  >
+                    🧺 {tx("Colher")}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={`pw-bed-main ${wet < 0.35 ? "thirsty" : ""}`}
+                    onClick={() => {
+                      sfx.play("drop");
+                      update((g) => water(g, i));
+                    }}
+                  >
+                    💧 {tx("Aguar")}
+                  </button>
+                )}
+                {!ready && (
+                  <button
+                    type="button"
+                    className="pw-bed-x"
+                    title={tx("Arrancar")}
+                    onClick={async () => {
+                      if (!(await ask({ title: tx("Arrancar a planta?"), message: tx("Ela sai do canteiro sem dar colheita."), yes: tx("Arrancar") }))) return;
+                      sfx.play("delete");
+                      update((g) => uproot(g, i));
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <p className="pw-tip">{tx("As plantas só crescem com a terra molhada. Cada rega dura 15 minutos, mesmo com o app fechado.")}</p>
+      </div>
     </div>
   );
 }
