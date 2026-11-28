@@ -37,6 +37,8 @@ installSwatchHints()
 import { installGlobalContextMenu } from './shared/globalContextMenu.js'
 installGlobalContextMenu()
 import UpdatePopup from './shared/UpdatePopup.jsx'
+// skins: no npm run dev, __orbeExportSkins() gera public/skins/_originais
+if (import.meta.env.DEV) import('./shared/skinsExport.jsx').then((m) => { window.__orbeExportSkins = m.exportOriginalSkins })
 startUpdateWatch()
 
 createRoot(document.getElementById('root')).render(

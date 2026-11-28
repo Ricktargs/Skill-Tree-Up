@@ -309,6 +309,7 @@ body:has(.np-panel) .notes-dock .dock-flash { display: none !important; }
 
 /* ---------- Ícones próprios: nanquim + aquarela ---------- */
 .app-ic { display: block; flex-shrink: 0; overflow: visible; }
+.app-ic-skin { object-fit: contain; image-rendering: auto; }
 .app-ic-wash {
   fill: var(--theme-accent, #38bdf8);
   opacity: 0.32;

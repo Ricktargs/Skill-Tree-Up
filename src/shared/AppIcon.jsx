@@ -4,6 +4,7 @@
 // sobre uma mancha de aquarela na cor do tema, cada uma de um jeito.
 // =========================================================
 import React from 'react';
+import { iconSkinPath, skinUrl } from './skins.js';
 
 // manchas de aquarela (bordas irregulares, como tinta no papel)
 const WASHES = [
@@ -114,7 +115,15 @@ const ICONS = {
   )
 };
 
+export const APP_ICON_NAMES = Object.keys(ICONS);
+export const appIconBody = (name) => ICONS[name] || null;
+
 export default function AppIcon({ name, size = 24, title }) {
+  // skin da pasta public/skins/icones (png ou svg) no lugar do desenho
+  const skin = iconSkinPath(name);
+  if (skin) {
+    return <img className={`app-ic app-ic-skin ic-${name}`} src={skinUrl(skin)} width={size} height={size} alt={title || ''} draggable={false} />;
+  }
   const body = ICONS[name];
   if (!body) return null;
   return (

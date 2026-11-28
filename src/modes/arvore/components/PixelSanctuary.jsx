@@ -20,6 +20,7 @@ import { IS_TOUCH } from "../../../shared/touch.js";
 import { tx, useLanguage } from "../../../i18n/index.jsx";
 import { sfx } from "../lib/sound";
 import { ask } from "../../../shared/Dialog.jsx";
+import { imageToCanvas, loadSkinImage, sceneSkinPath } from "../../../shared/skins.js";
 import { SEASONS, seasonOf, setSanctuary } from "./Sanctuary.jsx";
 import TouchPad from "./TouchPad.jsx";
 import PixelSceneEditor from "./PixelSceneEditor.jsx";
@@ -200,6 +201,24 @@ export default function PixelSanctuary({ prefs }) {
     return { far: buildFar(kind, season), mid: buildMid(kind, season), world: world.c, worldLights: world.lights, house: house.c, houseLights: house.lights, win: house.win };
   }, [kind, season]);
 
+  // skins da pasta public/skins/cenario substituem o desenho do código
+  const [skinBases, setSkinBases] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const pick = async (layer, base) => {
+        if (!base) return base;
+        const img = await loadSkinImage(sceneSkinPath(kind, layer));
+        return img ? imageToCanvas(img, base.width, base.height) : base;
+      };
+      const [far, mid, world, house] = await Promise.all([pick("far", bases.far), pick("mid", bases.mid), pick("world", bases.world), pick("house", bases.house)]);
+      if (alive) setSkinBases({ ...bases, far, mid, world, house });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [bases, kind]);
+
   // edições do modo desenvolvedor
   useEffect(() => {
     let alive = true;
@@ -209,8 +228,10 @@ export default function PixelSanctuary({ prefs }) {
     };
   }, []);
 
-  // base + edições = o que aparece no jogo
+  // base (código ou skin) + edições = o que aparece no jogo
   useEffect(() => {
+    if (!skinBases) return undefined;
+    const bases = skinBases;
     let alive = true;
     (async () => {
       const apply = async (layer, base) => {
@@ -227,7 +248,7 @@ export default function PixelSanctuary({ prefs }) {
     return () => {
       alive = false;
     };
-  }, [bases, devData, kind]);
+  }, [skinBases, devData, kind]);
 
   const grids = useMemo(() => ({ out: solidGrid("out", kind, devData[solidKey("out", kind)]), in: solidGrid("in", kind, devData[solidKey("in", kind)]) }), [kind, devData]);
   const spots = useMemo(() => spotsFor(kind, devData), [kind, devData]);
@@ -984,7 +1005,7 @@ export default function PixelSanctuary({ prefs }) {
           <PixelSceneEditor
             kind={kind}
             season={season}
-            bases={bases}
+            bases={skinBases || bases}
             devData={devData}
             onData={setDevData}
             onClose={() => setEditor(false)}

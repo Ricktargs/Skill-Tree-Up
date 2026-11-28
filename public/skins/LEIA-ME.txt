@@ -1,0 +1,65 @@
+===========================================================
+ SKINS DO ORBE-G
+===========================================================
+
+Coloque uma imagem nesta pasta (com o nome certo) e ela
+SUBSTITUI o desenho feito pelo código. Tirou a imagem daqui:
+volta o desenho original.
+
+A pasta "_originais" tem uma cópia de TUDO como é hoje.
+Ela NÃO é usada pelo programa — é só o ponto de partida:
+
+  1. Copie o arquivo que quer mudar de "_originais/..." para
+     o mesmo lugar aqui fora (ex.: _originais/personagens/mago.png
+     → personagens/mago.png).
+  2. Edite no programa que preferir (Aseprite, Piskel,
+     LibreSprite, Photoshop, GIMP, Krita...).
+  3. Com o "npm run dev" aberto, o app recarrega sozinho ao
+     salvar. Para ir para o PC/celular: lance uma versão nova.
+
+-----------------------------------------------------------
+ O QUE DÁ PARA TROCAR
+-----------------------------------------------------------
+
+personagens/            (PNG 50 x 57, fundo transparente)
+  mago.png  arqueiro.png  guerreiro.png  elfa.png
+  - 1 pixel da imagem = 1 pixel do personagem.
+  - Mantenha a posição do molde (cabeça, corpo, braços e
+    pernas no mesmo lugar do original): é assim que o programa
+    sabe o que balança ao andar e pular.
+  - Com a skin, as cores de "Personalizar" deixam de valer
+    para aquele personagem. "Editar em pixel art" dentro do
+    app continua por cima da skin.
+
+cenario/                (PNG do mesmo tamanho do original)
+  campo-mundo.png        campo-fundo-perto.png   campo-fundo-longe.png
+  ilha-mundo.png         ilha-fundo-perto.png    ilha-fundo-longe.png
+  praia-mundo.png        praia-fundo-longe.png
+  casa.png               (dentro da árvore)
+  - "mundo" = chão, árvore-casa, canteiro, cerca...
+  - "fundo-perto" / "fundo-longe" = colinas, ilhas e mar lá
+    atrás (andam mais devagar que o mundo).
+  - O topo da imagem fica acima da tela (é onde está a copa).
+  - Com a skin, a estação (neve, folhas de outono...) não
+    muda mais aquela camada.
+  - O que a planta, a água do mar, as luzes da noite e o
+    pêndulo do relógio fazem continua sendo do código.
+  - Onde o personagem pisa NÃO vem da imagem: isso se edita
+    no app, em Cenário (L) > Modo desenvolvedor > Blocos.
+
+icones/                 (SVG ou PNG, quadrado)
+  perfil  pomodoro  missoes  missoes-feitas  organizar  lua  sol
+  configuracoes  tema  tarefas  notas  flashcards
+  - Pode ser .svg ou .png (se tiver os dois, vale o .svg).
+  - Ícones novos que aparecerem no futuro seguem o mesmo
+    esquema: icones/<nome>.svg ou .png.
+
+-----------------------------------------------------------
+ GERAR OS ORIGINAIS DE NOVO
+-----------------------------------------------------------
+Se o código mudar um desenho, rode "npm run dev", abra o app
+e no console (F12) digite:
+
+  __orbeExportSkins()
+
+Ele refaz a pasta "_originais".

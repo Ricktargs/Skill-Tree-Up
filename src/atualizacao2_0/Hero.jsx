@@ -24,10 +24,11 @@ import {
   isCustomClass,
   newCustomId
 } from './HeroModels.js';
-import { buildHero2D, cellsFromPixels, pixelsFromHero, HAIR_STYLES_2D, BEARD_STYLES_2D, MOUTH_STYLES_2D, EYE_STYLES_2D } from './Hero2D.js';
+import { GRID, buildHero2D, cellsFromPixels, pixelsFromHero, HAIR_STYLES_2D, BEARD_STYLES_2D, MOUTH_STYLES_2D, EYE_STYLES_2D } from './Hero2D.js';
 import { CellsSvg } from './Hero2DView.jsx';
 import PixelEditor from './PixelEditor.jsx';
 import { ask } from '../shared/Dialog.jsx';
+import { heroSkinPath, loadSkinPixels, useSkinPixels } from '../shared/skins.js';
 
 // =========================================================
 // HERÓI 2D EM PIXEL (no formato desenhado pelo Ricardo)
@@ -35,15 +36,18 @@ import { ask } from '../shared/Dialog.jsx';
 // =========================================================
 
 // Desenho do personagem: os 3 padrão (montados por camadas) ou um desenhado no criador
+// Ordem: desenhado no criador > redesenho em pixel art > skin da pasta (public/skins) > código
 function Hero2DSvg({ hero, cls }) {
   const custom = isCustomClass(cls) ? findCustom(hero, cls) : null;
   const override = !custom && hero.pixelOverrides ? hero.pixelOverrides[cls] : null;
-  const look = custom || override ? null : getLook(hero, cls);
+  const skin = useSkinPixels(custom || override ? null : heroSkinPath(cls), GRID.c0, GRID.r0);
+  const look = custom || override || skin ? null : getLook(hero, cls);
   const lookKey = look ? JSON.stringify(look) : '';
   const cells = useMemo(
-    () => (custom ? cellsFromPixels(custom.pixels) : override ? cellsFromPixels(override) : buildHero2D(cls, look)),
+    () =>
+      custom ? cellsFromPixels(custom.pixels) : override ? cellsFromPixels(override) : skin ? cellsFromPixels(skin) : buildHero2D(cls, look),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [custom, override, cls, lookKey]
+    [custom, override, skin, cls, lookKey]
   );
   return <CellsSvg cells={cells} />;
 }
@@ -544,13 +548,14 @@ export function HeroMenu({ isOpen, onClose, hero: rawHero, setHero, playSound, d
                     <button
                       type="button"
                       className="hm-chip active"
-                      onClick={() => {
+                      onClick={async () => {
                         click();
+                        const skinPx = hero.pixelOverrides[hero.cls] ? null : await loadSkinPixels(heroSkinPath(hero.cls), GRID.c0, GRID.r0);
                         setDrawing({
                           mode: 'override',
                           cls: hero.cls,
                           name: heroName,
-                          pixels: hero.pixelOverrides[hero.cls] || pixelsFromHero(hero.cls, look)
+                          pixels: hero.pixelOverrides[hero.cls] || skinPx || pixelsFromHero(hero.cls, look)
                         });
                       }}
                     >
