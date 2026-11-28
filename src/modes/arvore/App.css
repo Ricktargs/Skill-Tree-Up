@@ -536,34 +536,21 @@ button:disabled {
 
 /* Herói morando no cenário (HTML por cima do desenho) */
 .sanc-hero { position: absolute; z-index: 3; width: 0; height: 0; pointer-events: none; }
-.sanc-hero .vx-model {
-  position: absolute;
+.sanc-hero .h2d-model {
+  /* personagem 2D: pés no ponto do herói (a âncora fica nos pés) */
+  inset: auto;
   left: 0;
   bottom: 0;
-  transform: translate(-50%, calc(var(--sanc-hero-size, 0.4) * -62px)) scale(var(--sanc-hero-size, 0.4));
-  transform-origin: 50% 100%;
+  width: calc(150px * var(--sanc-hero-size, 0.4) * 0.72);
+  height: calc(171px * var(--sanc-hero-size, 0.4) * 0.72);
+  transform: translate(-48%, calc(var(--sanc-hero-size, 0.4) * 6px));
   pointer-events: auto;
   cursor: pointer;
 }
-.sanc-hero .vx-rot { transition: transform 0.18s ease-out; }
-.sanc-hero.walking .vx-scene { animation: sanc-walk calc(var(--walk-dur, 0.42s) / 2) ease-in-out infinite alternate; }
-@keyframes sanc-walk { from { transform: translateY(0); } to { transform: translateY(-4px); } }
-
-/* Braços e pernas: balançam no passo (perna e braço do mesmo lado ao contrário) */
-.vx-limb { position: absolute; left: 0; top: 0; transform-style: preserve-3d; transition: transform 0.16s ease-out; }
-.sanc-hero.pose-walk .vx-legL,
-.sanc-hero.pose-walk .vx-armR { animation: vx-swing var(--walk-dur, 0.42s) ease-in-out infinite alternate; }
-.sanc-hero.pose-walk .vx-legR,
-.sanc-hero.pose-walk .vx-armL { animation: vx-swing var(--walk-dur, 0.42s) ease-in-out infinite alternate-reverse; }
-.sanc-hero.pose-walk .vx-armL,
-.sanc-hero.pose-walk .vx-armR { --swing: 22deg; }
-@keyframes vx-swing { from { transform: rotateX(var(--swing, 30deg)); } to { transform: rotateX(calc(var(--swing, 30deg) * -1)); } }
-/* no ar: pernas dobradas e braços abertos */
-.sanc-hero.pose-jump .vx-legL { transform: rotateX(-26deg); }
-.sanc-hero.pose-jump .vx-legR { transform: rotateX(18deg); }
-.sanc-hero.pose-jump .vx-armL { transform: rotateZ(32deg); }
-.sanc-hero.pose-jump .vx-armR { transform: rotateZ(-32deg); }
-.sanc-hero .vx-rot { transition: transform 0.22s cubic-bezier(0.3, 1.2, 0.5, 1); }
+.sanc-hero .h2d-model .h2d-hop { left: 0; top: 0; width: 100%; transform: none; }
+.sanc-hero .h2d-model .h2d-shadow { top: auto; bottom: 0; transform: translate(-50%, 30%); }
+.sanc-hero.walking .h2d-hop { animation: sanc-walk calc(var(--walk-dur, 0.42s) / 2) steps(1) infinite alternate; }
+@keyframes sanc-walk { from { transform: translateY(0); } to { transform: translateY(-3px); } }
 
 /* Painel Decorar */
 .sanc-panel { position: absolute; right: 18px; bottom: 84px; z-index: 6; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
@@ -605,7 +592,7 @@ button:disabled {
 .sanc-chip.on { border-style: solid; background: var(--wash-strong, rgba(0, 0, 0, 0.06)); opacity: 1; font-weight: 700; }
 .sanc-back-btn { margin-top: 10px; width: 100%; border: 0; background: none; color: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; opacity: 0.75; }
 @media (prefers-reduced-motion: reduce) {
-  .sanc-firefly, .sanc-fall, .sanc-flame-g, .sanc-lantern-sway, .sanc-water-line, .sanc-smoke, .sanc-hero.walking .vx-scene, .sanc-hero .vx-limb { animation: none !important; }
+  .sanc-firefly, .sanc-fall, .sanc-flame-g, .sanc-lantern-sway, .sanc-water-line, .sanc-smoke, .sanc-hero.walking .h2d-hop, .sanc-hero .h2d-svg g { animation: none !important; }
 }
 
 /* Lago afundado: terra escavada, barranco e água */
@@ -625,7 +612,7 @@ button:disabled {
 .workspace.is-editing .sanc-drag.editable { animation: sanc-editable 1.6s ease-in-out infinite; }
 @keyframes sanc-editable { 0%, 100% { opacity: 1; } 50% { opacity: 0.82; } }
 .sanc-hero.is-editing { opacity: 0.45; }
-.sanc-hero.is-editing .vx-model { pointer-events: none; }
+.sanc-hero.is-editing .h2d-model { pointer-events: none; }
 .sanc-pencil {
   margin-top: 12px;
   width: 100%;

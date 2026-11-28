@@ -25,7 +25,7 @@ import { useCustomThemes, getThemeById, onAccentColor } from './atualizacao2_0/T
 import { useProfileStoredState, collectBackupExtras, applyBackupExtras, collectFullStorage, restoreFullStorage } from './atualizacao2_0/ProfileStorage.js';
 import { sfx } from './modes/arvore/lib/sound.js';
 import { createPortal } from 'react-dom';
-import { toggleNotesPanel, useNotesPanelOpen } from './shared/notesPanel.js';
+import { setNotesPanelOpen, toggleNotesPanel, useNotesPanelOpen } from './shared/notesPanel.js';
 import { hasUpdate, useUpdate } from './shared/updater.js';
 import { globalUndo, globalRedo } from './atualizacao2_0/GlobalUndo.js';
 import UndoToast from './atualizacao2_0/UndoToast.jsx';
@@ -291,6 +291,25 @@ export default function App() {
   // Personagem (classe e cores), salvo por perfil
   const [hero, setHero] = useProfileStoredState('rpg_hero_v1', activeProfileId, DEFAULT_HERO);
   const [isHeroMenuOpen, setIsHeroMenuOpen] = useState(false);
+  // Santuário: o personagem acompanha as mudanças, e os móveis da casa abrem as janelas
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('orbe-hero-changed', { detail: hero }));
+  }, [hero]);
+  const pomodoroToggleRef = useRef(null);
+  pomodoroToggleRef.current = pomodoro.toggleModal;
+  useEffect(() => {
+    const onHero = () => setIsHeroMenuOpen(true);
+    const onNotes = () => setNotesPanelOpen(true);
+    const onPomodoro = () => pomodoroToggleRef.current && pomodoroToggleRef.current();
+    window.addEventListener('orbe-open-hero-menu', onHero);
+    window.addEventListener('orbe-open-notes', onNotes);
+    window.addEventListener('orbe-open-pomodoro', onPomodoro);
+    return () => {
+      window.removeEventListener('orbe-open-hero-menu', onHero);
+      window.removeEventListener('orbe-open-notes', onNotes);
+      window.removeEventListener('orbe-open-pomodoro', onPomodoro);
+    };
+  }, []);
 
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [tempNickname, setTempNickname] = useState(nickname);
@@ -790,6 +809,8 @@ const handleSaveMiniEdit = (idx, oldText) => {
   
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Criador de pixel art aberto: as teclas são dele (desfazer, ferramentas, Esc)
+      if (document.querySelector('.px-window, .pwd-editor')) return;
       // As ferramentas (Perfil, Configurações, janelas) valem em todos os modos;
       // o resto dos atalhos é só do modo Habilidades
       const inSkills = isSkillsMode();
@@ -859,6 +880,8 @@ const handleSaveMiniEdit = (idx, oldText) => {
 
       // E: editor de notas (✒️), em qualquer modo
       // N (ou E): editor de notas em qualquer modo · Shift+N cria neurônio (nos Neurônios)
+      // no Santuário, perto de um móvel/porta o E é "interagir" (não abre as notas)
+      if (keyLower === 'e' && window.__orbeSanctuarySpot) return;
       if ((keyLower === 'e' || (keyLower === 'n' && !e.shiftKey)) && !isCtrlOrCmd && !e.altKey && !isEditingText) {
         e.preventDefault();
         playSound('click');

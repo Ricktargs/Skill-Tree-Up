@@ -56,15 +56,12 @@ function modeItems(mode) {
     const p = getSanctuaryPrefs();
     const seasons = SEASONS.map((x) => x.id);
     const nextSeason = SEASONS[(seasons.indexOf(p.season || 'auto') + 1) % SEASONS.length];
-    const view = getModeActions('arvoreView');
-    const panelOpen = Boolean(document.querySelector('.sanc-panel.open'));
+    const panelOpen = Boolean(document.querySelector('.pw-panel'));
+    const night = p.night === 'noite' || (p.night !== 'dia' && (new Date().getHours() >= 19 || new Date().getHours() < 6));
     return [
-      { label: tx('Centralizar a câmera'), keys: 'Espaço 2×', run: () => view && view.resetView && view.resetView() },
-      { label: panelOpen ? tx('Fechar layouts') : tx('Layouts e decoração'), keys: 'L', run: () => window.dispatchEvent(new Event('orbe-sanctuary-layout')) },
-      { label: p.editing ? tx('Parar de mover decorações') : tx('Mover e editar decorações'), on: Boolean(p.editing), run: () => setSanctuary({ editing: !p.editing, selected: null }) },
-      { label: tx('Lanternas nos galhos'), on: Boolean(p.lanterns), run: () => setSanctuary({ lanterns: !p.lanterns }) },
+      { label: panelOpen ? tx('Fechar cenário') : tx('Cenário, estação e céu'), keys: 'L', run: () => window.dispatchEvent(new Event('orbe-sanctuary-layout')) },
       { label: `${tx('Próxima estação')}: ${tx(nextSeason.label)}`, run: () => setSanctuary({ season: nextSeason.id }) },
-      { label: tx('Sortear a árvore'), run: () => getModeActions('arvore')?.shuffle?.() }
+      { label: night ? tx('Virar dia') : tx('Virar noite'), run: () => setSanctuary({ night: night ? 'dia' : 'noite' }) }
     ];
   }
   return [

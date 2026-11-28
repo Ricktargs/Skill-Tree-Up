@@ -1,6 +1,6 @@
 // =========================================================
 // CONTROLE NA TELA DO SANTUÁRIO (só no celular)
-// Setas = W A S D · botão redondo = pular (Espaço)
+// ◀ ▶ = andar (A D) · botão redondo = pular (Espaço)
 // =========================================================
 import { useEffect, useRef } from "react";
 import { pressKey } from "../../../shared/touch.js";
@@ -43,16 +43,19 @@ function PadButton({ k, code, label, className = "", repeat = false }) {
   );
 }
 
-export default function TouchPad() {
+export default function TouchPad({ action = false }) {
   return (
     <div className="sanc-pad" onPointerDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
       <div className="sanc-pad-dpad">
-        <PadButton k="w" label="▲" className="up" />
+        {action && <PadButton k="ArrowUp" code="ArrowUp" label="▲" className="up" />}
         <PadButton k="a" label="◀" className="left" />
+        {action && <PadButton k="ArrowDown" code="ArrowDown" label="▼" className="down" />}
         <PadButton k="d" label="▶" className="right" />
-        <PadButton k="s" label="▼" className="down" />
       </div>
-      <PadButton k=" " label="⤒" className="jump" />
+      <div className="sanc-pad-actions">
+        {action && <PadButton k="e" label="E" className="act" />}
+        <PadButton k=" " label="⤒" className="jump" />
+      </div>
     </div>
   );
 }

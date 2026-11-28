@@ -13,6 +13,7 @@ import { refuseExtraTrees, useGrowthPermissions } from "../lib/growthPermissions
 import TouchPad from "./TouchPad.jsx";
 import { IS_TOUCH } from "../../../shared/touch.js";
 import { registerModeActions } from "../../../shared/modeBridge.js";
+import PixelSanctuary from "./PixelSanctuary.jsx";
 import { BranchHandles, BranchLanterns, BranchTools, MainTreeRoots, MainTreeWrap, SanctuaryBack, SanctuaryBackdrop, selectBranch, SanctuaryFront, SanctuaryHero, SanctuaryPanel, WorldGround, sanctuaryWorld, seasonOf, shownLayout, useSanctuary } from "./Sanctuary.jsx";
 
 const HOLD_MS = 1500;
@@ -341,6 +342,15 @@ export default function TreeCanvas({ activeIds, onNodeClick, onOpenBranch }) {
       setTimeout(() => setShakingId((s) => (s === id ? null : s)), 400);
     },
   });
+
+  // Santuário: o mundo em pixel art (a árvore vira a casa do personagem)
+  if (sanctuary) {
+    return (
+      <div ref={workspaceRef} className="workspace is-pixel-sanctuary">
+        <PixelSanctuary prefs={sanc} />
+      </div>
+    );
+  }
 
   return (
     <div

@@ -10,7 +10,7 @@
      árvore principal), mudar o tamanho e remover. Árvores,
      lagos e acampamentos se encaixam no relevo; a terra levanta
      o chão e, nas ilhas, cria chão novo onde for colocada.
-   - O herói anda pelo chão (W A S D) e pula (Espaço); a câmera
+   - O herói anda para os lados (A D ou ← →) e pula (Espaço ou W); a câmera
      acompanha quando ele chega perto da borda.
    As informações dos galhos ficam escondidas; os dados continuam
    guardados e voltam em "Ver como Árvore".
@@ -107,6 +107,9 @@ const read = () => {
     on: TEXT_FEATURES ? v.on : true,
     lanterns: v.lanterns,
     season: v.season,
+    // santuário em pixel art: cenário e céu (os 3 layouts antigos viram os 3 cenários)
+    scene: ["campo", "ilha", "praia"].includes(v.scene) ? v.scene : ["campo", "ilha", "praia"][active],
+    night: ["auto", "dia", "noite"].includes(v.night) ? v.night : "auto",
     grass: v.grass !== false,
     layouts,
     active,
@@ -127,8 +130,8 @@ const notify = () => listeners.forEach((l) => l());
 export const getSanctuaryPrefs = () => get();
 export function setSanctuary(patch) {
   state = { ...get(), ...patch };
-  const { on, lanterns, season, layouts, active, grass } = state;
-  saveJSON(KEY, { on, lanterns, season, layouts, active, grass });
+  const { on, lanterns, season, layouts, active, grass, scene, night } = state;
+  saveJSON(KEY, { on, lanterns, season, layouts, active, grass, scene, night });
   notify();
 }
 /** Muda sem salvar (enquanto arrasta). */
@@ -1197,7 +1200,7 @@ function Fireflies({ x, y, size, seed, count }) {
   );
 }
 
-/* ---------------- o herói (anda com W A S D, pula com Espaço) ---------------- */
+/* ---------------- o herói (anda com A D / ← →, pula com Espaço ou W) ---------------- */
 // Movimento com aceleração e freio (nada de começar/parar no seco),
 // gravidade de verdade (cai de beiradas e degraus) e pulo que fica mais
 // alto segurando o Espaço. Braços e pernas balançam no ritmo do passo.
@@ -1279,7 +1282,7 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
       const sy = pt.y - r.top;
       box.style.left = `${sx}px`;
       box.style.top = `${sy}px`;
-      box.style.setProperty("--sanc-hero-size", String(Math.max(0.3, ctm.a * 0.95 * (1 + p.z * 0.006))));
+      box.style.setProperty("--sanc-hero-size", String(Math.max(0.25, ctm.a * 0.95)));
       // na água: corta o que fica abaixo da superfície e mostra a ondinha
       const pool = w.water && w.water(p.x);
       const under = pool ? Math.max(0, p.y - pool.level) : 0;
@@ -1288,15 +1291,14 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
       // passo mais rápido quando corre mais
       const speed = Math.min(1, Math.abs(p.vx) / MAX_SPEED);
       box.style.setProperty("--walk-dur", `${(0.52 - speed * 0.2).toFixed(3)}s`);
-      box.style.zIndex = p.z > 8 ? "4" : "3";
+      box.style.zIndex = "3";
       // câmera acompanha quando ele chega perto da borda da tela
       if (follow && panRef.current) {
-        const mx = r.width * 0.22;
+        // o cenário anda junto: o herói fica perto do meio da tela
+        const dx = r.width * 0.5 - sx;
         const my = r.height * 0.2;
-        const dx = sx < mx ? mx - sx : sx > r.width - mx ? r.width - mx - sx : 0;
         const dy = sy < my ? my - sy : sy > r.height - my ? r.height - my - sy : 0;
-        // segue suave (sem tranco)
-        if (dx || dy) panRef.current(dx * 0.35, dy * 0.35);
+        if (Math.abs(dx) > 2 || dy) panRef.current(dx * 0.12, dy * 0.35);
       }
     },
     [groupRef, containerRef]
@@ -1334,7 +1336,7 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
       const k = keys.current;
       const p = pos.current;
       const inX = (k.has("d") ? 1 : 0) - (k.has("a") ? 1 : 0);
-      const inZ = (k.has("s") ? 1 : 0) - (k.has("w") ? 1 : 0);
+      const inZ = 0; // sem profundidade: só esquerda e direita
 
       // ---- andar: acelera, freia e vira com suavidade ----
       const control = p.air ? AIR_CONTROL : 1;
@@ -1417,7 +1419,8 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
 
   // Teclado: só no Santuário, fora de campos de texto, janelas e do lápis
   useEffect(() => {
-    const MOVE = ["w", "a", "s", "d"];
+    const MOVE = ["a", "d"];
+    const ARROWS = { arrowleft: "a", arrowright: "d" };
     const blocked = (e) =>
       get().editing ||
       e.ctrlKey ||
@@ -1429,7 +1432,14 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
     const onDown = (e) => {
       if (blocked(e)) return;
       const raw = (e.key || "").toLowerCase();
-      const key = MOVE.includes(raw) ? raw : null;
+      // W ou ↑ também pulam
+      if ((raw === "w" || raw === "arrowup") && !e.repeat) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        jump();
+        return;
+      }
+      const key = MOVE.includes(raw) ? raw : ARROWS[raw] || null;
       if (key) {
         e.preventDefault();
         e.stopImmediatePropagation();
@@ -1445,10 +1455,11 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
       }
     };
     const onUp = (e) => {
-      const key = (e.key || "").toLowerCase();
+      const raw = (e.key || "").toLowerCase();
+      const key = { arrowleft: "a", arrowright: "d" }[raw] || raw;
       if (keys.current.delete(key)) kick();
-      // soltou o Espaço ainda subindo: pulo mais baixo
-      if ((e.key === " " || e.code === "Space") && pos.current.vy < 0) pos.current.vy *= CUT_JUMP;
+      // soltou o pulo ainda subindo: pulo mais baixo
+      if ((e.key === " " || e.code === "Space" || raw === "w" || raw === "arrowup") && pos.current.vy < 0) pos.current.vy *= CUT_JUMP;
     };
     const clear = () => {
       keys.current.clear();
@@ -1474,11 +1485,11 @@ export function SanctuaryHero({ groupRef, containerRef, world, onPan }) {
     <div
       ref={boxRef}
       className={`sanc-hero pose-${pose} ${pose === "walk" ? "walking" : ""} ${editing ? "is-editing" : ""}`}
-      title="W A S D para andar · Espaço para pular"
+      title="A D (ou ← →) para andar · Espaço ou W para pular"
       onPointerDown={(e) => e.stopPropagation()}
       onClick={jump}
     >
-      <HeroModel hero={hero} rotation={rotation} size={1} limbs pose={pose} />
+      <HeroModel hero={hero} rotation={rotation} size={1} limbs pose={pose} flip={facing < 0} />
       <span className="sanc-ripple" aria-hidden="true" />
     </div>
   );
@@ -1987,7 +1998,7 @@ export function SanctuaryPanel({ prefs }) {
               <span><kbd>Delete</kbd> remove</span>
               <span><kbd>+</kbd><kbd>−</kbd> tamanho</span>
               <span><kbd>Esc</kbd> solta</span>
-              <span><kbd>WASD</kbd> anda · <kbd>Espaço</kbd> pula</span>
+              <span><kbd>A</kbd> <kbd>D</kbd> anda · <kbd>Espaço</kbd> pula</span>
             </div>
             <button type="button" className="sd-reset" onClick={() => resetLayout(layout.kind)}>
               ↺ Voltar este layout ao começo

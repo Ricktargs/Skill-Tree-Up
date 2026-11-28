@@ -1,0 +1,100 @@
+/* =========================================================
+   MODO DESENVOLVEDOR DO SANTUÁRIO (janela inteira)
+   ========================================================= */
+.pwd-editor {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  background: #0d1017;
+  color: #e5e7eb;
+  font: 500 13px/1.35 system-ui, sans-serif;
+}
+.pwd-editor button { font: inherit; color: inherit; cursor: pointer; }
+.pwd-editor button:disabled { opacity: 0.4; cursor: default; }
+.pwd-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #252b38;
+  background: #151a24;
+  flex-wrap: wrap;
+}
+.pwd-top strong { font: 800 14px/1 ui-monospace, Consolas, monospace; color: #fde68a; letter-spacing: 0.04em; }
+.pwd-scene { opacity: 0.6; font-size: 12px; }
+.pwd-modes { display: flex; gap: 4px; padding: 3px; border-radius: 10px; background: #0d1017; }
+.pwd-modes button { padding: 6px 12px; border-radius: 8px; border: 0; background: transparent; font-weight: 700; }
+.pwd-modes button.on { background: #fde68a; color: #1f130a; }
+.pwd-spacer { flex: 1; }
+.pwd-btn { padding: 7px 12px; border-radius: 8px; border: 1px solid #2f3646; background: #1c2230; font-weight: 700; }
+.pwd-btn:hover:not(:disabled) { background: #252d3e; }
+.pwd-btn.primary { background: #22c55e; border-color: transparent; color: #052e16; }
+.pwd-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 260px 1fr; }
+.pwd-side {
+  overflow: auto;
+  padding: 12px;
+  border-right: 1px solid #252b38;
+  background: #121722;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.pwd-side section { display: flex; flex-direction: column; gap: 7px; }
+.pwd-side h4 { margin: 0; font: 800 11px/1 ui-monospace, Consolas, monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #fde68a; }
+.pwd-list { display: flex; flex-direction: column; gap: 4px; }
+.pwd-list button,
+.pwd-tools button,
+.pwd-sizes button {
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: 1px solid #2a3140;
+  background: #1a2030;
+  text-align: left;
+  font-weight: 600;
+}
+.pwd-list button.on,
+.pwd-tools button.on,
+.pwd-sizes button.on { border-color: #fde68a; background: #3a3218; color: #fde68a; }
+.pwd-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.pwd-tools button { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.pwd-tools button span { font-size: 15px; width: 18px; text-align: center; }
+.pwd-sizes { display: flex; flex-wrap: wrap; gap: 4px; }
+.pwd-sizes button { padding: 5px 8px; font-size: 12px; text-align: center; }
+.pwd-tip { margin: 0; font-size: 11.5px; opacity: 0.7; }
+.pwd-current { display: flex; align-items: center; gap: 8px; }
+.pwd-current > span { width: 34px; height: 34px; border-radius: 8px; border: 2px solid #e5e7eb; }
+.pwd-custom { position: relative; padding: 7px 10px; border-radius: 8px; border: 1px dashed #fde68a; font-size: 12px; font-weight: 700; cursor: pointer; }
+.pwd-custom input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.pwd-palette { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+.pwd-palette button { aspect-ratio: 1; border-radius: 5px; border: 1px solid rgba(255, 255, 255, 0.18); padding: 0; }
+.pwd-palette button.on { outline: 2px solid #fde68a; outline-offset: 1px; }
+.pwd-palette.recent { grid-template-columns: repeat(10, 1fr); }
+.pwd-check { display: flex; align-items: center; gap: 7px; font-size: 12px; cursor: pointer; }
+.pwd-objs { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.pwd-objs li { display: flex; justify-content: space-between; padding: 5px 8px; border-radius: 6px; background: #1a2030; font-size: 12px; }
+.pwd-objs small { opacity: 0.55; font-family: ui-monospace, Consolas, monospace; }
+.pwd-reset { margin-top: auto; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(248, 113, 113, 0.45); background: transparent; color: #fca5a5 !important; font-weight: 700; }
+.pwd-keys { margin: 0; font-size: 11px; opacity: 0.5; }
+.pwd-view { position: relative; overflow: hidden; touch-action: none; cursor: crosshair; }
+.pwd-view canvas { position: absolute; inset: 0; display: block; image-rendering: pixelated; }
+.pwd-view.tool-hand { cursor: grab; }
+.pwd-view.tool-pick { cursor: copy; }
+.pwd-view.tool-select { cursor: default; }
+.pwd-view.tool-objects { cursor: move; }
+.pwd-loading { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 700; opacity: 0.7; }
+.pwd-coords {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  font: 700 11px/1 ui-monospace, Consolas, monospace;
+  pointer-events: none;
+}
+@media (max-width: 760px) {
+  .pwd-body { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+  .pwd-side { order: 2; max-height: 42vh; border-right: 0; border-top: 1px solid #252b38; }
+}

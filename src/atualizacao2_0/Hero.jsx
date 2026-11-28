@@ -1,10 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import './Hero.css';
 import { tx, useLanguage } from '../i18n/index.jsx';
 import {
-  DEFAULT_LOOK,
   HERO_CLASSES,
   OUTFIT_COLORS,
+  DETAIL_COLORS,
+  PANTS_COLORS,
+  SHOE_COLORS,
   TRIM_COLORS,
   statsFor,
   MAX_STAT_LEVEL,
@@ -13,171 +15,52 @@ import {
   getStatLevels,
   upgradeCost,
   getHeroClass,
-  getGender,
   heroNameFor,
   SKIN_COLORS,
   EYE_COLORS,
   HAIR_COLORS,
-  buildPalette,
-  resolveColor,
-  FACE_PATTERNS,
-  FACE_PIXEL_COLORS
+  classFor,
+  findCustom,
+  isCustomClass,
+  newCustomId
 } from './HeroModels.js';
-import { buildHeroParts, HAIR_STYLES, BEARD_STYLES, ARMOR_TYPES, HELM_TYPES } from './HeroParts.js';
+import { buildHero2D, cellsFromPixels, pixelsFromHero, HAIR_STYLES_2D, BEARD_STYLES_2D, MOUTH_STYLES_2D, EYE_STYLES_2D } from './Hero2D.js';
+import { CellsSvg } from './Hero2DView.jsx';
+import PixelEditor from './PixelEditor.jsx';
+import { ask } from '../shared/Dialog.jsx';
 
 // =========================================================
-// HERÓI EM BLOCOS (voxel)
-// Arraste para girar · clique para pular · segure para abrir o menu
+// HERÓI 2D EM PIXEL (no formato desenhado pelo Ricardo)
+// Clique abre o personagem · arraste para os lados vira de lado
 // =========================================================
 
-// Caixa 3D centralizada em (x, y, z), com rotação opcional.
-// `wave` (segundos de atraso) faz o bloco ondular (corpo do dragão).
-function Box({ w, h, d, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, color, className = '', face = null, wave }) {
-  const sides = [
-    ['front', w, h, `translateZ(${d / 2}px)`],
-    ['back', w, h, `rotateY(180deg) translateZ(${d / 2}px)`],
-    ['right', d, h, `rotateY(90deg) translateZ(${w / 2}px)`],
-    ['left', d, h, `rotateY(-90deg) translateZ(${w / 2}px)`],
-    ['top', w, d, `rotateX(90deg) translateZ(${h / 2}px)`],
-    ['bottom', w, d, `rotateX(-90deg) translateZ(${h / 2}px)`]
-  ];
-  const faces = sides.map(([name, fw, fh, transform]) => (
-    <div
-      key={name}
-      className={`vx-face vx-${name}`}
-      style={{ width: fw, height: fh, left: (w - fw) / 2, top: (h - fh) / 2, transform }}
-    >
-      {name === 'front' && face}
-    </div>
-  ));
-  return (
-    <div
-      className={`vx-box ${className}`}
-      style={{
-        width: w,
-        height: h,
-        transform: `translate3d(${x - w / 2}px, ${y - h / 2}px, ${z}px) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg)`,
-        '--vx': color
-      }}
-    >
-      {wave !== undefined ? (
-        <div className="vx-wave" style={{ width: w, height: h, animationDelay: `${wave}s` }}>
-          {faces}
-        </div>
-      ) : (
-        faces
-      )}
-    </div>
+// Desenho do personagem: os 3 padrão (montados por camadas) ou um desenhado no criador
+function Hero2DSvg({ hero, cls }) {
+  const custom = isCustomClass(cls) ? findCustom(hero, cls) : null;
+  const override = !custom && hero.pixelOverrides ? hero.pixelOverrides[cls] : null;
+  const look = custom || override ? null : getLook(hero, cls);
+  const lookKey = look ? JSON.stringify(look) : '';
+  const cells = useMemo(
+    () => (custom ? cellsFromPixels(custom.pixels) : override ? cellsFromPixels(override) : buildHero2D(cls, look)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [custom, override, cls, lookKey]
   );
+  return <CellsSvg cells={cells} />;
 }
 
-function PixelFace({ rows, palette }) {
+// Personagem completo. `rotation` (herança do 3D) decide para que lado ele olha;
+// `flip` força olhar para a esquerda. `pose`: idle · walk · jump (Santuário).
+export function HeroModel({ hero, cls, rotation = 0, hop = 0, size = 1, still = false, limbs = false, pose = null, flip }) {
+  const h = normalizeHero(hero);
+  const id = cls || h.cls;
+  const deg = (((rotation % 360) + 360) % 360);
+  const left = flip !== undefined ? flip : deg > 90 && deg < 270;
   return (
-    <div className="vx-pixels">
-      {rows
-        .join('')
-        .split('')
-        .map((c, i) => {
-          if (c === '.') return <span key={i} />;
-          return <span key={i} style={{ background: resolveColor(FACE_PIXEL_COLORS[c], palette) }} />;
-        })}
-    </div>
-  );
-}
-
-// Separa braços e pernas pelos blocos (cada classe tem os seus, sem nome):
-// pernas = blocos estreitos embaixo, perto do meio; braços = blocos dos
-// lados (com o que a mão segura, como cajado e espada). O resto é o corpo.
-function splitLimbs(blocks) {
-  const groups = { body: [], legL: [], legR: [], armL: [], armR: [] };
-  blocks.forEach((b, i) => {
-    const [w, h, , x, y, , , extra = {}] = b;
-    if (extra.wave !== undefined || /wing/.test(extra.cls || '')) return groups.body.push(i);
-    const ax = Math.abs(x);
-    if (y - h / 2 >= 38 && w <= 16 && ax >= 3 && ax <= 14) return groups[x < 0 ? 'legL' : 'legR'].push(i);
-    if ((ax >= 17 && w <= 16 && y >= -6 && y <= 50) || ax >= 27) return groups[x < 0 ? 'armL' : 'armR'].push(i);
-    return groups.body.push(i);
-  });
-  // ponto de giro: quadril (topo das pernas) e ombro (topo do braço)
-  const pivot = (ids, isArm) => {
-    const own = ids.filter((i) => !isArm || Math.abs(blocks[i][3]) < 27);
-    const use = own.length ? own : ids;
-    const top = Math.min(...use.map((i) => blocks[i][4] - blocks[i][1] / 2));
-    const x = use.reduce((sum, i) => sum + blocks[i][3], 0) / use.length;
-    return { x, y: top + (isArm ? 3 : 1) };
-  };
-  const out = { body: groups.body, limbs: [] };
-  [
-    ['legL', false],
-    ['legR', false],
-    ['armL', true],
-    ['armR', true]
-  ].forEach(([k, isArm]) => {
-    if (groups[k].length) out.limbs.push({ key: k, ids: groups[k], pivot: pivot(groups[k], isArm) });
-  });
-  return out;
-}
-
-// Os blocos de um personagem, com as cores DELE
-function HeroBody({ hero, cls, limbs = false }) {
-  const heroClass = getHeroClass(cls || hero.cls);
-  const look = getLook(hero, heroClass.id);
-  const palette = buildPalette(heroClass, look);
-  const gender = getGender(look, heroClass);
-  const { blocks, face } = buildHeroParts(heroClass, look, gender, FACE_PATTERNS);
-  const floating = heroClass.floating || heroClass.id === 'fairy';
-  const box = (i) => {
-    const [w, h, d, x, y, z, color, extra = {}] = blocks[i];
-    return (
-        <Box
-          key={i}
-          w={w}
-          h={h}
-          d={d}
-          x={x}
-          y={y}
-          z={z}
-          rx={extra.rx}
-          ry={extra.ry}
-          rz={extra.rz}
-          wave={extra.wave}
-          className={extra.cls || ''}
-          color={resolveColor(color, palette)}
-          face={extra.face ? <PixelFace rows={face} palette={palette} /> : null}
-        />
-    );
-  };
-  // braços e pernas soltos só quando o personagem anda (Santuário)
-  const parts = limbs && !floating ? splitLimbs(blocks) : null;
-  return (
-    <div
-      className={`vx-idle ${floating ? 'floating' : ''}`}
-      style={{ '--vx-lift': `${heroClass.lift || 0}px`, '--vx-scale': heroClass.scale || 1 }}
-    >
-      {parts
-        ? [
-            ...parts.body.map(box),
-            ...parts.limbs.map((l) => (
-              <div key={l.key} className={`vx-limb vx-${l.key}`} style={{ transformOrigin: `${l.pivot.x}px ${l.pivot.y}px` }}>
-                {l.ids.map(box)}
-              </div>
-            ))
-          ]
-        : blocks.map((_, i) => box(i))}
-    </div>
-  );
-}
-
-// Personagem completo (cena 3D). `size` muda a escala (miniaturas do menu).
-export function HeroModel({ hero, cls, rotation = -30, hop = 0, size = 1, still = false, limbs = false, pose = null }) {
-  return (
-    <div className={`vx-model ${still ? 'still' : ''} ${pose ? `pose-${pose}` : ''}`} style={{ '--vx-size': size }}>
-      <div className="vx-shadow" />
-      <div className="vx-scene">
-        <div className="vx-rot" style={{ transform: `rotateX(-14deg) rotateY(${rotation}deg)` }}>
-          <div className={`vx-hop ${hop ? 'hopping' : ''}`} key={hop}>
-            <HeroBody hero={hero} cls={cls} limbs={limbs} />
-          </div>
+    <div className={`h2d-model ${still ? 'still' : ''} ${limbs ? 'limbs' : ''} ${pose ? `pose-${pose}` : ''}`} style={{ '--h2d-size': size }}>
+      <div className="h2d-shadow" />
+      <div className={`h2d-hop ${hop ? 'hopping' : ''}`} key={hop}>
+        <div className={`h2d-flip ${left ? 'left' : ''}`}>
+          <Hero2DSvg hero={h} cls={id} />
         </div>
       </div>
     </div>
@@ -186,7 +69,7 @@ export function HeroModel({ hero, cls, rotation = -30, hop = 0, size = 1, still 
 
 // Arrastar para girar + clique + segurar (toque longo)
 function useHeroGestures({ onTap, onHold } = {}) {
-  const [rotation, setRotation] = useState(-30);
+  const [rotation, setRotation] = useState(0);
   const drag = useRef(null);
   const holdTimer = useRef(null);
 
@@ -217,7 +100,7 @@ function useHeroGestures({ onTap, onHold } = {}) {
         d.moved = true;
         clearTimeout(holdTimer.current);
       }
-      if (d.moved) setRotation(d.start + dx * 0.9);
+      if (d.moved) setRotation(dx < 0 ? 180 : 0);
     },
     onPointerUp: () => {
       clearTimeout(holdTimer.current);
@@ -254,7 +137,7 @@ export function HeroStage({ emoji, onEmojiClick, hero: rawHero, onOpenMenu }) {
 
   return (
     <div className="hero-stage">
-      <div className="vx-stage" {...handlers} title={tx('Clique para abrir o personagem · arraste para girar')}>
+      <div className="vx-stage" {...handlers} title={tx('Clique para abrir o personagem · arraste para virar de lado')}>
         <HeroModel hero={hero} rotation={rotation} />
       </div>
       <ThoughtBubble emoji={emoji} onClick={onEmojiClick} />
@@ -262,141 +145,106 @@ export function HeroStage({ emoji, onEmojiClick, hero: rawHero, onOpenMenu }) {
   );
 }
 
-// ---------- Gráfico radar dos atributos ----------
-function StatRadar({ heroClass, levels }) {
-  const size = 200;
-  const c = size / 2;
-  const r = 70;
-  const max = 20; // valor-base (até ~10) + upgrades (até 10)
+// ---------- Upgrades com cara de jogo ----------
+const RANKS = [
+  { min: 0, name: 'Bronze', color: '#d08a4a' },
+  { min: 10, name: 'Prata', color: '#cbd5e1' },
+  { min: 20, name: 'Ouro', color: '#facc15' },
+  { min: 35, name: 'Diamante', color: '#67e8f9' },
+  { min: 50, name: 'Lenda', color: '#f472b6' }
+];
+function UpgradeArcade({ hero, heroClass, diamonds, onUpgrade, click }) {
+  const levels = getStatLevels(hero, heroClass.id);
   const stats = statsFor(heroClass);
-  const n = stats.length;
-  const point = (i, v) => {
-    const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
-    return [c + Math.cos(a) * r * v, c + Math.sin(a) * r * v];
-  };
-  const poly = (fn) => stats.map((st, i) => point(i, fn(st)).join(',')).join(' ');
-  const base = (st) => Math.min(1, (heroClass.base?.[st.id] || 0) / max);
-  const total = (st) => Math.min(1, ((heroClass.base?.[st.id] || 0) + (levels[st.id] || 0)) / max);
+  const [flash, setFlash] = useState(null);
+  const total = stats.reduce((a, st) => a + (levels[st.id] || 0), 0);
+  const maxTotal = stats.length * MAX_STAT_LEVEL;
+  const power = stats.reduce((a, st) => a + ((heroClass.base?.[st.id] || 0) + (levels[st.id] || 0)) * 10, 0);
+  let rank = RANKS[0];
+  RANKS.forEach((r) => {
+    if (total >= Math.round((r.min / 50) * maxTotal)) rank = r;
+  });
+  const next = RANKS[RANKS.indexOf(rank) + 1];
 
   return (
-    <svg className="rp-radar" viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
-      {[0.25, 0.5, 0.75, 1].map((f) => (
-        <polygon key={f} className="rp-radar-ring" points={poly(() => f)} />
-      ))}
-      {stats.map((st, i) => {
-        const [x, y] = point(i, 1);
-        return <line key={st.id} className="rp-radar-axis" x1={c} y1={c} x2={x} y2={y} />;
-      })}
-      <polygon className="rp-radar-base" points={poly(base)} />
-      <polygon className="rp-radar-value" points={poly(total)} />
-      {stats.map((st, i) => {
-        const [x, y] = point(i, 1.24);
-        return (
-          <text key={st.id} x={x} y={y} className="rp-radar-icon" textAnchor="middle" dominantBaseline="central">
-            {st.icon}
-          </text>
-        );
-      })}
-    </svg>
-  );
-}
-
-// Posição de cada atributo ao redor do personagem (% da área da prévia)
-const ORBIT_POS = {
-  atk: { left: 17, top: 24 },
-  def: { left: 17, top: 66 },
-  agi: { left: 83, top: 24 },
-  mag: { left: 83, top: 66 },
-  hp: { left: 50, top: 11 }
-};
-
-// ---------- Atributos em volta do personagem ----------
-function UpgradeOrbit({ hero, heroClass, diamonds, onUpgrade, click }) {
-  const levels = getStatLevels(hero, heroClass.id);
-  return (
-    <div className="up-orbit">
-      {statsFor(heroClass).map((st) => {
-        const lvl = levels[st.id] || 0;
-        const maxed = lvl >= MAX_STAT_LEVEL;
-        const cost = upgradeCost(lvl);
-        const canBuy = !maxed && diamonds >= cost;
-        const pos = ORBIT_POS[st.id] || { left: 50, top: 50 };
-        return (
-          <div
-            key={st.id}
-            className={`up-node ${maxed ? 'maxed' : ''}`}
-            style={{ left: `${pos.left}%`, top: `${pos.top}%` }}
-            title={tx(st.desc)}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <span className="up-node-icon">{st.icon}</span>
-            <span className="up-node-name">{tx(st.name)}</span>
-            <span className="up-node-lvl">
-              {tx('Nv.')} {lvl}/{MAX_STAT_LEVEL}
-            </span>
-            <div className="up-pips">
-              {Array.from({ length: MAX_STAT_LEVEL }).map((_, i) => (
-                <span key={i} className={i < lvl ? 'on' : ''} />
-              ))}
-            </div>
-            <button
-              type="button"
-              className="up-buy"
-              disabled={!canBuy}
-              onClick={() => {
-                if (!canBuy) return;
-                click('train');
-                onUpgrade(st, lvl, cost);
-              }}
-              title={maxed ? tx('Nível máximo') : canBuy ? tx('Melhorar') : tx('Diamantes insuficientes')}
-            >
-              {maxed ? 'MAX' : `+ 💎${cost}`}
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ---------- Ficha do herói (gráfico + valores) ----------
-function HeroSheet({ hero, heroClass, diamonds }) {
-  const levels = getStatLevels(hero, heroClass.id);
-  return (
-    <div className="rp-sheet">
-      <div className="rp-head">
-        <div>
-          <h4>📜 {tx('Ficha do Herói')}</h4>
-          <small>{tx(heroNameFor(heroClass, getGender(getLook(hero, heroClass.id), heroClass)))}</small>
+    <div className="ga-panel">
+      <div className="ga-top">
+        <div className="ga-box">
+          <small>{tx('PODER')}</small>
+          <strong>{power}</strong>
         </div>
-        <div className="rp-purse" title={tx('Seus diamantes')}>
-          <span>💎</span>
-          <strong>{diamonds}</strong>
+        <div className="ga-box ga-rank" style={{ '--rank': rank.color }}>
+          <small>{tx('RANK')}</small>
+          <strong>{tx(rank.name)}</strong>
+        </div>
+        <div className="ga-box ga-gems" title={tx('Seus diamantes')}>
+          <small>{tx('DIAMANTES')}</small>
+          <strong>💎 {diamonds}</strong>
         </div>
       </div>
 
-      <StatRadar heroClass={heroClass} levels={levels} />
+      <div className="ga-xp">
+        <div className="ga-xp-bar">
+          <span style={{ width: `${(total / maxTotal) * 100}%` }} />
+        </div>
+        <small>
+          {total}/{maxTotal} {tx('níveis')}
+          {next ? ` · ${tx('próximo rank')}: ${tx(next.name)}` : ` · ${tx('rank máximo!')}`}
+        </small>
+      </div>
 
-      <div className="rp-list">
-        {statsFor(heroClass).map((st) => {
+      <div className="ga-list">
+        {stats.map((st) => {
           const lvl = levels[st.id] || 0;
           const base = heroClass.base?.[st.id] || 0;
+          const maxed = lvl >= MAX_STAT_LEVEL;
+          const cost = upgradeCost(lvl);
+          const canBuy = !maxed && diamonds >= cost;
           return (
-            <div key={st.id} className="rp-row">
-              <span>{st.icon}</span>
-              <span className="rp-row-name">
-                {tx(st.name)}
-                <small>{tx(st.desc)}</small>
-              </span>
-              <span className="rp-row-value">
-                {base + lvl}
-                {lvl > 0 && <em>+{lvl}</em>}
-              </span>
+            <div key={st.id} className={`ga-card ${maxed ? 'maxed' : ''} ${flash === st.id ? 'flash' : ''}`} title={tx(st.desc)}>
+              <span className="ga-badge">{st.icon}</span>
+              <div className="ga-info">
+                <div className="ga-line">
+                  <strong>{tx(st.name)}</strong>
+                  <span className="ga-val">{base + lvl}</span>
+                  <span className="ga-lvl">
+                    {tx('NV')} {lvl}/{MAX_STAT_LEVEL}
+                  </span>
+                </div>
+                <div className="ga-seg">
+                  {Array.from({ length: MAX_STAT_LEVEL }).map((_, i) => (
+                    <span key={i} className={i < lvl ? 'on' : ''} />
+                  ))}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="ga-buy"
+                disabled={!canBuy}
+                onClick={() => {
+                  if (!canBuy) return;
+                  click('train');
+                  onUpgrade(st, lvl, cost);
+                  setFlash(st.id);
+                  setTimeout(() => setFlash((f) => (f === st.id ? null : f)), 700);
+                }}
+                title={maxed ? tx('Nível máximo') : canBuy ? tx('Melhorar') : tx('Diamantes insuficientes')}
+              >
+                {maxed ? (
+                  'MAX'
+                ) : (
+                  <>
+                    <b>{tx('UPAR')}</b>
+                    <small>💎 {cost}</small>
+                  </>
+                )}
+              </button>
+              {flash === st.id && <span className="ga-pop">+1</span>}
             </div>
           );
         })}
       </div>
-      <p className="rp-tip">{tx('Ganhe diamantes completando as missões diárias.')}</p>
+      <p className="ga-tip">{tx('Ganhe diamantes completando as missões diárias.')}</p>
     </div>
   );
 }
@@ -485,7 +333,7 @@ function OptionChips({ options, value, onPick, click }) {
             onPick(o.id);
           }}
         >
-          <span aria-hidden="true">{o.icon}</span>
+          {o.icon && <span aria-hidden="true">{o.icon}</span>}
           {tx(o.name)}
         </button>
       ))}
@@ -497,6 +345,7 @@ function OptionChips({ options, value, onPick, click }) {
 export function HeroMenu({ isOpen, onClose, hero: rawHero, setHero, playSound, diamonds = 0, onSpend }) {
   useLanguage();
   const [tab, setTab] = useState('upgrades');
+  const [drawing, setDrawing] = useState(null); // { id?, name, pixels } aberto no criador
   const { rotation, handlers } = useHeroGestures();
 
   // Ao abrir, começa sempre na ficha de upgrades
@@ -507,12 +356,9 @@ export function HeroMenu({ isOpen, onClose, hero: rawHero, setHero, playSound, d
   if (!isOpen) return null;
 
   const hero = normalizeHero(rawHero);
-  const heroClass = getHeroClass(hero.cls);
+  const heroClass = classFor(hero, hero.cls);
   const look = getLook(hero, heroClass.id);
-  const palette = buildPalette(heroClass, look);
-  const gender = getGender(look, heroClass);
-  const isDragon = heroClass.id === 'dragon';
-  const heroName = heroNameFor(heroClass, gender);
+  const heroName = heroNameFor(heroClass);
 
   const click = (type = 'click') => playSound && playSound(type);
   const close = () => {
@@ -522,7 +368,7 @@ export function HeroMenu({ isOpen, onClose, hero: rawHero, setHero, playSound, d
   const save = (fn) => setHero((prev) => fn(normalizeHero(prev)));
   // Tudo que for personalizado fica só no personagem atual
   const updateLook = (fields) =>
-    save((h) => ({ ...h, looks: { ...h.looks, [h.cls]: { ...getLook(h, h.cls), ...fields } } }));
+    save((h) => ({ ...h, looks2d: { ...h.looks2d, [h.cls]: { ...((h.looks2d || {})[h.cls] || {}), ...fields } } }));
 
   const upgrade = (st, lvl, cost) => {
     const label = `${tx(heroName)}: ${tx(st.name)} ${tx('Nv.')} ${lvl + 1}`;
@@ -533,8 +379,47 @@ export function HeroMenu({ isOpen, onClose, hero: rawHero, setHero, playSound, d
     }));
   };
 
+  const saveDrawing = ({ name, pixels }) => {
+    if (drawing && drawing.mode === 'override') {
+      const cid = drawing.cls;
+      save((h) => ({ ...h, pixelOverrides: { ...h.pixelOverrides, [cid]: pixels } }));
+      setDrawing(null);
+      return;
+    }
+    const id = drawing && drawing.id ? drawing.id : newCustomId();
+    save((h) => {
+      const list = h.customs.filter((c) => c.id !== id);
+      const idx = h.customs.findIndex((c) => c.id === id);
+      const item = { id, name, pixels };
+      if (idx >= 0) list.splice(idx, 0, item);
+      else list.push(item);
+      return { ...h, customs: list, cls: `custom:${id}` };
+    });
+    setDrawing(null);
+    setTab('classes');
+  };
+  const deleteDrawing = () => {
+    const id = drawing && drawing.id;
+    if (id) {
+      click('delete');
+      save((h) => ({ ...h, customs: h.customs.filter((c) => c.id !== id), cls: h.cls === `custom:${id}` ? 'archer' : h.cls }));
+    }
+    setDrawing(null);
+  };
+
   return (
-    <div className="modal-backdrop" onClick={close}>
+    <div className="modal-backdrop" onClick={drawing ? undefined : close}>
+      {drawing && (
+        <PixelEditor
+          initial={drawing.pixels ? drawing : null}
+          lockedName={drawing.mode === 'override' ? drawing.name : null}
+          hero={hero}
+          playSound={playSound}
+          onCancel={() => setDrawing(null)}
+          onSave={saveDrawing}
+          onDelete={drawing.id && drawing.mode !== 'override' ? deleteDrawing : null}
+        />
+      )}
       <div className="modal-window hm-window" onClick={(e) => e.stopPropagation()}>
         <div className="hm-header">
           <div>
@@ -554,39 +439,12 @@ export function HeroMenu({ isOpen, onClose, hero: rawHero, setHero, playSound, d
                 <HeroModel hero={hero} rotation={rotation} size={tab === 'upgrades' ? 1.2 : 1.45} />
               </div>
               <div className="hm-pedestal" />
-              {tab === 'upgrades' && (
-                <UpgradeOrbit hero={hero} heroClass={heroClass} diamonds={diamonds} onUpgrade={upgrade} click={click} />
-              )}
               <div className="hm-preview-info">
                 <strong>{tx(heroName)}</strong>
-                <span>↔ {tx('Arraste para girar')}</span>
+                <span>↔ {tx('Arraste para virar de lado')}</span>
               </div>
             </div>
 
-            {/* Gênero, embaixo do personagem (aba Personagens) */}
-            {tab === 'classes' && !heroClass.noGender && (
-              <div className="hm-gender">
-                <span>{tx('Gênero')}</span>
-                <div className="hm-gender-toggle">
-                  {[
-                    ['m', `♂ ${tx('Masculino')}`],
-                    ['f', `♀ ${tx('Feminino')}`]
-                  ].map(([g, label]) => (
-                    <button
-                      key={g}
-                      type="button"
-                      className={gender === g ? 'active' : ''}
-                      onClick={() => {
-                        click();
-                        updateLook({ gender: g });
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="hm-panel">
@@ -611,7 +469,7 @@ export function HeroMenu({ isOpen, onClose, hero: rawHero, setHero, playSound, d
             </div>
 
             {tab === 'upgrades' && (
-              <HeroSheet hero={hero} heroClass={heroClass} diamonds={diamonds} />
+              <UpgradeArcade hero={hero} heroClass={heroClass} diamonds={diamonds} onUpgrade={upgrade} click={click} />
             )}
 
             {tab === 'classes' && (
@@ -627,109 +485,159 @@ export function HeroMenu({ isOpen, onClose, hero: rawHero, setHero, playSound, d
                     }}
                   >
                     <div className="hm-slot-model">
-                      <HeroModel hero={hero} cls={c.id} rotation={-28} size={c.id === 'dragon' ? 0.5 : 0.68} still />
+                      <HeroModel hero={hero} cls={c.id} size={0.62} still />
                     </div>
-                    <span className="hm-slot-name">{tx(heroNameFor(c, getGender(getLook(hero, c.id), c)))}</span>
+                    <span className="hm-slot-name">{tx(c.name)}</span>
                   </button>
                 ))}
+                {hero.customs.map((c) => (
+                  <div key={c.id} className={`hm-slot custom ${hero.cls === `custom:${c.id}` ? 'active' : ''}`}>
+                    <button
+                      type="button"
+                      className="hm-slot-pick"
+                      onClick={() => {
+                        click('train');
+                        save((h) => ({ ...h, cls: `custom:${c.id}` }));
+                      }}
+                    >
+                      <div className="hm-slot-model">
+                        <HeroModel hero={hero} cls={`custom:${c.id}`} size={0.62} still />
+                      </div>
+                      <span className="hm-slot-name">{c.name}</span>
+                    </button>
+                    <button type="button" className="hm-slot-edit" title={tx('Editar desenho')} onClick={() => { click(); setDrawing({ ...c }); }}>
+                      ✏️
+                    </button>
+                  </div>
+                ))}
+                <button type="button" className="hm-slot hm-slot-new" onClick={() => { click(); setDrawing({ name: '', pixels: null }); }}>
+                  <span className="hm-slot-plus">＋</span>
+                  <span className="hm-slot-name">{tx('Criar do zero')}</span>
+                </button>
               </div>
             )}
 
-            {tab === 'custom' && (
+            {tab === 'custom' && heroClass.custom && (
+              <div className="hm-colors">
+                <p className="hm-hint">
+                  <strong>{heroClass.name}</strong> {tx('foi desenhado por você, pixel por pixel.')}
+                </p>
+                <button type="button" className="hm-chip active" onClick={() => { click(); setDrawing({ ...findCustom(hero, hero.cls) }); }}>
+                  ✏️ {tx('Abrir no criador')}
+                </button>
+              </div>
+            )}
+
+            {tab === 'custom' && !heroClass.custom && (
               <div className="hm-colors">
                 <p className="hm-hint">
                   {tx('Vale só para este personagem:')} <strong>{tx(heroName)}</strong>
                 </p>
+                <section className="hm-pixel-box">
+                  <h4>{tx('Pixel art')}</h4>
+                  <p className="hm-hint">
+                    {hero.pixelOverrides[hero.cls]
+                      ? tx('Este personagem está com o seu desenho. As opções abaixo voltam a valer quando você voltar ao original.')
+                      : tx('Abra o personagem no criador e pinte pixel por pixel o que quiser mudar.')}
+                  </p>
+                  <div className="hm-chips">
+                    <button
+                      type="button"
+                      className="hm-chip active"
+                      onClick={() => {
+                        click();
+                        setDrawing({
+                          mode: 'override',
+                          cls: hero.cls,
+                          name: heroName,
+                          pixels: hero.pixelOverrides[hero.cls] || pixelsFromHero(hero.cls, look)
+                        });
+                      }}
+                    >
+                      ✏️ {tx('Editar em pixel art')}
+                    </button>
+                    {hero.pixelOverrides[hero.cls] && (
+                      <button
+                        type="button"
+                        className="hm-chip"
+                        onClick={async () => {
+                          if (!(await ask({ title: tx('Voltar ao original?'), message: tx('O desenho em pixel art deste personagem será apagado.'), yes: tx('Voltar') }))) return;
+                          click('delete');
+                          save((h) => {
+                            const po = { ...h.pixelOverrides };
+                            delete po[h.cls];
+                            return { ...h, pixelOverrides: po };
+                          });
+                        }}
+                      >
+                        ↺ {tx('Voltar ao original')}
+                      </button>
+                    )}
+                  </div>
+                </section>
+                {!hero.pixelOverrides[hero.cls] && (
+                  <>
                 <section>
-                  <h4>{isDragon ? tx('Escamas') : tx('Roupa')}</h4>
+                  <h4>{tx('Cabelo')}</h4>
+                  <OptionChips options={HAIR_STYLES_2D} value={look.hairStyle} onPick={(v) => updateLook({ hairStyle: v })} click={click} />
+                  <Swatches colors={HAIR_COLORS} value={look.hair} onPick={(v) => updateLook({ hair: v })} click={click} />
+                </section>
+                <section>
+                  <h4>{tx('Barba')}</h4>
+                  <OptionChips options={BEARD_STYLES_2D} value={look.beard} onPick={(v) => updateLook({ beard: v })} click={click} />
+                </section>
+                <section>
+                  <h4>{tx('Rosto')}</h4>
+                  <OptionChips options={EYE_STYLES_2D} value={look.eyes} onPick={(v) => updateLook({ eyes: v })} click={click} />
+                  <OptionChips options={MOUTH_STYLES_2D} value={look.mouth} onPick={(v) => updateLook({ mouth: v })} click={click} />
+                  <div className="hm-chips hm-chips-gap">
+                    <button type="button" className={`hm-chip ${look.blush ? 'active' : ''}`} onClick={() => { click(); updateLook({ blush: !look.blush }); }}>
+                      {tx('Bochechas rosadas')}
+                    </button>
+                    <button type="button" className={`hm-chip ${look.ears === 'elfo' ? 'active' : ''}`} onClick={() => { click(); updateLook({ ears: look.ears === 'elfo' ? null : 'elfo' }); }}>
+                      {tx('Orelhas de elfo')}
+                    </button>
+                  </div>
+                  <p className="hm-hint hm-hint-gap">{tx('Cor dos olhos')}</p>
+                  <Swatches colors={EYE_COLORS} value={look.eye} onPick={(v) => updateLook({ eye: v })} click={click} />
+                  <p className="hm-hint hm-hint-gap">{tx('Pele')}</p>
+                  <Swatches colors={SKIN_COLORS} value={look.skin} onPick={(v) => updateLook({ skin: v })} click={click} />
+                </section>
+                <section>
+                  <h4>{tx('Roupa')}</h4>
                   <Swatches colors={OUTFIT_COLORS} value={look.outfit} onPick={(v) => updateLook({ outfit: v })} click={click} />
+                  <p className="hm-hint hm-hint-gap">{tx('Mangas, alça e detalhes')}</p>
+                  <Swatches colors={DETAIL_COLORS} value={look.outfit2} onPick={(v) => updateLook({ outfit2: v })} click={click} />
+                  <p className="hm-hint hm-hint-gap">{tx('Calça')}</p>
+                  <Swatches colors={PANTS_COLORS} value={look.pants} onPick={(v) => updateLook({ pants: v })} click={click} />
+                  <p className="hm-hint hm-hint-gap">{tx('Sapatos')}</p>
+                  <Swatches colors={SHOE_COLORS} value={look.shoes} onPick={(v) => updateLook({ shoes: v })} click={click} />
                 </section>
-
-                {!isDragon && (
-                  <section>
-                    <h4>{tx('Pele')}</h4>
-                    <Swatches colors={SKIN_COLORS} value={palette.skin} onPick={(v) => updateLook({ skin: v })} click={click} />
-                  </section>
-                )}
-
                 <section>
-                  <h4>{tx('Olhos')}</h4>
-                  <Swatches colors={EYE_COLORS} value={palette.eye} onPick={(v) => updateLook({ eye: v })} click={click} />
+                  <h4>{tx('Acessórios')}</h4>
+                  <div className="hm-chips">
+                    <button type="button" className={`hm-chip ${look.headgear ? 'active' : ''}`} onClick={() => { click(); updateLook({ headgear: !look.headgear }); }}>
+                      {look.headgear ? '✓ ' : ''}{tx(heroClass.hatName)}
+                    </button>
+                    <button type="button" className={`hm-chip ${look.item ? 'active' : ''}`} onClick={() => { click(); updateLook({ item: !look.item }); }}>
+                      {look.item ? '✓ ' : ''}{tx(heroClass.itemName)}
+                    </button>
+                  </div>
+                  <p className="hm-hint hm-hint-gap">{tx('Detalhes (gema, pena, penacho)')}</p>
+                  <Swatches colors={TRIM_COLORS} value={look.trim} onPick={(v) => updateLook({ trim: v })} click={click} />
                 </section>
-
-                {!isDragon && (
-                  <section>
-                    <h4>{tx('Cabelo')}</h4>
-                    <OptionChips
-                      options={HAIR_STYLES}
-                      value={look.hairStyle || 'default'}
-                      onPick={(v) => updateLook({ hairStyle: v })}
-                      click={click}
-                    />
-                    <p className="hm-hint hm-hint-gap">{tx('Cor do cabelo e da barba')}</p>
-                    <Swatches colors={HAIR_COLORS} value={palette.hair} onPick={(v) => updateLook({ hair: v })} click={click} />
-                  </section>
-                )}
-
-                {!isDragon && (
-                  <section>
-                    <h4>{tx('Barba')}</h4>
-                    <OptionChips
-                      options={BEARD_STYLES}
-                      value={look.beard || 'default'}
-                      onPick={(v) => updateLook({ beard: v })}
-                      click={click}
-                    />
-                  </section>
-                )}
-
-                {heroClass.hasArmor && (
-                  <section>
-                    <h4>{tx('Armadura')}</h4>
-                    <OptionChips
-                      options={ARMOR_TYPES}
-                      value={look.armor || 'default'}
-                      onPick={(v) => updateLook({ armor: v })}
-                      click={click}
-                    />
-                  </section>
-                )}
-
-                {heroClass.hasHelm && (
-                  <section>
-                    <h4>{tx('Elmo')}</h4>
-                    <OptionChips
-                      options={HELM_TYPES}
-                      value={look.helm || 'default'}
-                      onPick={(v) => updateLook({ helm: v })}
-                      click={click}
-                    />
-                  </section>
-                )}
-
-                <section>
-                  <h4>{tx('Detalhes')}</h4>
-                  <p className="hm-hint">{tx('Gemas, cintos, penas e enfeites')}</p>
-                  <Swatches
-                    colors={TRIM_COLORS}
-                    value={look.trim}
-                    allowTheme
-                    customFallback="#facc15"
-                    onPick={(v) => updateLook({ trim: v })}
-                    click={click}
-                  />
-                </section>
-
                 <button
                   type="button"
                   className="hm-reset"
                   onClick={() => {
                     click('delete');
-                    updateLook({ ...DEFAULT_LOOK, skin: null, eye: null, hair: null, hairStyle: null, beard: null, armor: null, helm: null });
+                    save((h) => ({ ...h, looks2d: { ...h.looks2d, [h.cls]: {} } }));
                   }}
                 >
                   ↺ {tx('Restaurar padrão')}
                 </button>
+                  </>
+                )}
               </div>
             )}
           </div>

@@ -74,7 +74,9 @@ export function ThemeModal({
 }) {
   useLanguage();
   const ui = useUiTheme();
-  const [family, setFamily] = useState(ui.visual);
+  // só existe o visual Gameficado
+  const family = 'gamificado';
+  const setFamily = () => {};
   const [category, setCategory] = useState(() => findCategoryOf(currentTheme, customThemes));
   const [expanded, setExpanded] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -205,87 +207,6 @@ export function ThemeModal({
             </button>
           </div>
         </div>
-
-        {/* Família: Nanquim (papel e tinta) ou Gameficado (visual de jogo) */}
-        <div className="th-family" role="tablist">
-          {[
-            ['nanquim', '📜', 'Nanquim', 'Papel, tinta e aquarela'],
-            ['gamificado', '🎮', 'Gameficado', 'Visual de jogo, neon e escuro']
-          ].map(([id, icon, name, desc]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={family === id}
-              className={`th-family-btn ${family === id ? 'active' : ''}`}
-              onClick={() => {
-                click();
-                setFamily(id);
-                setIsEditMode(false);
-                setDraft(EMPTY_DRAFT);
-              }}
-            >
-              <span className="th-family-icon">{icon}</span>
-              <span>
-                <strong>{tx(name)}</strong>
-                <small>{tx(desc)}</small>
-              </span>
-              {ui.visual === id && <em>{tx('em uso')}</em>}
-            </button>
-          ))}
-        </div>
-
-        {family === 'nanquim' && (
-          <div className="th-nq">
-            <p className="th-nq-note">
-              {tx('Vale para Neurônios, Santuário e Habilidades. O modo noturno (🌙) escurece o papel de qualquer tema.')}
-            </p>
-            <div className="th-grid th-nq-grid">
-              {NANQUIM_THEMES.map((t) => {
-                const palette = ui.dark ? t.dark : t.light;
-                const accent = t.follow ? getThemeById(currentTheme, customThemes).color : palette.accent;
-                return (
-                  <NanquimCard
-                    key={t.id}
-                    theme={t}
-                    palette={palette}
-                    accent={accent}
-                    active={ui.visual === 'nanquim' && ui.nq === t.id}
-                    onClick={() => {
-                      click('train');
-                      setNanquimTheme(t.id);
-                    }}
-                  />
-                );
-              })}
-            </div>
-
-            {ui.visual === 'nanquim' && ui.nq === 'classico' && (
-              <details className="th-ink">
-                <summary className="th-ink-head">
-                  <span className="th-ink-swatch" style={{ background: themeGradient(getThemeById(currentTheme, customThemes)) }} />
-                  <strong>🎨 {tx('Cor da tinta do Clássico')}</strong>
-                  <small>{tx('Escolha qualquer cor dos temas — o papel continua o do Santuário.')}</small>
-                </summary>
-                <div className="th-ink-dots">
-                  {[...THEME_CATEGORIES.flatMap((c) => c.themes), ...customThemes].map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      className={`th-ink-dot ${currentTheme === t.id ? 'active' : ''}`}
-                      style={{ background: themeGradient(t) }}
-                      title={t.custom ? t.name : tx(t.name)}
-                      onClick={() => {
-                        click();
-                        setCurrentTheme(t.id);
-                      }}
-                    />
-                  ))}
-                </div>
-              </details>
-            )}
-          </div>
-        )}
 
         {family === 'gamificado' && (
         <>

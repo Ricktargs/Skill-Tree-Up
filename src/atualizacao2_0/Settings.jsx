@@ -222,27 +222,6 @@ export function SettingsModal({
           {/* Aparência (todos os modos) */}
           <section className="st-section">
             <h4>🎨 {tx('Aparência')}</h4>
-            <div className="st-row">
-              <div className="st-row-text">
-                <strong>{tx('Estilo visual')}</strong>
-                <span>{tx((VISUAL_THEMES.find((t) => t.id === ui.visual) || {}).desc || '')}</span>
-              </div>
-              <div className="st-segmented">
-                {VISUAL_THEMES.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className={ui.visual === t.id ? 'active' : ''}
-                    onClick={() => {
-                      click();
-                      setVisual(t.id);
-                    }}
-                  >
-                    {tx(t.name)}
-                  </button>
-                ))}
-              </div>
-            </div>
             <Toggle
               title={tx('Modo noturno')}
               desc={ui.visual === 'gamificado' ? tx('No estilo Gameficado as Habilidades já são escuras') : tx('Papel escuro e tinta clara nos três modos')}
@@ -501,7 +480,7 @@ const SHARED_GROUPS = [
       { keys: ['Alt', '1'], alt: ['Alt', '3'], text: 'Troca entre Neurônios, Santuário e Habilidades.' },
       { keys: ['P'], text: 'Perfis.' },
       { keys: ['M'], text: 'Missões diárias e diamantes.' },
-      { keys: ['C'], text: 'Temas (Nanquim e Gameficado).' },
+      { keys: ['C'], text: 'Temas.' },
       { keys: ['T'], text: 'Checklists (tarefas).' },
       { keys: ['F'], text: 'Flashcards.' },
       { keys: ['R'], text: 'Pomodoro.' },
@@ -515,32 +494,20 @@ const ARVORE_GROUPS = [
   {
     title: 'Santuário',
     items: [
-      { keys: ['W', 'A', 'S', 'D'], text: 'Anda com o personagem.' },
-      { keys: ['Espaço'], text: 'Pula.' },
-      { keys: ['Arrastar'], text: 'O fundo: move a vista.' },
-      { keys: ['Roda do mouse'], text: 'Zoom.' },
-      { keys: ['Clique'], text: 'Numa árvore: mostra a bolinha 🎲 para aleatorizar.' }
+      { keys: ['A', 'D'], alt: ['←', '→'], text: 'Anda com o personagem (o cenário acompanha).' },
+      { keys: ['Espaço'], alt: ['W'], text: 'Pula.' },
+      { keys: ['E'], text: 'Interage: porta, baú, relógio, estante, cama e escada.' },
+      { keys: ['↑'], alt: ['↓'], text: 'Entra/sai pela porta e sobe/desce a escada.' },
+      { keys: ['L'], text: 'Cenário (Campo, Ilha voadora, Praia), estação e céu.' }
     ]
   },
   {
-    title: 'Galhos (clique na árvore principal)',
+    title: 'Casa na árvore',
     items: [
-      { keys: ['Clique'], text: 'Numa bolinha: seleciona o galho.' },
-      { keys: ['Arrastar'], text: 'Uma bolinha: move o galho.' },
-      { keys: ['Segurar'], text: 'Uma bolinha por 1,5s: troca de lugar com outro galho.' },
-      { keys: ['Delete'], text: 'Remove o galho selecionado.' },
-      { keys: ['Ctrl', 'M'], text: 'Aleatoriza os galhos.' },
-      { keys: ['Ctrl', 'Z'], alt: ['Ctrl', 'Y'], text: 'Desfaz / refaz.' },
-      { keys: ['Esc'], text: 'Solta a seleção / sai do modo galhos.' }
-    ]
-  },
-  {
-    title: 'Layout (lápis ligado)',
-    items: [
-      { keys: ['Arrastar'], text: 'Move qualquer decoração pelo terreno.' },
-      { keys: ['+'], alt: ['−'], text: 'Aumenta / diminui o selecionado.' },
-      { keys: ['Delete'], text: 'Remove o selecionado.' },
-      { keys: ['Esc'], text: 'Solta a seleção / desliga o lápis.' }
+      { keys: ['Baú'], text: 'Abre o Personagem.' },
+      { keys: ['Relógio'], text: 'Abre o Pomodoro.' },
+      { keys: ['Estante'], text: 'Abre as Notas.' },
+      { keys: ['Cama'], text: 'Dorme: troca entre dia e noite.' }
     ]
   }
 ];

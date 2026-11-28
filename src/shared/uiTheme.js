@@ -7,10 +7,8 @@
 import { useSyncExternalStore } from 'react';
 import { NANQUIM_THEMES, nanquimVars, getNanquimTheme } from './nanquimThemes.js';
 
-export const VISUAL_THEMES = [
-  { id: 'nanquim', name: 'Nanquim', desc: 'Papel, tinta e aquarela (igual ao Santuário)' },
-  { id: 'gamificado', name: 'Gameficado', desc: 'O visual de jogo original das Habilidades' }
-];
+// O Nanquim saiu: o programa usa só o visual Gameficado
+export const VISUAL_THEMES = [{ id: 'gamificado', name: 'Gameficado', desc: 'O visual de jogo original das Habilidades' }];
 
 const DARK_KEY = 'eu-sou-arvore-theme'; // a mesma chave que a Árvore já usava
 const VISUAL_KEY = 'ui_visual_theme_v1';
@@ -34,7 +32,7 @@ const write = (key, value) => {
 
 let state = {
   dark: read(DARK_KEY) !== 'light', // modo noturno é o padrão
-  visual: VISUAL_THEMES.some((t) => t.id === read(VISUAL_KEY)) ? read(VISUAL_KEY) : 'nanquim',
+  visual: 'gamificado',
   nq: validNq(read(NQ_KEY))
 };
 
@@ -67,13 +65,13 @@ export const setDark = (dark) => set({ dark: Boolean(dark) });
 export const toggleDark = () => set({ dark: !state.dark });
 export const setVisual = (visual) => VISUAL_THEMES.some((t) => t.id === visual) && set({ visual });
 // Escolher um tema do Nanquim já liga o estilo Nanquim
-export const setNanquimTheme = (id) => set({ nq: validNq(id), visual: 'nanquim' });
+export const setNanquimTheme = (id) => set({ nq: validNq(id) });
 
 // Desfazer/refazer (Ctrl+Z) pode mudar as chaves por baixo: relê
 export const reloadUiTheme = () => {
   state = {
     dark: read(DARK_KEY) !== 'light', // modo noturno é o padrão
-    visual: VISUAL_THEMES.some((t) => t.id === read(VISUAL_KEY)) ? read(VISUAL_KEY) : 'nanquim',
+    visual: 'gamificado',
     nq: validNq(read(NQ_KEY))
   };
   apply();

@@ -563,3 +563,5 @@ html.is-touch .tree-page .sanc-panel-body {
 @media (max-width: 760px), (max-height: 520px) and (orientation: landscape) {
   html #root .modal-window.full-screen-edit { border-radius: 0 !important; border: none !important; }
 }
+.sanc-pad-actions { display: flex; align-items: flex-end; gap: 10px; pointer-events: none; }
+.sanc-pad-btn.act { width: 52px; height: 52px; border-radius: 50%; font-weight: 800; font-size: 18px; background: rgba(120, 53, 15, 0.6); }

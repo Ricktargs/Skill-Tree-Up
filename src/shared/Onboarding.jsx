@@ -80,14 +80,14 @@ const STEPS = [
     target: '.tree-container',
     emoji: '🌳',
     title: 'Santuário',
-    text: 'O mundo do seu herói, sem cobrança. A árvore guarda galhos e notas e cresce com o que você registra. Ande com W A S D e pule com Espaço.'
+    text: 'O mundo do seu herói, sem cobrança. A árvore guarda galhos e notas e cresce com o que você registra. Ande com A e D (ou as setas) e pule com Espaço.'
   },
   {
     mode: 'arvore',
-    target: '.sanc-toggle-btn',
-    emoji: '🗺️',
-    title: 'Layout do mundo',
-    text: 'Escolha entre Terra, Ilha voadora e Ilha com mar, e decore: árvores, lagos, barracas, fogueiras, lanternas…'
+    target: '.pw-canvas',
+    emoji: '🏡',
+    title: 'Sua casa na árvore',
+    text: 'A árvore gigante é a casa do seu personagem: vá até a porta e aperte E para entrar. Lá dentro o baú abre o Personagem, o relógio o Pomodoro, a estante as Notas e a cama troca dia e noite. Aperte L para mudar o cenário.'
   },
   // ---------- Neurônios ----------
   {
