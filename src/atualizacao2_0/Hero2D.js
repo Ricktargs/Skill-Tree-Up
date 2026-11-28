@@ -239,7 +239,17 @@ function drawFace(cv, look) {
   const lip = '#4a1010';
   const tongue = '#6b1717';
   const m = look.mouth || 'sorriso';
-  if (m === 'sorriso') {
+  if (m === 'focinho') {
+    // focinho de porco (para o vendedor da vila)
+    const sn = shade(look.skin || '#f6a5b0', -0.16);
+    cv.rect(15, 16, 26, 20, sn, 'head');
+    cv.rect(16, 15, 25, 15, sn, 'head');
+    cv.rect(16, 21, 25, 21, sn, 'head');
+    cv.rect(15, 16, 26, 16, shade(sn, 0.18), 'head');
+    cv.rect(17, 17, 18, 19, '#5b1f2a', 'head');
+    cv.rect(23, 17, 24, 19, '#5b1f2a', 'head');
+    cv.rect(17, 23, 24, 23, '#7a2a36', 'head');
+  } else if (m === 'sorriso') {
     cv.rect(16, 18, 17, 18, '#ffffff', 'head');
     cv.rect(24, 18, 25, 18, '#ffffff', 'head');
     cv.rect(17, 19, 24, 19, '#ffffff', 'head');
@@ -303,6 +313,22 @@ function drawBeard(cv, look, hair) {
 
 // ---------- orelhas de elfo (pontudas, para fora da cabeça) ----------
 function drawEars(cv, look) {
+  if (look.ears === 'porco') {
+    // orelhinhas de porco caídas em cima da cabeça
+    const sk = look.skin || '#f6a5b0';
+    const dk = shade(sk, -0.2);
+    [
+      [4, 8],
+      [27, 31]
+    ].forEach(([a, b]) => {
+      for (let r = -4; r <= 1; r++) {
+        const w = Math.max(0, r + 4);
+        for (let c = a + (r < -1 ? 1 : 0); c <= Math.min(b, a + w); c++) cv.set(c, r, r === -4 || c === a ? dk : sk, 'head');
+      }
+      cv.set(a + 2, -1, shade(sk, -0.32), 'head');
+    });
+    return;
+  }
   if (look.ears !== 'elfo') return;
   const skin = look.skin;
   const skinD = shade(skin, -0.15);

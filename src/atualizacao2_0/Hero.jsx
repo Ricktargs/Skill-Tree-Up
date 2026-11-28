@@ -37,10 +37,11 @@ import { heroSkinPath, loadSkinPixels, useSkinPixels } from '../shared/skins.js'
 
 // Desenho do personagem: os 3 padrão (montados por camadas) ou um desenhado no criador
 // Ordem: desenhado no criador > redesenho em pixel art > skin da pasta (public/skins) > código
-function Hero2DSvg({ hero, cls }) {
+// `skinPath`: imagem própria (moradores da vila); sem ela, não usa a skin do personagem principal
+function Hero2DSvg({ hero, cls, skinPath }) {
   const custom = isCustomClass(cls) ? findCustom(hero, cls) : null;
   const override = !custom && hero.pixelOverrides ? hero.pixelOverrides[cls] : null;
-  const skin = useSkinPixels(custom || override ? null : heroSkinPath(cls), GRID.c0, GRID.r0);
+  const skin = useSkinPixels(custom || override ? null : skinPath !== undefined ? skinPath : heroSkinPath(cls), GRID.c0, GRID.r0);
   const look = custom || override || skin ? null : getLook(hero, cls);
   const lookKey = look ? JSON.stringify(look) : '';
   const cells = useMemo(
@@ -54,7 +55,7 @@ function Hero2DSvg({ hero, cls }) {
 
 // Personagem completo. `rotation` (herança do 3D) decide para que lado ele olha;
 // `flip` força olhar para a esquerda. `pose`: idle · walk · jump (Santuário).
-export function HeroModel({ hero, cls, rotation = 0, hop = 0, size = 1, still = false, limbs = false, pose = null, flip }) {
+export function HeroModel({ hero, cls, rotation = 0, hop = 0, size = 1, still = false, limbs = false, pose = null, flip, skinPath }) {
   const h = normalizeHero(hero);
   const id = cls || h.cls;
   const deg = (((rotation % 360) + 360) % 360);
@@ -64,7 +65,7 @@ export function HeroModel({ hero, cls, rotation = 0, hop = 0, size = 1, still = 
       <div className="h2d-shadow" />
       <div className={`h2d-hop ${hop ? 'hopping' : ''}`} key={hop}>
         <div className={`h2d-flip ${left ? 'left' : ''}`}>
-          <Hero2DSvg hero={h} cls={id} />
+          <Hero2DSvg hero={h} cls={id} skinPath={skinPath} />
         </div>
       </div>
     </div>

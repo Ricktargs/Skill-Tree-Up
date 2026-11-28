@@ -1,6 +1,7 @@
 // =========================================================
-// CONTROLE NA TELA DO SANTUÁRIO (só no celular)
-// ◀ ▶ = andar (A D) · botão redondo = pular (Espaço)
+// CONTROLE NA TELA DO SANTUÁRIO (celular e tablet)
+// ◀ ▶ ▲ ▼ = andar / porta / escada · botões da direita: 1, 2, 3
+// (interagir, plantar, regar) e ⤒ (pular / nadar)
 // =========================================================
 import { useEffect, useRef } from "react";
 import { pressKey } from "../../../shared/touch.js";
@@ -30,7 +31,6 @@ function PadButton({ k, code, label, className = "", repeat = false }) {
         }
         held.current = true;
         pressKey(k, true, code);
-        // cavar: segurar continua batendo no bloco
         if (repeat) timer.current = setInterval(() => pressKey(k, true, code), 190);
       }}
       onPointerUp={release}
@@ -43,18 +43,19 @@ function PadButton({ k, code, label, className = "", repeat = false }) {
   );
 }
 
-export default function TouchPad({ action = false }) {
+export default function TouchPad({ full = false, buttons = [{ k: " ", label: "⤒", big: true }] }) {
   return (
     <div className="sanc-pad" onPointerDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
       <div className="sanc-pad-dpad">
-        {action && <PadButton k="ArrowUp" code="ArrowUp" label="▲" className="up" />}
+        {full && <PadButton k="ArrowUp" code="ArrowUp" label="▲" className="up" />}
         <PadButton k="a" label="◀" className="left" />
-        {action && <PadButton k="ArrowDown" code="ArrowDown" label="▼" className="down" />}
+        {full && <PadButton k="ArrowDown" code="ArrowDown" label="▼" className="down" />}
         <PadButton k="d" label="▶" className="right" />
       </div>
       <div className="sanc-pad-actions">
-        {action && <PadButton k="e" label="E" className="act" />}
-        <PadButton k=" " label="⤒" className="jump" />
+        {buttons.map((b) => (
+          <PadButton key={b.label} k={b.k} code={b.code} label={b.label} className={b.big ? "jump" : "act"} />
+        ))}
       </div>
     </div>
   );

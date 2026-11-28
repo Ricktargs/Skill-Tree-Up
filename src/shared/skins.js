@@ -36,6 +36,30 @@ export function loadSkinImage(path) {
   return cache.get(path);
 }
 
+// tudo o que está na pasta já começa a carregar; o jogo pega pronto (sem esperar)
+const loaded = new Map();
+FILES.forEach((p) => {
+  if (/\.(png|webp|gif|jpe?g|svg)$/i.test(p)) loadSkinImage(p).then((img) => img && loaded.set(p, img));
+});
+/** A imagem da skin, se já carregou (para desenhar no canvas a cada quadro). */
+let bypass = false;
+/** O exportador desliga as skins para gerar os desenhos originais. */
+export const setSkinBypass = (v) => (bypass = Boolean(v));
+export const skinImg = (path) => (!bypass && path && loaded.get(path)) || null;
+// regador em pixel art (12 × 9): # contorno · o metal · O brilho
+export const CAN_PIXELS = [
+  '........##..',
+  '.......#..#.',
+  '..#####...#.',
+  '.#ooooo#..#.',
+  '#.oOOOOo#.#.',
+  '..oOOOOo####',
+  '..oOOOOo..#.',
+  '..oooooo....',
+  '..######....'
+];
+export const CAN_COLORS = { '#': '#3f4a57', o: '#7c8b99', O: '#a9b6c2' };
+
 /** Imagem → tela (canvas) do tamanho dela. */
 export function imageToCanvas(img, w, h) {
   const c = document.createElement('canvas');
@@ -105,6 +129,39 @@ export const ICON_SKIN = {
   notes: 'notas',
   flashcards: 'flashcards'
 };
+// moradores da vila e vendedor (cada um com sua imagem; não usa a do personagem principal)
+export const npcSkinPath = (id) => `personagens/moradores/${id}.png`;
+// mais cenários
+export const EXTRA_SCENES = {
+  vila: 'cenario/vila.png',
+  loja: 'cenario/loja.png',
+  balcao: 'cenario/loja-balcao.png',
+  copa: 'cenario/copa.png',
+  horta: 'cenario/horta.png'
+};
+// plantas: <planta>-<fase>.png (quadradinho de 32 × 32)
+export const STAGE_FILE = ['0-semente', '1-broto', '2-crescendo', '3-pronta'];
+export const cropSkinPath = (crop, stage) => `plantas/${crop}-${STAGE_FILE[stage]}.png`;
+// animais e lago
+export const ANIMAL_SKINS = {
+  fish: (i) => `animais/peixe-${i}.png`,
+  frog: 'animais/sapo.png',
+  frogJump: 'animais/sapo-pulando.png',
+  lily: 'animais/vitoria-regia.png',
+  lilyFlower: 'animais/vitoria-regia-flor.png'
+};
+// itens (inventário, loja e barra da horta)
+export const CLASS_ITEM_FILE = { wizard: 'mago', archer: 'arqueiro', warrior: 'guerreiro', elf: 'elfa' };
+export function itemSkinPath(id, cls) {
+  if (id === 'weapon') return `itens/arma-${CLASS_ITEM_FILE[cls] || 'outra'}.png`;
+  if (id === 'can') return 'itens/regador.png';
+  if (id === 'rod') return 'itens/vara-de-pesca.png';
+  if (id === 'ring') return 'itens/anel.png';
+  const [kind, crop] = String(id).split(':');
+  if (kind === 'orb') return `itens/orbe-${crop}.png`;
+  if (kind === 'fish') return `itens/peixe-${crop}.png`;
+  return kind === 'seed' ? `itens/semente-${crop}.png` : `itens/${crop}.png`;
+}
 export const iconSkinPath = (name) => {
   const base = ICON_SKIN[name] || name;
   return findSkin(`icones/${base}.svg`, `icones/${base}.png`, `icones/${base}.webp`);

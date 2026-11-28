@@ -16,6 +16,8 @@ import './Responsive.css'
 // Visual Nanquim (padrão): cores traduzidas + papel, tipografia e formas
 import './shared/nanquim.generated.css'
 import './shared/nanquim.css'
+// Modo claro dos temas Gameficados (cores traduzidas, sem a cara do Nanquim)
+import './shared/light.generated.css'
 // Árvore e Neurônios seguindo o tema (Nanquim ou Gameficado)
 import './shared/modeThemes.css'
 // Tema em tudo (janelas soltas, listas suspensas) + nome de emojis/cores

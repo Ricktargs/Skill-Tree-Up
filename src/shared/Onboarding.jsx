@@ -87,7 +87,7 @@ const STEPS = [
     target: '.pw-canvas',
     emoji: '🏡',
     title: 'Sua casa na árvore',
-    text: 'A árvore gigante é a casa do seu personagem: vá até a porta e aperte E para entrar. Lá dentro o baú abre o Personagem, o relógio o Pomodoro, a estante as Notas e a cama troca dia e noite. Aperte L para mudar o cenário.'
+    text: 'A árvore gigante é a casa do seu personagem: vá até a porta e aperte 1 para entrar. Lá dentro o baú abre o Personagem, o relógio o Pomodoro, a estante as Notas e a cama troca dia e noite. Ao lado tem um lago para nadar e a horta (1 colhe, 2 planta, 3 rega). Aperte L para mudar o cenário.'
   },
   // ---------- Neurônios ----------
   {

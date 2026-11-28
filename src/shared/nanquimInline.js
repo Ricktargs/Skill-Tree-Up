@@ -93,7 +93,9 @@ function stop() {
 }
 
 function sync() {
-  const want = getUiTheme().visual === 'nanquim';
+  // Nanquim ou modo claro: as cores escritas no código também são traduzidas
+  const ui = getUiTheme();
+  const want = ui.visual === 'nanquim' || !ui.dark;
   if (want && !active) start();
   else if (!want && active) stop();
 }

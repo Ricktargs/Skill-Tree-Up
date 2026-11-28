@@ -9,7 +9,7 @@
 
 export const VH = 240; // altura da tela em pixels de arte
 export const GROUND = 196; // onde o chão começa (fora)
-export const OUT_W = 2000;
+export const OUT_W = 2800; // mapa de fora (com o lago grande)
 export const TX = 1000; // centro da árvore
 export const IN_W = 440;
 export const FLOOR1 = 212;
@@ -22,9 +22,9 @@ export const BOT = 152; // terra a mais embaixo (telas altas)
 const VB = VH + BOT;
 
 export const SCENES = {
-  campo: { name: 'Campo', desc: 'Grama e colinas até o horizonte', bounds: [120, 1880] },
-  ilha: { name: 'Ilha voadora', desc: 'Uma ilha flutuando entre as nuvens', bounds: [600, 1400], island: [560, 1440] },
-  praia: { name: 'Praia', desc: 'Areia e mar do lado de casa', bounds: [120, 1668], sand: 1400, sea: 1660 }
+  campo: { name: 'Campo', desc: 'Grama e colinas até o horizonte', bounds: [120, 2680] },
+  ilha: { name: 'Ilha voadora', desc: 'Uma ilha flutuando entre as nuvens', bounds: [600, 2000], island: [560, 2040] },
+  praia: { name: 'Praia', desc: 'Areia e mar do lado de casa', bounds: [120, 2368], sand: 2100, sea: 2360 }
 };
 export const SCENE_IDS = Object.keys(SCENES);
 
@@ -38,11 +38,43 @@ export const GARDEN_X = TX - 330;
 export const GARDEN_BED_W = 14;
 export const GARDEN_GAP = 3;
 export const GARDEN_X0 = GARDEN_X - Math.round((4 * GARDEN_BED_W + 3 * GARDEN_GAP) / 2);
+export const GARDEN_HALF = 64; // cercado da horta (largura/2)
+// lago fundo à direita da árvore
+export const LAKE_SURF = GROUND + 4;
+export const LAKES = {
+  campo: { x0: TX + 218, x1: TX + 998, depth: 150 },
+  praia: { x0: TX + 218, x1: TX + 998, depth: 150 },
+  ilha: { x0: TX + 206, x1: TX + 782, depth: 50 }
+};
+export const lakeOf = (kind) => LAKES[kind] || null;
+export function lakeBottom(L, x) {
+  const mid = (L.x0 + L.x1) / 2;
+  const half = (L.x1 - L.x0) / 2;
+  const t = (x - mid) / half;
+  if (Math.abs(t) >= 1) return GROUND;
+  return Math.round(LAKE_SURF + 4 + L.depth * Math.pow(Math.sqrt(1 - t * t), 0.7));
+}
+// vitórias-régias (posição relativa no lago e tamanho)
+export const LILIES = [
+  [0.05, 10, true],
+  [0.13, 8, false],
+  [0.22, 12, false],
+  [0.31, 9, true],
+  [0.42, 13, false],
+  [0.53, 9, false],
+  [0.63, 11, true],
+  [0.74, 8, false],
+  [0.84, 12, false],
+  [0.94, 9, true]
+];
+// área do lago (com folga): sem moitas, pedras ou flores
+const inLakeZone = (x) => x > TX + 196 && x < TX + 1010;
+export const lilyX = (L, i) => Math.round(L.x0 + (L.x1 - L.x0) * LILIES[i][0]);
 
 // coisas para interagir (E). y = altura do chão onde ficam
 export const SPOTS = [
   { id: 'door', where: 'out', x: TX, y: GROUND, w: 40, label: 'Entrar em casa', act: 'enter' },
-  { id: 'garden', where: 'out', x: GARDEN_X, y: GROUND, w: 70, label: 'Canteiro', act: 'garden' },
+  { id: 'garden', where: 'out', x: GARDEN_X, y: GROUND, w: 40, label: 'Entrar na horta', act: 'farm' },
   { id: 'deckdoor', where: 'out', x: BALCONY_DOOR, y: DECK_Y, w: 24, label: 'Entrar pela varanda', act: 'deckIn' },
   { id: 'exit', where: 'in', x: 50, y: FLOOR1, w: 32, label: 'Sair de casa', act: 'exit' },
   { id: 'up', where: 'in', x: LADDER_X, y: FLOOR1, w: 26, label: 'Subir a escada', act: 'up' },
@@ -51,7 +83,8 @@ export const SPOTS = [
   { id: 'shelf', where: 'in', x: 80, y: FLOOR2, w: 56, label: 'Estante (Notas)', act: 'notes' },
   { id: 'down', where: 'in', x: LADDER_X, y: FLOOR2, w: 26, label: 'Descer a escada', act: 'down' },
   { id: 'bed', where: 'in', x: 214, y: FLOOR2, w: 72, label: 'Dormir', act: 'sleep' },
-  { id: 'deck', where: 'in', x: 404, y: FLOOR2, w: 24, label: 'Ir para a varanda', act: 'deckOut' }
+  { id: 'deck', where: 'in', x: 404, y: FLOOR2, w: 24, label: 'Ir para a varanda', act: 'deckOut' },
+  { id: 'skylight', where: 'in', x: 366, y: FLOOR2, w: 22, label: 'Subir pela claraboia (copa)', act: 'toCanopy' }
 ];
 
 /* ---------------- blocos (colisão em quadradinhos de 4 pixels) ---------------- */
@@ -70,6 +103,14 @@ export function defaultSolid(where, kind) {
     const isl = SCENES[kind] && SCENES[kind].island;
     if (isl) fill(isl[0], isl[1], GROUND, VH + BOT);
     else fill(0, OUT_W, GROUND, VH + BOT);
+    const L = LAKES[kind];
+    if (L) {
+      for (let x = L.x0; x < L.x1; x += TILE) {
+        const c = Math.floor(x / TILE);
+        const bottom = Math.max(lakeBottom(L, x), lakeBottom(L, x + TILE - 1));
+        for (let r = row(GROUND); r < Math.min(G.rows, row(bottom)); r++) grid[r * G.cols + c] = 0;
+      }
+    }
     fill(DECK[0], DECK[1], DECK_Y, DECK_Y + 4);
     fill(DECK[1] - 4, DECK[1], DECK_Y - 16, DECK_Y); // grade no fim da varanda (dá para pular)
   } else {
@@ -80,6 +121,8 @@ export function defaultSolid(where, kind) {
   }
   return grid;
 }
+
+import { ANIMAL_SKINS, skinImg } from '../../../shared/skins.js';
 
 /* ---------------- utilidades ---------------- */
 export function rng(seed) {
@@ -255,8 +298,39 @@ function floatIsland(g, x, y, w, P, fade = 0) {
     rect(g, x + dx, y + 3, 1, depth, Math.abs(dx) > half * 0.6 ? rockD : rock);
     rect(g, x + dx, y, 1, 3, top);
   }
-  // arvorezinha
-  disc(g, x - half * 0.3, y - 6, Math.max(3, w * 0.12), shade(P.leaf[2], fade));
+  // mata em cima
+  for (let k = -2; k <= 2; k++) disc(g, x + k * half * 0.3, y - 4 - Math.abs(k) * -1, Math.max(3, w * 0.1), shade(P.leaf[k % 2 ? 1 : 2], fade));
+}
+
+/* ---------------- floresta (fundo) ---------------- */
+// uma fileira de árvores coladas: pinheiros e copas redondas
+function forestRow(g, W, baseY, h, cols, r, P, opt = {}) {
+  const { trunks = false, fill = true } = opt;
+  if (fill) for (let x = 0; x < W; x++) rect(g, x, baseY - 2, 1, VB - baseY + 2, cols[0]);
+  let x = -20;
+  while (x < W + 20) {
+    const th = h * (0.7 + r() * 0.55);
+    const pine = r() < 0.45;
+    const w = pine ? th * 0.42 : th * 0.5;
+    if (trunks) rect(g, x - 2, baseY - th * 0.35, 4, th * 0.35 + 2, cols[3] || BARK[1]);
+    if (pine) {
+      for (let y = 0; y < th; y++) {
+        const k = y / th;
+        const half = Math.round(w * (0.15 + 0.85 * k) * (1 - ((y % 9) / 9) * 0.25));
+        rect(g, x - half, baseY - th + y, half * 2 + 1, 1, k < 0.25 ? cols[2] : cols[1]);
+      }
+      if (P.snow) rect(g, x - 2, baseY - th, 5, 3, '#ffffff');
+    } else {
+      const cy = baseY - th * 0.62;
+      disc(g, x, cy + th * 0.12, w * 0.85, cols[1]);
+      disc(g, x - w * 0.3, cy, w * 0.6, cols[1]);
+      disc(g, x + w * 0.35, cy + 2, w * 0.55, cols[1]);
+      disc(g, x - w * 0.2, cy - w * 0.25, w * 0.42, cols[2]);
+      if (P.snow) rect(g, x - w * 0.5, cy - w * 0.62, w, 2, '#ffffff');
+      if (P.bloom && r() < 0.3) px(g, x, cy - 2, P.bloom);
+    }
+    x += w * (0.7 + r() * 0.5);
+  }
 }
 
 /* ---------------- fundo distante ---------------- */
@@ -270,18 +344,11 @@ export function buildFar(kind, season) {
   g.translate(0, PAD);
   const r = rng(11);
   if (kind === 'campo') {
-    for (let x = 0; x < W; x++) {
-      const h = Math.round(hillA(x));
-      rect(g, x, h, 1, VB - h, P.hill[0]);
-      if (P.snow) px(g, x, h, '#ffffff');
-    }
-    for (let i = 0; i < 55; i++) {
-      const x = r() * W;
-      const h = hillA(x);
-      const s = 3 + Math.round(r() * 3);
-      rect(g, x, h - s, 1, s + 2, shade(P.hill[1], -0.3));
-      disc(g, x, h - s - 2, s, shade(P.hill[1], -0.12));
-    }
+    // floresta lá no fundo, em camadas (mais clara = mais longe)
+    const far1 = [shade(P.leaf[1], 0.45), shade(P.leaf[1], 0.38), shade(P.leaf[2], 0.45)];
+    const far2 = [shade(P.leaf[1], 0.22), shade(P.leaf[1], 0.18), shade(P.leaf[2], 0.25)];
+    forestRow(g, W, 128, 70, far1, r, P);
+    forestRow(g, W, 150, 64, far2, r, P);
   } else if (kind === 'ilha') {
     for (let i = 0; i < 12; i++) {
       floatIsland(g, 60 + i * (W / 12) + r() * 80, 70 + r() * 90, 26 + r() * 46, P, 0.35);
@@ -312,22 +379,18 @@ export function buildMid(kind, season) {
   g.translate(0, PAD);
   const r = rng(33);
   if (kind === 'campo') {
-    for (let x = 0; x < W; x++) {
-      const h = Math.round(hillB(x));
-      rect(g, x, h, 1, VB - h, P.hill[1]);
-      if (P.snow) px(g, x, h, '#ffffff');
-    }
-    for (let i = 0; i < 40; i++) {
-      const x = r() * W;
-      const h = hillB(x);
-      const s = 5 + Math.round(r() * 5);
-      rect(g, x - 1, h - s, 3, s + 3, BARK[1]);
-      disc(g, x, h - s - 3, s, P.leaf[1]);
-      disc(g, x - 2, h - s - 5, s - 2, P.leaf[2]);
-      if (P.snow) rect(g, x - s + 2, h - s * 2 - 2, s * 2 - 4, 2, '#ffffff');
-    }
+    // floresta densa de perto: árvores grandes com tronco
+    forestRow(g, W, 180, 110, [shade(P.leaf[0], 0.05), P.leaf[1], P.leaf[2], BARK[1]], r, P, { trunks: true });
+    forestRow(g, W, 198, 92, [shade(P.leaf[0], -0.12), P.leaf[0], P.leaf[1], BARK[0]], r, P, { trunks: true });
   } else if (kind === 'ilha') {
-    for (let i = 0; i < 7; i++) floatIsland(g, 100 + i * (W / 7) + r() * 120, 120 + r() * 60, 40 + r() * 40, P, 0.15);
+    for (let i = 0; i < 7; i++) {
+      const x = 100 + i * (W / 7) + r() * 120;
+      const y = 120 + r() * 60;
+      const w = 40 + r() * 40;
+      floatIsland(g, x, y, w, P, 0.15);
+      // cada ilha com sua mata
+      for (let k = 0; k < 4; k++) disc(g, x - w * 0.35 + k * w * 0.22, y - 5 - r() * 4, 4 + r() * 4, shade(P.leaf[k % 2 ? 1 : 2], 0.12));
+    }
   } else {
     return null;
   }
@@ -366,7 +429,7 @@ function flowers(g, x0, x1, P, r, n) {
   if (!P.flower.length) return;
   for (let i = 0; i < n; i++) {
     const x = Math.round(x0 + r() * (x1 - x0));
-    if (Math.abs(x - TX) < 70 || Math.abs(x - GARDEN_X) < 58) continue;
+    if (Math.abs(x - TX) < 70 || Math.abs(x - GARDEN_X) < 70 || inLakeZone(x)) continue;
     const col = P.flower[Math.floor(r() * P.flower.length)];
     px(g, x, GROUND - 1, P.grass[1]);
     px(g, x, GROUND - 2, P.grass[1]);
@@ -425,6 +488,60 @@ function mailbox(g, x) {
   rect(g, x + 7, GROUND - 34, 4, 3, '#ef4444');
 }
 
+// placa de madeira (no lugar da caixa de correio)
+function signpost(g, x) {
+  rect(g, x, GROUND - 22, 3, 22, WOOD[0]);
+  rect(g, x - 9, GROUND - 30, 22, 10, WOOD[1]);
+  rect(g, x - 9, GROUND - 30, 22, 1, WOOD[3]);
+  rect(g, x - 8, GROUND - 27, 20, 1, WOOD[0]);
+  rect(g, x - 8, GROUND - 24, 14, 1, WOOD[0]);
+  // ponta de seta
+  px(g, x + 13, GROUND - 26, WOOD[1]);
+  px(g, x + 13, GROUND - 25, WOOD[1]);
+  px(g, x + 14, GROUND - 25, WOOD[1]);
+}
+
+// lago fundo (parte parada; a água da frente, as vitórias-régias e o sapo mexem no quadro)
+function drawLake(g, L, P, r) {
+  const deep = ['#3f93c9', '#3484bb', '#2b74aa', '#236598', '#1c5585', '#164771', '#11395e', '#0c2c4b'];
+  for (let x = L.x0; x < L.x1; x++) {
+    const b = lakeBottom(L, x);
+    g.clearRect(x, GROUND - 4, 1, b - GROUND + 6);
+    for (let y = LAKE_SURF; y < b; y++) {
+      const k = Math.min(deep.length - 1, Math.floor(((y - LAKE_SURF) / Math.max(30, L.depth)) * deep.length));
+      px(g, x, y, deep[k]);
+    }
+    // fundo de lama e areia
+    rect(g, x, b, 1, 3, '#5b4a30');
+    if (r() < 0.25) px(g, x, b - 1, '#7a6440');
+    if (r() < 0.06) px(g, x, b - 1, '#9a8f84');
+  }
+  // margens de terra
+  for (let x = L.x0 - 2; x < L.x1 + 2; x++) {
+    const b = Math.max(lakeBottom(L, x), GROUND);
+    rect(g, x, b, 1, 3, DIRT[1]);
+  }
+  // algas e pedras lá no fundo
+  for (let i = 0; i < Math.round((L.x1 - L.x0) / 18); i++) {
+    const x = Math.round(L.x0 + 14 + r() * (L.x1 - L.x0 - 28));
+    const b = lakeBottom(L, x);
+    const h = 6 + r() * Math.min(26, (b - LAKE_SURF) * 0.6);
+    for (let k = 0; k < h; k++) px(g, x + Math.round(Math.sin(k * 0.5 + i) * 1.4), b - 1 - k, k % 3 ? '#1f7a3f' : '#2f9a4f');
+  }
+  for (let i = 0; i < Math.round((L.x1 - L.x0) / 30); i++) {
+    const x = Math.round(L.x0 + 10 + r() * (L.x1 - L.x0 - 20));
+    const b = lakeBottom(L, x);
+    ellipse(g, x, b - 1, 3 + r() * 3, 2, '#6b7280');
+  }
+  // taboas e juncos nas margens
+  [L.x0 - 4, L.x0 + 2, L.x1 - 3, L.x1 + 4].forEach((x, i) => {
+    const h = 14 + (i % 2) * 6;
+    rect(g, x, GROUND - h, 1, h + 2, P.leaf[1]);
+    rect(g, x + 2, GROUND - h + 4, 1, h - 2, P.leaf[2]);
+    rect(g, x - 1, GROUND - h - 4, 3, 5, '#6b3f1f');
+  });
+}
+
 function lampPost(g, x, lights) {
   rect(g, x, GROUND - 40, 2, 40, '#374151');
   rect(g, x - 2, GROUND - 2, 6, 2, '#1f2937');
@@ -436,86 +553,150 @@ function lampPost(g, x, lights) {
 
 /* ---------------- canteiro (mini horta) ---------------- */
 function drawGardenBeds(g, P) {
-  const x0 = GARDEN_X0;
-  const total = 4 * GARDEN_BED_W + 3 * GARDEN_GAP;
-  // cerquinha baixa atrás
-  for (let x = x0 - 8; x <= x0 + total + 8; x += 7) {
-    rect(g, x, GROUND - 14, 2, 14, WOOD[1]);
-    px(g, x, GROUND - 15, WOOD[2]);
+  const x0 = GARDEN_X - GARDEN_HALF;
+  const x1 = GARDEN_X + GARDEN_HALF;
+  // cerca de trás (comprida)
+  for (let x = x0; x <= x1; x += 8) {
+    rect(g, x, GROUND - 18, 3, 18, WOOD[1]);
+    rect(g, x, GROUND - 19, 3, 1, WOOD[3]);
   }
-  rect(g, x0 - 8, GROUND - 11, total + 18, 1, WOOD[2]);
-  // canteiros de madeira com terra
-  for (let i = 0; i < 4; i++) {
-    const x = x0 + i * (GARDEN_BED_W + GARDEN_GAP);
-    rect(g, x, GROUND - 6, GARDEN_BED_W, 6, WOOD[1]);
-    rect(g, x, GROUND - 6, GARDEN_BED_W, 1, WOOD[3]);
-    rect(g, x + 1, GROUND - 5, GARDEN_BED_W - 2, 2, '#5b3a1e');
-    px(g, x + 3, GROUND - 5, '#7a4f2a');
-    px(g, x + 9, GROUND - 4, '#7a4f2a');
-    rect(g, x, GROUND - 1, GARDEN_BED_W, 1, WOOD[0]);
-  }
-  // plaquinha com uma cenoura
-  const sx = x0 + total + 12;
-  rect(g, sx, GROUND - 16, 2, 16, WOOD[0]);
-  rect(g, sx - 6, GROUND - 24, 14, 10, WOOD[2]);
-  rect(g, sx - 5, GROUND - 23, 12, 8, WOOD[3]);
-  [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [1, 2]].forEach(([dx, dy]) => px(g, sx - 1 + dx, GROUND - 20 + dy, '#f97316'));
-  px(g, sx, GROUND - 21, '#22c55e');
-  px(g, sx + 1, GROUND - 22, '#22c55e');
-  px(g, sx - 1, GROUND - 22, '#22c55e');
-  // regador
-  const wx = x0 - 18;
+  rect(g, x0, GROUND - 15, x1 - x0 + 3, 2, WOOD[2]);
+  rect(g, x0, GROUND - 8, x1 - x0 + 3, 2, WOOD[2]);
+  // dois canteiros compridos
+  [[GARDEN_X - 58, GARDEN_X - 10], [GARDEN_X + 10, GARDEN_X + 58]].forEach(([a, b]) => {
+    rect(g, a, GROUND - 6, b - a, 6, WOOD[1]);
+    rect(g, a, GROUND - 6, b - a, 1, WOOD[3]);
+    rect(g, a + 1, GROUND - 5, b - a - 2, 3, '#5b3a1e');
+    for (let x = a + 3; x < b - 2; x += 5) px(g, x, GROUND - 4, '#7a4f2a');
+    rect(g, a, GROUND - 1, b - a, 1, WOOD[0]);
+  });
+  // porteira no meio (arco de madeira com uma cenoura pintada)
+  rect(g, GARDEN_X - 9, GROUND - 30, 3, 30, WOOD[0]);
+  rect(g, GARDEN_X + 7, GROUND - 30, 3, 30, WOOD[0]);
+  rect(g, GARDEN_X - 12, GROUND - 33, 25, 4, WOOD[2]);
+  rect(g, GARDEN_X - 12, GROUND - 33, 25, 1, WOOD[3]);
+  [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [1, 2]].forEach(([dx, dy]) => px(g, GARDEN_X - 1 + dx, GROUND - 32 + dy, '#f97316'));
+  px(g, GARDEN_X, GROUND - 33, '#22c55e');
+  // pontas da cerca da frente
+  rect(g, x0, GROUND - 12, 3, 12, WOOD[0]);
+  rect(g, x1, GROUND - 12, 3, 12, WOOD[0]);
+  // regador e saco de sementes
+  const wx = x0 - 16;
   rect(g, wx, GROUND - 7, 8, 7, '#7c8b99');
   rect(g, wx, GROUND - 7, 8, 1, '#a9b6c2');
   rect(g, wx + 8, GROUND - 6, 3, 1, '#7c8b99');
   rect(g, wx + 10, GROUND - 8, 2, 2, '#7c8b99');
   rect(g, wx - 2, GROUND - 6, 2, 4, '#5d6b78');
-  rect(g, wx + 1, GROUND - 10, 6, 1, '#5d6b78');
-  if (P.snow) rect(g, x0 - 8, GROUND - 16, total + 18, 1, '#ffffff');
+  rect(g, x1 + 6, GROUND - 9, 8, 9, '#c4a072');
+  rect(g, x1 + 7, GROUND - 10, 6, 2, '#a8825a');
+  if (P.snow) rect(g, x0, GROUND - 20, x1 - x0 + 3, 1, '#ffffff');
 }
 
-// plantas do canteiro (mudam com o tempo: desenhadas a cada quadro)
-// beds[i] = { crop, stage 0..3, wet }
-export function drawGardenPlants(g, ox, beds, t) {
-  beds.forEach((b, i) => {
-    const x = GARDEN_X0 + i * (GARDEN_BED_W + GARDEN_GAP) + ox;
+const MINI_CROP = {
+  cenoura: { leaf: '#4ade80', leafD: '#16a34a', fruit: '#f97316' },
+  batata: { leaf: '#15803d', leafD: '#14532d', fruit: '#be185d' },
+  trigo: { leaf: '#84cc16', leafD: '#65a30d', ripeLeaf: '#eab308', fruit: '#fde68a', fruitTop: true },
+  arroz: { leaf: '#22c55e', leafD: '#16a34a', fruit: '#fef3c7', fruitTop: true },
+  tomate: { leaf: '#16a34a', leafD: '#166534', fruit: '#dc2626', fruitTop: true }
+};
+// mudas aparecendo nos canteiros de fora (6 de cada canteiro da horta)
+// slots[i] = { crop, stage 0..3, wet } ou null (12 no total)
+export function drawGardenPlants(g, ox, slots, t) {
+  slots.forEach((b, i) => {
     if (!b) return;
-    if (b.wet) {
-      rect(g, x + 1, GROUND - 5, GARDEN_BED_W - 2, 2, '#3a2412');
-      if (Math.sin(t * 3 + i) > 0.7) px(g, x + 4 + i, GROUND - 5, '#93c5fd');
+    const bed = i < 6 ? GARDEN_X - 58 : GARDEN_X + 10;
+    const c = bed + 5 + (i % 6) * 7 + ox;
+    if (b.wet) rect(g, c - 2, GROUND - 5, 5, 3, '#3a2412');
+    const C = MINI_CROP[b.crop] || MINI_CROP.cenoura;
+    const leaf = b.stage === 3 && C.ripeLeaf ? C.ripeLeaf : C.leaf;
+    const leafD = C.leafD;
+    if (b.stage === 0) {
+      px(g, c, GROUND - 5, '#c4a072');
+      return;
     }
-    const carrot = b.crop === 'cenoura';
-    const leaf = carrot ? '#4ade80' : '#15803d';
-    const leafD = carrot ? '#16a34a' : '#14532d';
-    const cols = [x + 3, x + 7, x + 11];
-    cols.forEach((c, k) => {
-      if (b.stage === 0) {
-        px(g, c, GROUND - 5, '#3b2412');
-        px(g, c - 1, GROUND - 4, '#c4a072');
-        return;
-      }
-      const h = b.stage === 1 ? 2 : b.stage === 2 ? 5 : 7;
-      const sway = Math.sin(t * 2 + i + k) > 0.6 ? 1 : 0;
-      for (let y = 0; y < h; y++) px(g, c + (y > h / 2 ? sway : 0), GROUND - 6 - y, y % 2 ? leaf : leafD);
-      if (b.stage >= 2) {
-        if (carrot) {
-          px(g, c - 1, GROUND - 6 - h + 1, leaf);
-          px(g, c + 1, GROUND - 6 - h + 2, leaf);
-          px(g, c - 1 + sway, GROUND - 6 - h + 3, leafD);
-        } else {
-          rect(g, c - 2, GROUND - 6 - h + 1, 2, 2, leaf);
-          rect(g, c + 1, GROUND - 6 - h + 2, 2, 2, leaf);
-          px(g, c, GROUND - 6 - h + 3, '#9d174d');
-        }
-      }
-      if (b.stage === 3) {
-        // a raiz aparecendo na terra
-        rect(g, c - 1, GROUND - 6, 3, 2, carrot ? '#f97316' : '#be185d');
-        px(g, c, GROUND - 4, carrot ? '#ea580c' : '#9d174d');
-        if (Math.sin(t * 4 + i * 2 + k) > 0.85) px(g, c + 2, GROUND - 10 - h, '#fef08a');
-      }
-    });
+    const h = b.stage === 1 ? 2 : b.stage === 2 ? 5 : 7;
+    const sway = Math.sin(t * 2 + i) > 0.6 ? 1 : 0;
+    for (let y = 0; y < h; y++) px(g, c + (y > h / 2 ? sway : 0), GROUND - 6 - y, y % 2 ? leaf : leafD);
+    if (b.stage >= 2) {
+      px(g, c - 1, GROUND - 6 - h + 1, leaf);
+      px(g, c + 1, GROUND - 6 - h + 2, leaf);
+    }
+    if (b.stage === 3) {
+      if (C.fruitTop) {
+        px(g, c - 1, GROUND - 6 - h, C.fruit);
+        px(g, c + 1, GROUND - 7 - h, C.fruit);
+        px(g, c, GROUND - 4 - h / 2, C.fruit);
+      } else rect(g, c - 1, GROUND - 6, 3, 2, C.fruit);
+      if (Math.sin(t * 4 + i * 2) > 0.85) px(g, c + 2, GROUND - 10 - h, '#fef08a');
+    }
   });
+}
+
+// água da frente do lago (por cima do herói), vitórias-régias e o sapo
+export function drawLakeFront(g, ox, L, t, frog, night) {
+  const water = night ? 'rgba(20, 50, 95, 0.5)' : 'rgba(40, 125, 185, 0.42)';
+  g.fillStyle = water;
+  for (let x = L.x0; x < L.x1; x++) {
+    const b = lakeBottom(L, x);
+    g.fillRect(x + ox, LAKE_SURF + 1, 1, b - LAKE_SURF - 1);
+  }
+  // superfície com ondinhas
+  for (let x = L.x0; x < L.x1; x++) {
+    const w = Math.sin(x * 0.15 + t * 2) + Math.sin(x * 0.06 - t * 1.1);
+    px(g, x + ox, LAKE_SURF, w > 0.9 ? (night ? '#6d88b8' : '#e0f4ff') : night ? '#2f4f80' : '#7cc4ea');
+  }
+  // vitórias-régias (folha redonda com borda levantada)
+  LILIES.forEach(([, r, flower], i) => drawLily(g, lilyX(L, i) + ox, LAKE_SURF, r, flower, night));
+  // sapo
+  if (frog) drawFrog(g, Math.round(frog.x + ox), Math.round(frog.y), frog.air, frog.croak, night);
+}
+
+// desenha uma imagem de skin com o pé (base) em (x, y), centralizada
+function skinAt(g, img, x, y, flip = false) {
+  const w = img.naturalWidth || img.width;
+  const h = img.naturalHeight || img.height;
+  if (!flip) return g.drawImage(img, Math.round(x - w / 2), Math.round(y - h));
+  g.save();
+  g.translate(Math.round(x + w / 2), Math.round(y - h));
+  g.scale(-1, 1);
+  g.drawImage(img, 0, 0);
+  g.restore();
+}
+
+export function drawLily(g, x, y, r, flower, night = false) {
+  const img = skinImg(flower ? ANIMAL_SKINS.lilyFlower : ANIMAL_SKINS.lily);
+  if (img) return skinAt(g, img, x, y + 2);
+  ellipse(g, x, y, r, 2, night ? '#1d5a2c' : '#2f8f3a');
+  ellipse(g, x, y - 1, r - 1, 1, night ? '#2a7038' : '#4caf50');
+  rect(g, x - r, y - 2, 1, 2, night ? '#3b8f4a' : '#7bd36b');
+  rect(g, x + r, y - 2, 1, 2, night ? '#3b8f4a' : '#7bd36b');
+  // cortezinho da folha
+  px(g, x + Math.round(r * 0.55), y - 1, night ? '#1a3a5c' : '#5fb0de');
+  if (flower) {
+    const fx = x - Math.round(r * 0.35);
+    [[0, -4], [-1, -3], [1, -3], [-2, -2], [2, -2], [0, -3], [-1, -2], [1, -2]].forEach(([dx, dy]) => px(g, fx + dx, y + dy, night ? '#c084a8' : '#f9a8d4'));
+    px(g, fx, y - 2, '#fde68a');
+  }
+}
+
+export function drawFrog(g, x, y, air, croak, night = false) {
+  const img = skinImg(air ? ANIMAL_SKINS.frogJump : ANIMAL_SKINS.frog);
+  if (img) return skinAt(g, img, x, y + 1);
+  const body = night ? '#2f7a45' : '#4ade80';
+  const dark = night ? '#1d4d2c' : '#15803d';
+  if (air) {
+    rect(g, x - 3, y - 4, 7, 3, body);
+    px(g, x - 4, y - 1, dark);
+    px(g, x + 4, y - 1, dark);
+  } else {
+    rect(g, x - 3, y - 3, 7, 3, body);
+    rect(g, x - 4, y - 1, 9, 1, dark);
+    if (croak) rect(g, x - 1, y - 1, 3, 2, '#fef9c3');
+  }
+  px(g, x - 2, y - 4 - (air ? 1 : 0), '#ffffff');
+  px(g, x + 2, y - 4 - (air ? 1 : 0), '#ffffff');
+  px(g, x - 2, y - 5 - (air ? 1 : 0), '#111827');
+  px(g, x + 2, y - 5 - (air ? 1 : 0), '#111827');
 }
 
 /* ---------------- a Árvore-casa gigante ---------------- */
@@ -789,7 +970,6 @@ export function buildWorld(kind, season) {
     mushroom(g, TX - 222);
     fence(g, b - 34, 3);
     fence(g, a + 4, 3);
-    lampPost(g, TX + 180, lights);
     drawGardenBeds(g, P);
   } else {
     const end = kind === 'praia' ? sc.sand : OUT_W;
@@ -826,20 +1006,18 @@ export function buildWorld(kind, season) {
     flowers(g, 40, rightEnd, P, r, 150);
     for (let i = 0; i < 12; i++) {
       const x = 60 + r() * (rightEnd - 120);
-      if (Math.abs(x - TX) < 260 || Math.abs(x - GARDEN_X) < 80) continue;
+      if (Math.abs(x - TX) < 260 || Math.abs(x - GARDEN_X) < 90 || inLakeZone(x)) continue;
       bush(g, x, P, 0.8 + r() * 0.5);
     }
     for (let i = 0; i < 7; i++) {
       const x = 80 + r() * (rightEnd - 160);
-      if (Math.abs(x - TX) < 240 || Math.abs(x - GARDEN_X) < 70) continue;
+      if (Math.abs(x - TX) < 240 || Math.abs(x - GARDEN_X) < 80 || inLakeZone(x)) continue;
       rock(g, x, 0.7 + r() * 0.6);
     }
     mushroom(g, TX - 240);
     mushroom(g, TX - 232);
     mushroom(g, TX + 262);
-    fence(g, TX - 420, 6);
     drawGardenBeds(g, P);
-    lampPost(g, TX + 330, lights);
     // árvores menores nas pontas (o mundo "acaba" nelas)
     [60, ...(kind === 'praia' ? [] : [OUT_W - 60])].forEach((x) => {
       rect(g, x - 6, GROUND - 70, 12, 70, BARK[2]);
@@ -849,9 +1027,49 @@ export function buildWorld(kind, season) {
       if (P.snow) rect(g, x - 20, GROUND - 114, 34, 3, '#ffffff');
     });
   }
-  mailbox(g, TX + 150);
+  signpost(g, TX + 150);
+  // placa "← vila" no fim do mapa, à esquerda
+  {
+    const vx = sc.bounds[0] + 26;
+    rect(g, vx, GROUND - 24, 3, 24, WOOD[0]);
+    rect(g, vx - 14, GROUND - 33, 26, 10, WOOD[2]);
+    rect(g, vx - 14, GROUND - 33, 26, 1, WOOD[3]);
+    px(g, vx - 15, GROUND - 29, WOOD[2]);
+    px(g, vx - 16, GROUND - 28, WOOD[2]);
+    px(g, vx - 15, GROUND - 27, WOOD[2]);
+    // casinha pintada na placa
+    rect(g, vx - 6, GROUND - 29, 6, 4, '#efe4c8');
+    rect(g, vx - 7, GROUND - 31, 8, 2, '#9a3412');
+    rect(g, vx + 3, GROUND - 30, 6, 1, WOOD[0]);
+    rect(g, vx + 3, GROUND - 27, 6, 1, WOOD[0]);
+  }
+  const LK = LAKES[kind];
+  if (LK) drawLake(g, LK, P, r);
   drawTree(g, P, lights);
   return { c, lights };
+}
+
+/* ---------------- peças medievais ---------------- */
+function torch(g, x, y, lights) {
+  rect(g, x - 1, y, 3, 10, '#5a3820');
+  rect(g, x - 3, y + 2, 7, 2, '#4b5563');
+  rect(g, x - 2, y - 3, 5, 4, '#f59e0b');
+  rect(g, x - 1, y - 6, 3, 4, '#fbbf24');
+  px(g, x, y - 7, '#fde68a');
+  lights.push({ x, y: y - 3, r: 2, glow: 40 });
+}
+function chandelier(g, x, y, chain, lights) {
+  rect(g, x, y, 1, chain, '#374151');
+  const cy = y + chain;
+  rect(g, x - 12, cy, 25, 2, '#374151');
+  rect(g, x - 13, cy - 1, 2, 3, '#374151');
+  rect(g, x + 12, cy - 1, 2, 3, '#374151');
+  [-11, 0, 11].forEach((dx) => {
+    rect(g, x + dx - 1, cy - 5, 3, 5, '#f5e6c8');
+    px(g, x + dx, cy - 6, '#f59e0b');
+    px(g, x + dx, cy - 7, '#fde047');
+    lights.push({ x: x + dx, y: cy - 6, r: 1, glow: 30 });
+  });
 }
 
 /* ---------------- dentro do tronco ---------------- */
@@ -942,16 +1160,24 @@ export function buildInterior(season) {
   rect(g, 186, FLOOR1 - 24, 56, 1, WOOD[3]);
   rect(g, 190, FLOOR1 - 20, 3, 20, WOOD[0]);
   rect(g, 235, FLOOR1 - 20, 3, 20, WOOD[0]);
-  rect(g, 200, FLOOR1 - 31, 6, 7, '#e5e7eb');
-  rect(g, 206, FLOOR1 - 29, 2, 3, '#e5e7eb');
-  rect(g, 201, FLOOR1 - 30, 4, 1, '#7c2d12');
-  // vaso com planta na mesa
-  rect(g, 224, FLOOR1 - 30, 6, 6, '#c2410c');
-  disc(g, 227, FLOOR1 - 34, 4, P.leaf[2]);
-  // banquinho
-  rect(g, 250, FLOOR1 - 13, 16, 3, WOOD[2]);
-  rect(g, 252, FLOOR1 - 10, 2, 10, WOOD[0]);
-  rect(g, 262, FLOOR1 - 10, 2, 10, WOOD[0]);
+  // caneca de madeira com aro de ferro e pão
+  rect(g, 198, FLOOR1 - 32, 7, 8, '#7a4a22');
+  rect(g, 198, FLOOR1 - 30, 7, 1, '#4b5563');
+  rect(g, 198, FLOOR1 - 27, 7, 1, '#4b5563');
+  rect(g, 205, FLOOR1 - 30, 2, 4, '#5a3820');
+  rect(g, 199, FLOOR1 - 33, 5, 1, '#f5e6c8');
+  ellipse(g, 224, FLOOR1 - 27, 7, 3, '#c98a3f');
+  ellipse(g, 223, FLOOR1 - 28, 5, 1, '#e0a95a');
+  // barril no lugar do banquinho
+  rect(g, 250, FLOOR1 - 20, 16, 20, '#7a4a22');
+  rect(g, 248, FLOOR1 - 16, 20, 12, '#8a5a2e');
+  rect(g, 248, FLOOR1 - 17, 20, 1, '#4b5563');
+  rect(g, 248, FLOOR1 - 5, 20, 1, '#4b5563');
+  rect(g, 250, FLOOR1 - 21, 16, 1, '#4b5563');
+  for (let x = 252; x < 266; x += 4) rect(g, x, FLOOR1 - 19, 1, 18, '#5a3820');
+  // vigas de madeira na parede
+  [70, 172, 276].forEach((x) => rect(g, x, 150, 4, FLOOR1 - 150, '#5a3820'));
+  rect(g, 24, 148, 392, 3, '#5a3820');
   // baú do personagem
   const cx0 = 288;
   rect(g, cx0, FLOOR1 - 24, 40, 24, '#8b5a2b');
@@ -973,17 +1199,24 @@ export function buildInterior(season) {
     px(g, kx + 10 + Math.cos(a) * 6, FLOOR1 - 55 + Math.sin(a) * 6, '#78350f');
   }
   rect(g, kx + 4, FLOOR1 - 44, 12, 34, '#2a1a0c');
-  // luminária pendurada embaixo do 2º andar
-  rect(g, 250, FLOOR2 + 10, 1, 18, '#1f2937');
-  rect(g, 245, FLOOR2 + 28, 11, 5, '#1f2937');
-  rect(g, 246, FLOOR2 + 33, 9, 2, '#fde68a');
-  lights.push({ x: 250, y: FLOOR2 + 34, r: 2, glow: 48 });
-  // quadrinho na parede
-  rect(g, 382, 150, 26, 20, WOOD[0]);
-  rect(g, 384, 152, 22, 16, '#bae6fd');
-  rect(g, 384, 162, 22, 6, P.grass[0]);
-  rect(g, 394, 156, 2, 7, BARK[2]);
-  disc(g, 395, 156, 4, P.leaf[2]);
+  // lustre de ferro com velas embaixo do 2º andar
+  chandelier(g, 250, FLOOR2 + 8, 16, lights);
+  // estandarte (bandeira) na parede
+  rect(g, 380, 150, 30, 2, '#5a3820');
+  rect(g, 383, 152, 24, 30, '#7f1d1d');
+  rect(g, 383, 152, 24, 1, '#991b1b');
+  for (let k = 0; k < 6; k++) rect(g, 383 + k * 2, 182 + k, 24 - k * 4, 1, '#7f1d1d');
+  rect(g, 384, 152, 1, 30, '#d4a017');
+  rect(g, 405, 152, 1, 30, '#d4a017');
+  // brasão: escudo com uma árvore
+  rect(g, 390, 159, 10, 9, '#d4a017');
+  rect(g, 391, 168, 8, 2, '#d4a017');
+  rect(g, 393, 170, 4, 1, '#d4a017');
+  rect(g, 394, 163, 2, 5, '#5a3820');
+  disc(g, 395, 162, 3, '#166534');
+  // tochas na parede
+  torch(g, 104, 168, lights);
+  torch(g, 166, FLOOR2 - 30, lights);
 
   /* ---- 2º andar ---- */
   // estante de livros
@@ -1014,15 +1247,37 @@ export function buildInterior(season) {
   rect(g, bx, FLOOR2 - 30, 6, 30, WOOD[0]);
   rect(g, bx + 66, FLOOR2 - 20, 6, 20, WOOD[0]);
   rect(g, bx + 4, FLOOR2 - 16, 64, 10, '#7a4a22');
-  rect(g, bx + 6, FLOOR2 - 20, 60, 5, '#f3f4f6');
-  rect(g, bx + 8, FLOOR2 - 26, 14, 6, '#ffffff');
-  rect(g, bx + 8, FLOOR2 - 21, 14, 1, '#d1d5db');
-  rect(g, bx + 22, FLOOR2 - 22, 46, 8, '#3b82f6');
-  for (let x = bx + 24; x < bx + 66; x += 6) rect(g, x, FLOOR2 - 20, 3, 3, '#93c5fd');
-  rect(g, bx + 22, FLOOR2 - 22, 46, 1, '#60a5fa');
+  rect(g, bx + 6, FLOOR2 - 20, 60, 5, '#e8dcc0');
+  rect(g, bx + 8, FLOOR2 - 26, 14, 6, '#efe4c8');
+  rect(g, bx + 8, FLOOR2 - 21, 14, 1, '#c9b48a');
+  rect(g, bx + 22, FLOOR2 - 22, 46, 8, '#7f1d1d');
+  for (let x = bx + 24; x < bx + 66; x += 6) rect(g, x, FLOOR2 - 20, 3, 3, '#b45309');
+  rect(g, bx + 22, FLOOR2 - 22, 46, 1, '#991b1b');
+  // colunas da cama com pontas torneadas
+  rect(g, bx, FLOOR2 - 38, 6, 8, WOOD[0]);
+  disc(g, bx + 3, FLOOR2 - 40, 3, WOOD[2]);
+  disc(g, bx + 69, FLOOR2 - 22, 3, WOOD[2]);
+  // escudo e espadas cruzadas acima da cama
+  for (let k = 0; k < 22; k++) {
+    px(g, bx + 26 + k, FLOOR2 - 66 + k, '#9ca3af');
+    px(g, bx + 47 - k, FLOOR2 - 66 + k, '#9ca3af');
+  }
+  rect(g, bx + 24, FLOOR2 - 46, 6, 2, '#5a3820');
+  rect(g, bx + 43, FLOOR2 - 46, 6, 2, '#5a3820');
+  rect(g, bx + 30, FLOOR2 - 64, 14, 14, '#1e3a8a');
+  rect(g, bx + 31, FLOOR2 - 50, 12, 2, '#1e3a8a');
+  rect(g, bx + 33, FLOOR2 - 48, 8, 2, '#1e3a8a');
+  rect(g, bx + 30, FLOOR2 - 64, 14, 1, '#d4a017');
+  rect(g, bx + 36, FLOOR2 - 62, 2, 12, '#d4a017');
+  rect(g, bx + 32, FLOOR2 - 58, 10, 2, '#d4a017');
   // vaso de planta
-  rect(g, 268, FLOOR2 - 12, 10, 12, '#c2410c');
-  rect(g, 267, FLOOR2 - 13, 12, 2, '#ea580c');
+  rect(g, 268, FLOOR2 - 12, 10, 12, '#8a5a2e');
+  rect(g, 267, FLOOR2 - 13, 12, 2, '#a8743e');
+  // ervas secando penduradas
+  rect(g, 262, 74, 24, 1, '#5a3820');
+  [265, 271, 277, 283].forEach((x, i) => {
+    for (let k = 0; k < 8 + (i % 2) * 3; k++) px(g, x + (k % 2), 75 + k, i % 2 ? '#65a30d' : '#4d7c0f');
+  });
   disc(g, 273, FLOOR2 - 20, 7, P.leaf[1]);
   disc(g, 270, FLOOR2 - 24, 4, P.leaf[2]);
   // mesinha com vela
@@ -1048,15 +1303,21 @@ export function buildInterior(season) {
     }
     disc(g, cx - 6, FLOOR2 - 18, 1, '#facc15');
   }
+  // escada até a claraboia no teto (leva para o topo da copa)
+  rect(g, 355, 40, 3, FLOOR2 - 40, WOOD[0]);
+  rect(g, 375, 40, 3, FLOOR2 - 40, WOOD[0]);
+  for (let y = 46; y < FLOOR2; y += 9) rect(g, 358, y, 17, 2, WOOD[2]);
+  disc(g, 366, 38, 11, WOOD[0]);
+  disc(g, 366, 38, 9, '#9fd6f2');
+  disc(g, 363, 35, 3, '#e0f4ff');
+  rect(g, 357, 38, 19, 1, WOOD[0]);
+  rect(g, 366, 29, 1, 19, WOOD[0]);
   // janela redonda (o céu dela muda de dia/noite)
   const win = { x: 314, y: FLOOR2 - 50, r: 14 };
   disc(g, win.x, win.y, win.r + 4, WOOD[0]);
   disc(g, win.x, win.y, win.r + 2, WOOD[2]);
-  // lanterna no teto
-  rect(g, 220, 30, 1, 22, '#1f2937');
-  rect(g, 215, 52, 11, 9, '#1f2937');
-  rect(g, 216, 53, 9, 7, '#fde68a');
-  lights.push({ x: 220, y: 56, r: 4, glow: 52 });
+  // lustre de ferro com velas no teto
+  chandelier(g, 220, 30, 22, lights);
   return { c, lights, win };
 }
 
@@ -1075,8 +1336,15 @@ export function drawRoomWindow(g, win, ox, night, t) {
     disc(g, x + ox + 1, y + 1, 5, '#ffffff');
     disc(g, x + ox - 6, y - 7, 3, '#fff7c2');
   }
-  rect(g, x + ox - r, y, r * 2 + 1, 1, WOOD[0]);
-  rect(g, x + ox, y - r, 1, r * 2 + 1, WOOD[0]);
+  // vidro em losangos (chumbo)
+  for (let k = -r; k <= r; k++) {
+    for (let d = -r * 2; d <= r * 2; d += 7) {
+      const a = k + d;
+      if (Math.hypot(k, a) < r) px(g, x + ox + k, y + a, '#3b2a1a');
+      const b2 = -k + d;
+      if (Math.hypot(k, b2) < r) px(g, x + ox + k, y + b2, '#3b2a1a');
+    }
+  }
 }
 
 // pêndulo do relógio
@@ -1158,3 +1426,84 @@ export function composeLayer(base, rec) {
   return c;
 }
 export const makeCanvas = (w, h) => mk(w, h);
+
+/* ---------------- peixes do lago ---------------- */
+export const FISH_COLORS = [
+  ['#f97316', '#fdba74'],
+  ['#facc15', '#fef08a'],
+  ['#cbd5e1', '#f1f5f9'],
+  ['#60a5fa', '#bfdbfe'],
+  ['#ef4444', '#fecaca'],
+  ['#a3e635', '#d9f99d']
+];
+export function makeFish(L, n = 9) {
+  const r = rng(321);
+  return Array.from({ length: n }, (_, i) => {
+    const x = L.x0 + 20 + r() * (L.x1 - L.x0 - 40);
+    const maxY = lakeBottom(L, x) - 6;
+    return {
+      kind: (i % FISH_COLORS.length) + 1,
+      x,
+      y: LAKE_SURF + 10 + r() * Math.max(4, maxY - LAKE_SURF - 14),
+      dir: r() < 0.5 ? -1 : 1,
+      speed: 8 + r() * 14,
+      col: FISH_COLORS[i % FISH_COLORS.length],
+      big: r() < 0.3,
+      ph: r() * 6,
+      jump: null,
+      nextJump: 6 + r() * 20
+    };
+  });
+}
+// nadam de um lado para o outro e às vezes pulam para fora da água
+export function updateFish(list, L, dt, t) {
+  list.forEach((f) => {
+    if (f.jump) {
+      const k = (t - f.jump.t0) / 0.9;
+      f.x += f.dir * 30 * dt;
+      f.y = LAKE_SURF + 4 - Math.sin(Math.PI * Math.min(1, k)) * 26;
+      if (k >= 1) {
+        f.jump = null;
+        f.y = LAKE_SURF + 10;
+        f.nextJump = t + 10 + Math.random() * 25;
+      }
+      return;
+    }
+    f.x += f.dir * f.speed * dt;
+    f.y += Math.sin(t * 1.3 + f.ph) * 3 * dt;
+    const bottom = lakeBottom(L, f.x) - 5;
+    if (f.y > bottom) f.y = bottom;
+    if (f.y < LAKE_SURF + 6) f.y = LAKE_SURF + 6;
+    if (f.x < L.x0 + 12 || f.x > L.x1 - 12 || lakeBottom(L, f.x + f.dir * 8) - LAKE_SURF < 10) f.dir *= -1;
+    if (Math.random() < dt * 0.08) f.dir *= -1;
+    if (t > f.nextJump && f.y < LAKE_SURF + 40) f.jump = { t0: t };
+  });
+}
+export function drawFish(g, ox, list) {
+  list.forEach((f) => {
+    const x = Math.round(f.x + ox);
+    const y = Math.round(f.y);
+    const d = f.dir;
+    // skin: o peixe da imagem olha para a direita (vira sozinho)
+    const img = skinImg(ANIMAL_SKINS.fish(f.kind || 1));
+    if (img) {
+      const h = img.naturalHeight || img.height;
+      const w = img.naturalWidth || img.width;
+      skinAt(g, img, d > 0 ? x - w / 2 : x + w / 2, y + h / 2, d < 0);
+      return;
+    }
+    const len = f.big ? 9 : 6;
+    const [body, belly] = f.col;
+    rect(g, d > 0 ? x - len : x, y - 1, len, 3, body);
+    rect(g, d > 0 ? x - len + 1 : x + 1, y + 1, len - 2, 1, belly);
+    // rabinho
+    const tx = d > 0 ? x - len - 1 : x + len;
+    px(g, tx, y - 2, body);
+    px(g, tx, y + 2, body);
+    px(g, tx - d, y - 3, body);
+    px(g, tx - d, y + 3, body);
+    px(g, tx, y, body);
+    // olho
+    px(g, d > 0 ? x - 2 : x + 1, y - 1, '#111827');
+  });
+}

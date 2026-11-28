@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { registerModeActions } from './shared/modeBridge.js';
 import { getMode, isSkillsMode, useMode } from './modes/modeState.js';
 import { useUiTheme, toggleDark } from './shared/uiTheme.js';
+import { lightAccent, lightVars } from './shared/lightTheme.js';
 import { tx } from './i18n/index.jsx';
 import { useGameData, PRESET_DECKS, getXpNeededForLevel, getGameDayKey } from './hooks/useGameData';
 import EmojiPicker from './shared/EmojiPickerPT.jsx';
@@ -880,8 +881,6 @@ const handleSaveMiniEdit = (idx, oldText) => {
 
       // E: editor de notas (✒️), em qualquer modo
       // N (ou E): editor de notas em qualquer modo · Shift+N cria neurônio (nos Neurônios)
-      // no Santuário, perto de um móvel/porta o E é "interagir" (não abre as notas)
-      if (keyLower === 'e' && window.__orbeSanctuarySpot) return;
       if ((keyLower === 'e' || (keyLower === 'n' && !e.shiftKey)) && !isCtrlOrCmd && !e.altKey && !isEditingText) {
         e.preventDefault();
         playSound('click');
@@ -1006,7 +1005,16 @@ const handleSaveMiniEdit = (idx, oldText) => {
     html.setProperty('--theme-accent-src', activeThemePreset.color);
     html.setProperty('--g-box', activeThemePreset.boxBg || activeThemePreset.modalBg);
     html.setProperty('--g-on-accent', onAccentColor(activeThemePreset.color));
-  }, [activeThemePreset]);
+    // Modo claro: o tema ganha a versão clara (papel com o tom do tema, destaque mais escuro)
+    if (!uiTheme.dark) {
+      const vars = lightVars(activeThemePreset);
+      Object.entries(vars).forEach(([k, v]) => html.setProperty(k, v));
+      html.setProperty('--theme-accent', lightAccent(activeThemePreset.color));
+      html.setProperty('--g-on-accent', onAccentColor(lightAccent(activeThemePreset.color)));
+    } else {
+      html.removeProperty('--theme-accent');
+    }
+  }, [activeThemePreset, uiTheme.dark]);
   const activeDeckColors = getActiveDeckColors();
 
   const pendingMissionsCount = dailyMissions ? dailyMissions.filter((m) => !m.completed).length : 0;
@@ -1661,13 +1669,13 @@ if (folderSortOrder === 'a-z') {
       onTouchEnd={handleCardTouchEndOrMove}
       onTouchMove={handleCardTouchEndOrMove}
       style={{
-        background: activeThemePreset.bg,
-        '--theme-accent': activeThemePreset.color,
+        background: uiTheme.dark ? activeThemePreset.bg : 'var(--g-bg)',
+        '--theme-accent': uiTheme.dark ? activeThemePreset.color : lightAccent(activeThemePreset.color),
         // Cor "crua" do tema: no Nanquim vira a cor da tinta (mais escura no papel)
         '--theme-accent-src': activeThemePreset.color,
-        '--theme-on-accent': onAccentColor(activeThemePreset.color),
-        '--theme-modal-bg': activeThemePreset.modalBg,
-        '--theme-border': activeThemePreset.border
+        '--theme-on-accent': onAccentColor(uiTheme.dark ? activeThemePreset.color : lightAccent(activeThemePreset.color)),
+        '--theme-modal-bg': uiTheme.dark ? activeThemePreset.modalBg : 'var(--g-modal)',
+        '--theme-border': uiTheme.dark ? activeThemePreset.border : 'var(--g-border)'
       }}
     >
       <div className="top-left-nav-buttons" style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>

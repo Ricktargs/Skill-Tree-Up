@@ -17,6 +17,85 @@
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
+/* camada da frente (água do lago, plantas na frente do herói) */
+.pw-canvas.pw-front { z-index: 3; pointer-events: none; }
+.pw-wrap { cursor: grab; }
+.pw-wrap.dragging { cursor: grabbing; }
+.pw-wrap.in-farm { cursor: pointer; }
+.pw-wrap.in-farm.dragging { cursor: grabbing; }
+
+/* horta */
+.pw-farm-top {
+  position: absolute;
+  top: 58px;
+  left: 14px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 3px solid #1f130a;
+  background: #fff8e7;
+  box-shadow: 0 4px 0 #1f130a;
+  color: #2a1a0c !important;
+  font: 800 14px/1 ui-monospace, Consolas, monospace;
+  pointer-events: none;
+}
+.pw-farm-hint { top: auto !important; bottom: 108px; }
+.pw-hotbar {
+  position: absolute;
+  left: 50%;
+  bottom: 74px;
+  translate: -50% 0;
+  z-index: 7;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 3px solid #1f130a;
+  background: #8a5a2e;
+  box-shadow: 0 4px 0 #1f130a, inset 0 2px 0 #a8743e;
+}
+.pw-wrap .pw-slot {
+  position: relative;
+  width: 74px;
+  height: 66px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: 6px;
+  border: 3px solid #5a3820;
+  background: #f3dfb4;
+  color: #2a1a0c !important;
+  font-family: ui-monospace, Consolas, monospace !important;
+  cursor: pointer;
+}
+.pw-wrap .pw-slot.on { border-color: #dc2626; background: #fff1c7; box-shadow: 0 0 0 2px #fde68a; }
+.pw-slot kbd { position: absolute; top: 2px; left: 4px; font: 900 11px/1 ui-monospace, Consolas, monospace; color: #5a3820; }
+.pw-slot-icon { font-size: 24px; line-height: 1; }
+.pw-slot small { font-size: 9.5px; font-weight: 800; text-align: center; line-height: 1.1; }
+.pw-can { position: absolute; left: 6px; right: 6px; bottom: 3px; height: 4px; border-radius: 2px; background: rgba(0, 0, 0, 0.25); overflow: hidden; }
+.pw-can span { display: block; height: 100%; background: #2563eb; }
+.pw-toast {
+  position: absolute;
+  left: 50%;
+  top: 104px;
+  translate: -50% 0;
+  z-index: 8;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 2px solid #1f130a;
+  background: #fff8e7;
+  color: #2a1a0c;
+  font: 800 13px/1.2 ui-monospace, Consolas, monospace;
+  box-shadow: 0 3px 0 #1f130a;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.pw-hero.swimming .h2d-svg { filter: saturate(0.85) brightness(0.95); }
 
 /* herói: o ponto (0,0) é onde ficam os pés */
 .pw-hero {
@@ -448,3 +527,251 @@ html.pw-joy-on .mode-switcher,
 html.pw-joy-on .notes-dock,
 html.pw-joy-on .sanc-pad,
 html.pw-joy-on .subtle-mission-badge { display: none !important; }
+
+/* moradores da vila e vendedor */
+.pw-npc { z-index: 2; }
+.pw-npc-name {
+  position: absolute;
+  left: 0;
+  top: calc(-60px * var(--pw-s, 3));
+  translate: -50% 0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(31, 19, 10, 0.55);
+  color: #fef3c7;
+  font: 700 calc(4.2px * var(--pw-s, 3)) / 1.2 ui-monospace, Consolas, monospace;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+.pw-bubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 5;
+  translate: -50% -100%;
+  max-width: 260px;
+  padding: 7px 11px;
+  border-radius: 10px;
+  border: 2px solid #1f130a;
+  background: #fffdf6;
+  color: #2a1a0c;
+  font: 700 12.5px/1.3 ui-monospace, Consolas, monospace;
+  box-shadow: 0 3px 0 #1f130a;
+  pointer-events: none;
+}
+.pw-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  translate: -50% 0;
+  border: 7px solid transparent;
+  border-top-color: #1f130a;
+  border-bottom: 0;
+}
+.pw-weather { margin: 0; font-size: 12.5px; font-weight: 700; }
+.pw-slot-count { position: absolute; top: 2px; right: 5px; font: 900 11px/1 ui-monospace, Consolas, monospace; color: #5a3820; }
+.pw-wrap .pw-bag-btn { top: 108px; }
+
+/* inventário e lojinha (madeira aconchegante) */
+.pw-inv,
+.pw-shop {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  background: rgba(10, 6, 2, 0.45);
+}
+.pw-inv-box,
+.pw-shop-box {
+  width: min(470px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 12px;
+  border: 4px solid #3b2412;
+  background: #c98a4f;
+  box-shadow: 0 6px 0 #1f130a, inset 0 0 0 3px #e0a96a;
+  color: #2a1a0c;
+}
+.pw-wrap .pw-inv,
+.pw-wrap .pw-inv button,
+.pw-wrap .pw-shop,
+.pw-wrap .pw-shop button {
+  font-family: ui-monospace, Consolas, monospace !important;
+  color: #2a1a0c !important;
+  text-shadow: none !important;
+}
+.pw-inv .pw-panel-head,
+.pw-shop .pw-panel-head { gap: 10px; }
+.pw-inv .pw-panel-head strong,
+.pw-shop .pw-panel-head strong { flex: 1; color: #fff8e7 !important; text-shadow: 0 2px 0 #3b2412 !important; }
+.pw-wrap .pw-inv .pw-panel-head button,
+.pw-wrap .pw-shop .pw-panel-head button { border: 0; background: none; font-size: 16px; cursor: pointer; color: #fff8e7 !important; }
+.pw-coins { padding: 3px 9px; border-radius: 6px; background: #fde68a; border: 2px solid #3b2412; font-weight: 900; font-size: 13px; }
+.pw-inv-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 8px; border-radius: 8px; background: #8a5a2e; box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.25); }
+.pw-wrap .pw-inv-slot {
+  position: relative;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  border: 3px solid #5a3820;
+  background: #f3dfb4;
+  cursor: pointer;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.12);
+}
+.pw-wrap .pw-inv-slot.weapon { background: #fde68a; border-color: #a16207; }
+.pw-wrap .pw-inv-slot.on { border-color: #dc2626; box-shadow: 0 0 0 2px #fff1c7; }
+.pw-inv-icon { font-size: 26px; line-height: 1; }
+.pw-inv-n { position: absolute; right: 4px; bottom: 2px; font: 900 12px/1 ui-monospace, Consolas, monospace; color: #3b2412; text-shadow: 0 1px 0 #fff8e7; }
+.pw-inv-info { margin-top: 10px; padding: 9px 11px; border-radius: 8px; background: #fff8e7; border: 2px solid #3b2412; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
+.pw-inv-info b { font-size: 14px; }
+.pw-wrap .pw-btn-wood { align-self: flex-start; padding: 6px 10px; border-radius: 6px; border: 2px solid #3b2412; background: #fde68a; font-weight: 800; cursor: pointer; box-shadow: 0 2px 0 #3b2412; }
+.pw-shop-who { display: flex; align-items: center; gap: 10px; margin: 6px 0 10px; }
+.pw-shop-portrait { position: relative; width: 72px; height: 72px; flex: 0 0 auto; border-radius: 10px; border: 3px solid #3b2412; background: #fde68a; overflow: hidden; }
+.pw-shop-portrait .h2d-model { inset: 0; }
+.pw-shop-portrait .h2d-hop { width: 120px; top: 62%; }
+.pw-shop-who p { margin: 0; flex: 1; padding: 8px 10px; border-radius: 8px; background: #fff8e7; border: 2px solid #3b2412; font-size: 12.5px; font-weight: 700; }
+.pw-shop-tabs { margin-bottom: 8px; }
+.pw-shop-list { display: flex; flex-direction: column; gap: 6px; }
+.pw-shop-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; background: #fff8e7; border: 2px solid #3b2412; }
+.pw-shop-row.dim { opacity: 0.6; }
+.pw-shop-icon { font-size: 24px; }
+.pw-shop-name { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.pw-shop-name b { font-size: 13px; }
+.pw-shop-name small { font-size: 11px; opacity: 0.8; }
+.pw-wrap .pw-shop-row button { padding: 5px 9px; border-radius: 6px; border: 2px solid #3b2412; background: #bbf7d0; font-weight: 800; font-size: 12px; cursor: pointer; box-shadow: 0 2px 0 #3b2412; }
+.pw-wrap .pw-shop-row button:disabled { opacity: 0.4; cursor: default; }
+.pw-inv-badge { position: absolute; left: 3px; top: 2px; font-size: 13px; line-height: 1; }
+.pw-can-icon { width: 30px; height: 23px; image-rendering: pixelated; }
+.pw-inv-main { display: grid; grid-template-columns: 120px 1fr; gap: 10px; align-items: stretch; }
+.pw-inv-hero { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px; border-radius: 8px; background: #8a5a2e; box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.25); }
+.pw-inv-hero b { color: #fff8e7; font-size: 13px; text-shadow: 0 2px 0 #3b2412; }
+.pw-inv-hero small { color: #fde68a; font-size: 11px; text-align: center; }
+.pw-inv-hero-stage { position: relative; width: 100%; flex: 1; min-height: 130px; border-radius: 6px; background: radial-gradient(ellipse at 50% 80%, #f3dfb4 0%, #c98a4f 75%); }
+.pw-inv-hero-stage .h2d-model { inset: 0; }
+.pw-inv-hero-stage .h2d-hop { width: 100px; top: 56%; }
+.pw-inv-box { width: min(560px, 100%) !important; }
+@media (max-width: 520px) { .pw-inv-main { grid-template-columns: 1fr; } .pw-inv-hero-stage { min-height: 110px; } }
+
+/* sentado no banco */
+.pw-hero.sitting .h2d-model { transform: translate(-49%, calc(-2px * var(--pw-s, 3))); }
+.pw-hero.sitting .h2d-legL,
+.pw-hero.sitting .h2d-legR { transform: translateY(-3px) scaleY(0.45); transform-origin: 50% 0; }
+.pw-hero { transition: opacity 0.4s linear; }
+/* legenda ao olhar as estrelas */
+.pw-wrap .pw-gaze-caption {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  translate: -50% 0;
+  z-index: 6;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(199, 210, 254, 0.35);
+  background: rgba(10, 12, 40, 0.55);
+  color: #e0e7ff !important;
+  font: 700 12.5px/1 ui-monospace, Consolas, monospace !important;
+  cursor: pointer;
+  animation: pw-gaze-in 2.4s ease;
+}
+.pw-gaze-caption kbd { padding: 1px 5px; border-radius: 4px; background: rgba(255, 255, 255, 0.15); font: inherit; }
+@keyframes pw-gaze-in { 0%, 60% { opacity: 0; } 100% { opacity: 1; } }
+
+/* ícones de itens vindos da pasta de skins */
+.pw-item-img { width: 30px; height: 30px; object-fit: contain; image-rendering: pixelated; }
+.pw-shop-icon .pw-item-img { width: 26px; height: 26px; }
+
+/* luz do cenário nos personagens (à noite): perto da luz fica claro e quentinho */
+.pw-hero.night .h2d-svg {
+  filter: brightness(calc(0.62 + var(--pw-lit, 0) * 0.55)) saturate(calc(0.75 + var(--pw-lit, 0) * 0.35)) sepia(calc(var(--pw-lit, 0) * 0.32))
+    drop-shadow(0 0 calc(var(--pw-lit, 0) * 5px) rgba(255, 180, 80, calc(var(--pw-lit, 0) * 0.6)));
+}
+.pw-hero.night.inside .h2d-svg {
+  filter: brightness(calc(0.78 + var(--pw-lit, 0) * 0.4)) saturate(calc(0.85 + var(--pw-lit, 0) * 0.25)) sepia(calc(var(--pw-lit, 0) * 0.28))
+    drop-shadow(0 0 calc(var(--pw-lit, 0) * 4px) rgba(255, 180, 80, calc(var(--pw-lit, 0) * 0.5)));
+}
+
+/* abertura de cinema (Santuário e vila) */
+.pw-cine {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  background: radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(0, 0, 0, 0.55) 100%);
+  animation: pw-cine-out 4.8s ease forwards;
+}
+.pw-cine-bar { height: 13%; background: #000; animation: pw-cine-bar 4.8s ease forwards; }
+.pw-cine-bar.top { transform-origin: top; }
+.pw-cine-bar.bottom { transform-origin: bottom; }
+.pw-cine-text {
+  align-self: center;
+  max-width: min(620px, 88%);
+  text-align: center;
+  color: #fff8e7;
+  text-shadow: 0 3px 0 #1f130a, 0 0 18px rgba(0, 0, 0, 0.6);
+  animation: pw-cine-text 4.8s ease forwards;
+}
+.pw-cine-text small { display: block; letter-spacing: 0.6em; font: 700 12px/1 ui-monospace, Consolas, monospace; color: #fde68a; margin-bottom: 8px; }
+.pw-cine-text h2 { margin: 0; font: 900 clamp(30px, 6vw, 56px)/1 ui-monospace, Consolas, monospace; letter-spacing: 0.08em; text-transform: uppercase; color: #fff8e7; }
+.pw-cine-text p { margin: 12px auto 0; font: 700 clamp(12px, 1.8vw, 15px)/1.5 ui-monospace, Consolas, monospace; color: #fef3c7; }
+@keyframes pw-cine-bar { 0% { transform: scaleY(0); } 12%, 82% { transform: scaleY(1); } 100% { transform: scaleY(0); } }
+@keyframes pw-cine-text {
+  0%, 10% { opacity: 0; letter-spacing: 0.3em; transform: translateY(8px); }
+  28%, 78% { opacity: 1; letter-spacing: 0.08em; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-6px); }
+}
+@keyframes pw-cine-out { 0%, 84% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .pw-cine, .pw-cine-bar, .pw-cine-text { animation-duration: 0.01s; } }
+
+/* espaços fixos do inventário (arma, regador, vara, anel) */
+.pw-inv-tools { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; width: 100%; }
+.pw-wrap .pw-inv-slot.tool { background: #fde68a; border-color: #a16207; }
+.pw-inv-tools .pw-can-icon { width: 26px; height: 20px; }
+.pw-inv-key { position: absolute; left: 3px; top: 2px; font: 900 10px/1 ui-monospace, Consolas, monospace; color: #7c2d12; }
+.pw-inv-rarity { position: absolute; left: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; border: 1px solid #1f130a; }
+.pw-rarity { font-weight: 900; }
+.pw-orbs { display: flex; flex-direction: column; gap: 6px; }
+.pw-orb { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; border: 2px solid #c9b48a; background: #fffdf6; }
+.pw-orb.on { border-color: #7c3aed; background: #f3e8ff; }
+.pw-orb.locked { opacity: 0.55; }
+.pw-orb-icon { font-size: 22px; width: 30px; text-align: center; }
+.pw-orb-name { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.pw-orb-name small { font-size: 11px; opacity: 0.8; }
+.pw-orb-tip { font-size: 11px; font-weight: 800; color: #7c3aed; }
+
+/* minigame da pesca */
+.pw-fishgame {
+  position: absolute;
+  right: 18%;
+  top: 50%;
+  translate: 0 -50%;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  touch-action: none;
+  cursor: pointer;
+}
+.pw-fg-frame { display: flex; gap: 6px; padding: 7px; border-radius: 10px; border: 4px solid #3b2412; background: #8a5a2e; box-shadow: 0 5px 0 #1f130a, inset 0 0 0 2px #c48a52; }
+.pw-fg-water { position: relative; width: 42px; height: 210px; border-radius: 5px; overflow: hidden; background: linear-gradient(180deg, #7cc4ea, #2f6fa8 60%, #1c3f66); border: 2px solid #1f130a; }
+.pw-fg-bar { position: absolute; left: 3px; right: 3px; bottom: 0; height: 28%; border-radius: 4px; background: rgba(132, 204, 22, 0.55); border: 2px solid #4d7c0f; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.25); }
+.pw-fg-bar.in { background: rgba(163, 230, 53, 0.85); border-color: #3f6212; }
+.pw-fg-fish { position: absolute; left: 50%; bottom: 10%; translate: -50% 0; font-size: 20px; line-height: 22px; height: 22px; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35)); }
+.pw-fg-fish .pw-item-img { width: 24px; height: 24px; }
+.pw-fg-prog { position: relative; width: 10px; height: 210px; border-radius: 4px; background: #1f130a; overflow: hidden; border: 2px solid #1f130a; }
+.pw-fg-prog > div { position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: linear-gradient(0deg, #ef4444, #facc15 50%, #22c55e); }
+.pw-fishgame b { padding: 2px 8px; border-radius: 6px; background: #1f130a; font: 900 12px/1.2 ui-monospace, Consolas, monospace; }
+.pw-fishgame small { padding: 3px 8px; border-radius: 6px; background: rgba(31, 19, 10, 0.75); color: #fef3c7; font: 700 11px/1.2 ui-monospace, Consolas, monospace; }
+
+/* brilho do orbe ao teletransportar */
+.pw-orbflash { position: absolute; inset: 0; z-index: 7; pointer-events: none; background: radial-gradient(circle at 50% 60%, rgba(196, 181, 253, 0.95), rgba(124, 58, 237, 0.55) 40%, transparent 75%); animation: pw-orbflash 0.9s ease-out forwards; }
+@keyframes pw-orbflash { 0% { opacity: 0; transform: scale(0.6); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.4); } }

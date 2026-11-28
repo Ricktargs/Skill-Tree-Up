@@ -1403,6 +1403,60 @@ html[data-ui-theme='nanquim'] .top-icon-button .update-dot {
     }
 }
 
+/* ===== src/atualizacao2_0/AlarmClock.css ===== */
+html[data-ui-theme='nanquim'] .alc-add {
+    border: 1px dashed var(--theme-accent, rgb(56, 189, 248));
+    background: color-mix(in srgb, var(--theme-accent, rgb(56, 189, 248)) 10%, transparent)
+}
+html[data-ui-theme='nanquim'] .alc-add:hover {
+    background: color-mix(in srgb, var(--theme-accent, rgb(56, 189, 248)) 20%, transparent)
+}
+html[data-ui-theme='nanquim'] .alc-editor {
+    border: 1px solid var(--theme-border, rgb(var(--nq-shade-rgb) / 0.108));
+    background: rgb(var(--nq-shade-rgb) / 0.04)
+}
+html[data-ui-theme='nanquim'] .alc-time-input, html[data-ui-theme='nanquim'] .alc-label-input, html[data-ui-theme='nanquim'] .alc-sound {
+    border: 1px solid var(--theme-border, rgb(var(--nq-shade-rgb) / 0.135));
+    background: rgb(var(--nq-shade-rgb) / 0.054)
+}
+html[data-ui-theme='nanquim'] .alc-time-input:focus, html[data-ui-theme='nanquim'] .alc-label-input:focus, html[data-ui-theme='nanquim'] .alc-sound:focus {
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .alc-day {
+    border: 1px solid var(--theme-border, rgb(var(--nq-shade-rgb) / 0.135))
+}
+html[data-ui-theme='nanquim'] .alc-day.on {
+    background: var(--theme-accent, rgb(56, 189, 248));
+    border-color: var(--theme-accent, rgb(56, 189, 248));
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .alc-btn {
+    border: 1px solid var(--theme-border, rgb(var(--nq-shade-rgb) / 0.135))
+}
+html[data-ui-theme='nanquim'] .alc-btn.primary {
+    background: var(--theme-accent, rgb(56, 189, 248));
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .alc-item {
+    border: 1px solid var(--theme-border, rgb(var(--nq-shade-rgb) / 0.09));
+    background: rgb(var(--nq-shade-rgb) / 0.036)
+}
+html[data-ui-theme='nanquim'] .alc-switch span {
+    background: rgb(var(--nq-shade-rgb) / 0.162)
+}
+html[data-ui-theme='nanquim'] .alc-switch span::after {
+    background: var(--nq-paper-2)
+}
+html[data-ui-theme='nanquim'] .alc-switch input:checked + span {
+    background: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .alc-ring-card {
+    background: var(--theme-modal-bg, color-mix(in srgb, var(--nq-paper), var(--nq-paper-3) 45%));
+    color: var(--opt-fg, var(--nq-ink));
+    border: 1px solid var(--theme-accent, rgb(56, 189, 248));
+    box-shadow: 0 12px 34px rgb(var(--nq-shade-rgb) / 0.158), 0 0 0 4px color-mix(in srgb, var(--theme-accent, rgb(var(--nq-shade-rgb) / 0.18)) 18%, transparent)
+}
+
 /* ===== src/atualizacao2_0/ColorDeck.css ===== */
 html[data-ui-theme='nanquim'] .cd-window {
     --cd-border: var(--theme-border, var(--nq-line-strong))
@@ -2365,6 +2419,92 @@ html[data-ui-theme='nanquim'] .hm-chip.active {
 html[data-ui-theme='nanquim'] .vx-chain .vx-face {
     background-image: radial-gradient(circle at 50% 50%, transparent 1.2px, rgb(var(--nq-shade-rgb) / 0.05) 1.6px, transparent 2.2px)
 }
+html[data-ui-theme='nanquim'] .h2d-shadow {
+    background: radial-gradient(ellipse, rgb(var(--nq-shade-rgb) / 0.081), transparent 70%)
+}
+html[data-ui-theme='nanquim'][data-ui-theme] .hm-chip.active {
+    background: var(--theme-accent, rgb(56, 189, 248));
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .hm-slot-edit {
+    border: 1px solid var(--hm-border, rgb(var(--nq-shade-rgb) / 0.135));
+    background: rgb(var(--nq-shade-rgb) / 0.063)
+}
+html[data-ui-theme='nanquim'] .hm-slot-edit:hover {
+    border-color: var(--theme-accent, rgb(56, 189, 248))
+}
+html[data-ui-theme='nanquim'] .hm-slot-plus {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .ga-box {
+    background: linear-gradient(180deg, rgb(var(--nq-shade-rgb) / 0.063), rgb(var(--nq-shade-rgb) / 0.045));
+    border: 2px solid rgb(var(--nq-shade-rgb) / 0.108);
+    box-shadow: inset 0 -3px 0 rgb(var(--nq-shade-rgb) / 0.122)
+}
+html[data-ui-theme='nanquim'] .ga-box strong {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)));
+    text-shadow: 0 2px 0 rgb(var(--nq-shade-rgb) / 0.158)
+}
+html[data-ui-theme='nanquim'] .ga-gems strong {
+    color: color-mix(in srgb, rgb(103, 232, 249) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .ga-xp-bar {
+    background: rgb(var(--nq-shade-rgb) / 0.081);
+    border: 2px solid rgb(var(--nq-shade-rgb) / 0.126)
+}
+html[data-ui-theme='nanquim'] .ga-xp-bar span {
+    background: repeating-linear-gradient(90deg, rgb(250, 204, 21) 0 10px, rgb(245, 158, 11) 10px 20px);
+    box-shadow: inset 0 2px 0 rgb(var(--nq-shade-rgb) / 0.122)
+}
+html[data-ui-theme='nanquim'] .ga-card {
+    background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent, rgb(56, 189, 248)) 12%, rgb(var(--nq-shade-rgb) / 0.045)), rgb(var(--nq-shade-rgb) / 0.036));
+    border: 2px solid rgb(var(--nq-shade-rgb) / 0.09);
+    box-shadow: inset 0 -3px 0 rgb(var(--nq-shade-rgb) / 0.105)
+}
+html[data-ui-theme='nanquim'] .ga-card.maxed {
+    background: linear-gradient(90deg, rgba(250, 204, 21, 0.16), rgb(var(--nq-shade-rgb) / 0.036))
+}
+html[data-ui-theme='nanquim'] .ga-badge {
+    background: rgb(var(--nq-shade-rgb) / 0.063);
+    border: 2px solid color-mix(in srgb, var(--theme-accent, rgb(56, 189, 248)) 55%, transparent);
+    box-shadow: inset 0 -3px 0 rgb(var(--nq-shade-rgb) / 0.14)
+}
+html[data-ui-theme='nanquim'] .ga-val {
+    color: var(--theme-accent, color-mix(in srgb, rgb(56, 189, 248) 62%, var(--nq-ink)))
+}
+html[data-ui-theme='nanquim'] .ga-seg span {
+    background: rgb(var(--nq-shade-rgb) / 0.09)
+}
+html[data-ui-theme='nanquim'] .ga-seg span.on {
+    background: linear-gradient(180deg, rgb(134, 239, 172), rgb(34, 197, 94));
+    box-shadow: 0 0 6px rgb(var(--nq-shade-rgb) / 0.18)
+}
+html[data-ui-theme='nanquim'] .ga-card.maxed .ga-seg span.on {
+    background: linear-gradient(180deg, rgb(253, 230, 138), rgb(250, 204, 21));
+    box-shadow: 0 0 6px rgb(var(--nq-shade-rgb) / 0.18)
+}
+html[data-ui-theme='nanquim'] .ga-buy {
+    color: var(--nq-muted);
+    background: linear-gradient(180deg, rgb(74, 222, 128), rgb(22, 163, 74));
+    box-shadow: inset 0 -3px 0 rgb(var(--nq-shade-rgb) / 0.105), 0 2px 0 rgb(var(--nq-shade-rgb) / 0.122)
+}
+html[data-ui-theme='nanquim'] .ga-buy:active:not(:disabled) {
+    box-shadow: inset 0 -1px 0 rgb(var(--nq-shade-rgb) / 0.105)
+}
+html[data-ui-theme='nanquim'] .ga-buy:disabled {
+    background: rgb(var(--nq-shade-rgb) / 0.09)
+}
+html[data-ui-theme='nanquim'] .ga-card.maxed .ga-buy:disabled {
+    background: linear-gradient(180deg, rgb(253, 230, 138), rgb(250, 204, 21));
+    color: color-mix(in srgb, rgb(66, 32, 6) 62%, var(--nq-ink))
+}
+html[data-ui-theme='nanquim'] .ga-pop {
+    color: color-mix(in srgb, rgb(250, 204, 21) 62%, var(--nq-ink));
+    text-shadow: 0 2px 0 rgb(var(--nq-shade-rgb) / 0.175)
+}
+html[data-ui-theme='nanquim'] .hm-pixel-box {
+    border: 1px dashed color-mix(in srgb, var(--theme-accent, rgb(56, 189, 248)) 50%, transparent)
+}
 
 /* ===== src/atualizacao2_0/ModuleTabs.css ===== */
 html[data-ui-theme='nanquim'] .mt-bar {
@@ -2374,6 +2514,26 @@ html[data-ui-theme='nanquim'] .mt-bar {
 html[data-ui-theme='nanquim'] .mt-tab {
     border: 1px solid var(--theme-border, var(--nq-line-strong));
     background: rgb(var(--nq-shade-rgb) / 0.027)
+}
+
+/* ===== src/atualizacao2_0/PixelEditor.css ===== */
+html[data-ui-theme='nanquim'] .px-name {
+    background: rgb(var(--nq-shade-rgb) / 0.045)
+}
+html[data-ui-theme='nanquim'] .px-current > span {
+    box-shadow: inset 0 0 0 2px rgb(var(--nq-shade-rgb) / 0.122)
+}
+html[data-ui-theme='nanquim'] .px-palette button {
+    border: 1px solid rgb(var(--nq-shade-rgb) / 0.162)
+}
+html[data-ui-theme='nanquim'] .px-preview {
+    background: radial-gradient(ellipse at 50% 85%, color-mix(in srgb, var(--px-acc) 18%, transparent), transparent 70%), rgb(var(--nq-shade-rgb) / 0.032)
+}
+html[data-ui-theme='nanquim'] .px-btn.primary {
+    color: var(--nq-muted)
+}
+html[data-ui-theme='nanquim'] .px-del {
+    color: color-mix(in srgb, rgb(248, 113, 113) 62%, var(--nq-ink))
 }
 
 /* ===== src/atualizacao2_0/Settings.css ===== */

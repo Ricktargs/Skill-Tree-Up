@@ -95,4 +95,34 @@ for (const file of FILES) {
 }
 const target = path.join(ROOT, 'src/shared/nanquim.generated.css');
 fs.writeFileSync(target, result);
+
+// ---------------------------------------------------------
+// MODO CLARO dos temas Gameficados: as mesmas traduções de cor,
+// sem a cara do Nanquim (fonte, papel, aquarela). As variáveis
+// --nq-* recebem tons claros tirados do tema escolhido (App.jsx).
+// ---------------------------------------------------------
+const LIGHT_PREFIX = "html[data-ui-light='true']";
+const LIGHT_FILES = [
+  ...FILES,
+  'src/mobile.css',
+  'src/modes/ModeSwitcher.css',
+  'src/shared/modeThemes.css',
+  'src/shared/lobbyPolish.css',
+  'src/shared/Dialog.css',
+  'src/shared/Onboarding.css',
+  'src/shared/SkillLink.css',
+  'src/shared/UpdatePopup.css',
+  'src/shared/spell/DictionaryWindow.css',
+  'src/modes/neuronios/neuronios.css',
+  'src/modes/neuronios/notesPanel.css',
+  'src/modes/neuronios/BalloonLayer.css'
+].filter((f) => fs.existsSync(path.join(ROOT, f)) && !f.endsWith('PixelEditor.css'));
+let light = '/* GERADO por scripts/build-nanquim.mjs — modo claro dos temas (npm run nanquim) */\n';
+for (const file of LIGHT_FILES) {
+  const css = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  light += `\n/* ===== ${file} ===== */\n${convert(css, LIGHT_PREFIX)}\n`;
+}
+const lightTarget = path.join(ROOT, 'src/shared/light.generated.css');
+fs.writeFileSync(lightTarget, light);
+console.log(`ok: ${path.relative(ROOT, lightTarget)} (${Math.round(light.length / 1024)} KB)`);
 console.log(`ok: ${path.relative(ROOT, target)} (${Math.round(result.length / 1024)} KB)`);

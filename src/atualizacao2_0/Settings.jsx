@@ -224,7 +224,7 @@ export function SettingsModal({
             <h4>🎨 {tx('Aparência')}</h4>
             <Toggle
               title={tx('Modo noturno')}
-              desc={ui.visual === 'gamificado' ? tx('No estilo Gameficado as Habilidades já são escuras') : tx('Papel escuro e tinta clara nos três modos')}
+              desc={tx('Desligado: todos os temas ficam claros. Também troca o dia/noite do Santuário.')}
               checked={ui.dark}
               onChange={(v) => {
                 click();
@@ -495,8 +495,11 @@ const ARVORE_GROUPS = [
     title: 'Santuário',
     items: [
       { keys: ['A', 'D'], alt: ['←', '→'], text: 'Anda com o personagem (o cenário acompanha).' },
-      { keys: ['Espaço'], alt: ['W'], text: 'Pula.' },
-      { keys: ['E'], text: 'Interage: porta, baú, relógio, estante, cama e escada.' },
+      { keys: ['Espaço'], alt: ['W'], text: 'Pula (e nada, dentro do lago).' },
+      { keys: ['1'], text: 'Interage: porta, baú, relógio, estante, cama, escada e horta.' },
+      { keys: ['4'], text: 'Inventário: arma, colheita e sementes (20 espaços).' },
+      { keys: ['←'], text: 'No fim do caminho à esquerda fica a vila, com a lojinha do Seu Bartolomeu.' },
+      { keys: ['Arrastar'], text: 'Com o mouse: olha em volta (duplo clique volta). Roda: zoom.' },
       { keys: ['↑'], alt: ['↓'], text: 'Entra/sai pela porta e sobe/desce a escada.' },
       { keys: ['L'], text: 'Cenário (Campo, Ilha voadora, Praia), estação e céu.' }
     ]
@@ -508,6 +511,17 @@ const ARVORE_GROUPS = [
       { keys: ['Relógio'], text: 'Abre o Pomodoro.' },
       { keys: ['Estante'], text: 'Abre as Notas.' },
       { keys: ['Cama'], text: 'Dorme: troca entre dia e noite.' }
+    ]
+  },
+  {
+    title: 'Horta',
+    items: [
+      { keys: ['W', 'A', 'S', 'D'], text: 'Anda pela horta (vista de cima).' },
+      { keys: ['1'], text: 'Colhe o que está pronto / sai pela porteira.' },
+      { keys: ['2'], text: 'Planta a semente escolhida.' },
+      { keys: ['3'], text: 'Rega (no poço: enche o regador).' },
+      { keys: ['Q'], text: 'Troca a semente (cenoura ou batata-doce).' },
+      { keys: ['Esc'], text: 'Sai da horta.' }
     ]
   }
 ];

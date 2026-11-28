@@ -43,11 +43,13 @@ const apply = () => {
   const html = document.documentElement;
   html.setAttribute('data-ui-theme', state.visual);
   html.setAttribute('data-ui-dark', String(state.dark));
+  // modo claro: os temas Gameficados ganham a versão clara (light.generated.css)
+  html.setAttribute('data-ui-light', String(!state.dark));
   // Tema do Nanquim: papel, tinta e aquarela como variáveis CSS
   html.setAttribute('data-nq-theme', state.nq);
   html.setAttribute('data-nq-follow', String(Boolean(getNanquimTheme(state.nq).follow)));
   Object.entries(nanquimVars(state.nq, state.dark)).forEach(([k, v]) => html.style.setProperty(k, v));
-  html.style.colorScheme = state.visual === 'gamificado' || state.dark ? 'dark' : 'light';
+  html.style.colorScheme = state.dark ? 'dark' : 'light';
 };
 apply();
 

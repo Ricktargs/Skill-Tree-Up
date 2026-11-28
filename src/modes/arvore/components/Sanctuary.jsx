@@ -29,6 +29,7 @@ import { readProfileValue } from "../../../atualizacao2_0/ProfileStorage.js";
 import { getActiveProfileId } from "../../../shared/activeProfile.js";
 import { getModeActions } from "../../../shared/modeBridge.js";
 import { ask, inform } from "../../../shared/Dialog.jsx";
+import { getUiTheme, subscribeUiTheme } from "../../../shared/uiTheme.js";
 import { useArvore } from "../state/contexts";
 import { createSubbranch, deleteBranch } from "../lib/folders";
 import { colorForId, generateId } from "../lib/ids";
@@ -152,6 +153,16 @@ export function useSanctuary() {
   return useSyncExternalStore(subscribe, get);
 }
 export const useSanctuaryState = () => useSyncExternalStore(subscribe, get);
+
+// O botão de dia/noite do programa também troca o horário do Santuário
+// (a cama e o "pelo relógio" continuam funcionando normalmente depois)
+let lastDark = getUiTheme().dark;
+subscribeUiTheme(() => {
+  const d = getUiTheme().dark;
+  if (d === lastDark) return;
+  lastDark = d;
+  setSanctuary({ night: d ? "noite" : "dia" });
+});
 /* modo galhos: clicar na árvore principal para editar os galhos dela */
 export const selectBranch = (id) => setLive({ branch: get().branch === id ? null : id });
 export const exitBranchMode = () => setLive({ branchMode: false, branch: null });

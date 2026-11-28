@@ -23,6 +23,8 @@ Ela NÃO é usada pelo programa — é só o ponto de partida:
 
 personagens/            (PNG 50 x 57, fundo transparente)
   mago.png  arqueiro.png  guerreiro.png  elfa.png
+  moradores/  velara  thalion  nilson  elina  bruno  fuba
+              bartolomeu (o vendedor porco da lojinha)
   - 1 pixel da imagem = 1 pixel do personagem.
   - Mantenha a posição do molde (cabeça, corpo, braços e
     pernas no mesmo lugar do original): é assim que o programa
@@ -30,22 +32,48 @@ personagens/            (PNG 50 x 57, fundo transparente)
   - Com a skin, as cores de "Personalizar" deixam de valer
     para aquele personagem. "Editar em pixel art" dentro do
     app continua por cima da skin.
+  - Os moradores têm imagem própria: trocar o mago.png não
+    muda o Mestre Nilson (e vice-versa).
 
 cenario/                (PNG do mesmo tamanho do original)
-  campo-mundo.png        campo-fundo-perto.png   campo-fundo-longe.png
-  ilha-mundo.png         ilha-fundo-perto.png    ilha-fundo-longe.png
-  praia-mundo.png        praia-fundo-longe.png
-  casa.png               (dentro da árvore)
-  - "mundo" = chão, árvore-casa, canteiro, cerca...
-  - "fundo-perto" / "fundo-longe" = colinas, ilhas e mar lá
-    atrás (andam mais devagar que o mundo).
+  campo-mundo  campo-fundo-perto  campo-fundo-longe
+  ilha-mundo   ilha-fundo-perto   ilha-fundo-longe
+  praia-mundo  praia-fundo-longe
+  casa          dentro da árvore
+  vila          a vila medieval
+  loja          dentro da lojinha
+  loja-balcao   o balcão (fica na frente do vendedor)
+  copa          o topo da árvore (claraboia, banco, luneta)
+  horta         a horta vista de cima (canteiros, poço, cerca)
+  - "mundo" = chão, árvore-casa, lago, canteiro, cerca...
+  - "fundo-perto" / "fundo-longe" = floresta, ilhas e mar
+    lá atrás (andam mais devagar que o mundo).
   - O topo da imagem fica acima da tela (é onde está a copa).
-  - Com a skin, a estação (neve, folhas de outono...) não
-    muda mais aquela camada.
-  - O que a planta, a água do mar, as luzes da noite e o
-    pêndulo do relógio fazem continua sendo do código.
+  - Com a skin, a estação (neve, folhas...) não muda mais
+    aquela imagem.
   - Onde o personagem pisa NÃO vem da imagem: isso se edita
     no app, em Cenário (L) > Modo desenvolvedor > Blocos.
+
+plantas/                (PNG 32 x 32 = um quadradinho da horta)
+  cenoura  batata  trigo  arroz  tomate
+  cada uma em 4 fases:  -0-semente  -1-broto  -2-crescendo  -3-pronta
+  ex.: plantas/tomate-3-pronta.png
+  - A planta "nasce" de baixo do quadradinho.
+
+animais/
+  peixe-1 ... peixe-6   (olhando para a DIREITA; vira sozinho)
+  sapo  sapo-pulando
+  vitoria-regia  vitoria-regia-flor
+
+itens/                  (inventário, lojinha e barra da horta)
+  cenoura  batata  trigo  arroz  tomate     (a colheita)
+  semente-cenoura ... semente-tomate        (os saquinhos)
+  arma-mago  arma-arqueiro  arma-guerreiro  arma-elfa
+  regador  vara-de-pesca  anel
+  peixe-lambari  peixe-tilapia  peixe-carpa  peixe-truta  peixe-lua
+  orbe-casa (Casateleportador)  orbe-vento  orbe-brasa (ainda bloqueados)
+  - Os originais das verduras/armas são os emojis do sistema
+    num quadrado de 32 x 32: desenhe por cima à vontade.
 
 icones/                 (SVG ou PNG, quadrado)
   perfil  pomodoro  missoes  missoes-feitas  organizar  lua  sol
@@ -53,6 +81,10 @@ icones/                 (SVG ou PNG, quadrado)
   - Pode ser .svg ou .png (se tiver os dois, vale o .svg).
   - Ícones novos que aparecerem no futuro seguem o mesmo
     esquema: icones/<nome>.svg ou .png.
+
+O que continua sendo do código (anima a cada quadro): água e
+ondas, chuva/neve/folhas, luzes da noite, pêndulo do relógio,
+nuvens, estrelas e planetas do céu.
 
 -----------------------------------------------------------
  GERAR OS ORIGINAIS DE NOVO
@@ -62,4 +94,4 @@ e no console (F12) digite:
 
   __orbeExportSkins()
 
-Ele refaz a pasta "_originais".
+Ele refaz a pasta "_originais" (as suas skins não entram nela).
